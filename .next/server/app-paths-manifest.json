@@ -1,0 +1,13 @@
+{
+  "/debug/data/page": "app/debug/data/page.js",
+  "/recruiter/dashboard/page": "app/recruiter/dashboard/page.js",
+  "/auth/login/page": "app/auth/login/page.js",
+  "/candidate/dashboard/page": "app/candidate/dashboard/page.js",
+  "/api/interviews/route": "app/api/interviews/route.js",
+  "/candidate/dashboard/skills/page": "app/candidate/dashboard/skills/page.js",
+  "/candidate/dashboard/practice/page": "app/candidate/dashboard/practice/page.js",
+  "/candidate/dashboard/resume/page": "app/candidate/dashboard/resume/page.js",
+  "/candidate/dashboard/certificates/page": "app/candidate/dashboard/certificates/page.js",
+  "/candidate/dashboard/profile/page": "app/candidate/dashboard/profile/page.js",
+  "/api/debug/data/route": "app/api/debug/data/route.js"
+}
