@@ -1237,6 +1237,7 @@ Good luck!`)
       {/* Subscription Paywall - Only show if user hits interview limits */}
       {showPaywall && (
         <SubscriptionPaywall 
+          userId={user?.id}
           onClose={() => setShowPaywall(false)}
           remainingInterviews={subscriptionInfo.remainingInterviews}
           currentPlan={subscriptionInfo.currentPlan}
