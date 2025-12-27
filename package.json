@@ -11,6 +11,7 @@
     "test:email-validation": "node scripts/test-email-validation.js"
   },
   "dependencies": {
+    "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-dialog": "^1.1.0",
     "@radix-ui/react-dropdown-menu": "^2.0.3",
     "@radix-ui/react-select": "^1.2.1",
