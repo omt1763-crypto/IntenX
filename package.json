@@ -29,6 +29,7 @@
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.6.1",
     "clsx": "^2.0.0",
+    "cmdk": "^1.1.1",
     "email-validator": "^2.0.4",
     "framer-motion": "^10.16.0",
     "jsonwebtoken": "^9.0.3",
