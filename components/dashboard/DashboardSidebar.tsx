@@ -1,4 +1,5 @@
-import { useLocation, Link } from "react-router-dom";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { 
   Diamond, 
   LayoutDashboard, 
@@ -56,7 +57,7 @@ const companyItems = [
 ];
 
 const DashboardSidebar = ({ userType }: DashboardSidebarProps) => {
-  const location = useLocation();
+  const pathname = usePathname();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   
@@ -79,7 +80,7 @@ const DashboardSidebar = ({ userType }: DashboardSidebarProps) => {
     >
       <div className="p-4">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-3 mb-2">
+        <Link href="/" className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-white/20 to-white/10 flex items-center justify-center backdrop-blur-sm border border-white/20">
             <Diamond className="w-5 h-5 text-white" />
           </div>
@@ -97,12 +98,12 @@ const DashboardSidebar = ({ userType }: DashboardSidebarProps) => {
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
-                const isActive = location.pathname === item.url;
+                const isActive = pathname === item.url;
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
                       <Link
-                        to={item.url}
+                        href={item.url}
                         className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                           isActive
                             ? "bg-white/20 text-white shadow-lg backdrop-blur-sm"

@@ -1,5 +1,5 @@
 import { ArrowLeft } from "lucide-react";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { ReactNode } from "react";
 
 interface PageHeaderProps {
@@ -23,7 +23,7 @@ const PageHeader = ({
     <div className="mb-8">
       {backLink && (
         <Link 
-          to={backLink} 
+          href={backLink} 
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
