@@ -591,7 +591,6 @@ Good luck!`
           autoGainControl: true,
           // Advanced constraints for better noise suppression
           channelCount: { ideal: 1 },
-          latency: { ideal: 0.01 },
           sampleRate: { ideal: 16000 }
         }
       })
