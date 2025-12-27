@@ -327,6 +327,8 @@ export default function NewJobPage() {
       </div>
     )
   }
+
+  return (
     <div className="min-h-screen bg-white">
       <Sidebar role="company" />
       <div className="fixed inset-0 pointer-events-none opacity-30">
