@@ -36,6 +36,7 @@ interface JobGroup {
 export default function BusinessApplicantsPage() {
   const router = useRouter()
   const { user: authUser, isAuthenticated } = useAuth()
+  const { isSidebarOpen } = useSidebar()
   const [applicants, setApplicants] = useState<Applicant[]>([])
   const [jobGroups, setJobGroups] = useState<JobGroup[]>([])
   const [loading, setLoading] = useState(true)
