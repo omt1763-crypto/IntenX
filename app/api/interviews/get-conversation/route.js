@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { supabase, supabaseAdmin } from '@/lib/supabase'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Get conversation history from the interview
  * This retrieves messages that have been saved during the interview

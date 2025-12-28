@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * API endpoint to get jobs summary for a business/recruiter
  * Returns aggregated data about jobs including counts and statistics
