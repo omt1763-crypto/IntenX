@@ -20,7 +20,8 @@ from guardrails import generate_interview_instructions, validate_ai_response, va
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY not set in .env")
+    logger.warning("⚠️ OPENAI_API_KEY not set in environment - WebSocket will fail")
+    # Don't crash, let it fail gracefully with clear error
 
 # Setup logging first
 logging.basicConfig(level=logging.INFO)
@@ -91,7 +92,12 @@ app.add_middleware(
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "time": datetime.now().isoformat()}
+    return {
+        "status": "ok",
+        "time": datetime.now().isoformat(),
+        "openai_api_key_set": bool(OPENAI_API_KEY),
+        "openai_api_key_length": len(OPENAI_API_KEY) if OPENAI_API_KEY else 0
+    }
 
 @app.get("/api/openai-realtime/ephemeral-token")
 async def get_ephemeral_token():
@@ -155,6 +161,14 @@ async def websocket_realtime(websocket: WebSocket):
     """
     WebSocket proxy to OpenAI Realtime API using Bearer token auth
     """
+    logger.info("=" * 80)
+    logger.info("🔔 WEBSOCKET CONNECTION ATTEMPT")
+    logger.info(f"   Client: {websocket.client}")
+    logger.info(f"   URL: {websocket.url}")
+    logger.info(f"   OPENAI_API_KEY set: {bool(OPENAI_API_KEY)}")
+    logger.info(f"   OPENAI_API_KEY length: {len(OPENAI_API_KEY) if OPENAI_API_KEY else 'NOT SET'}")
+    logger.info("=" * 80)
+    
     await websocket.accept()
     logger.info("🔄 Client connected to WebSocket proxy")
     
