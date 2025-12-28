@@ -67,6 +67,8 @@ SKILL ASSESSMENT STRATEGY:
 - Ask for real-world examples of using each skill
 - Assess both theoretical knowledge and practical experience
 - Reference specific job requirements in your questions
+- Ask about specific responsibilities from the job description
+- Evaluate how the candidate's experience aligns with the exact needs of this position
 
 INTERVIEW PHASES:
 1. INTRODUCTION - "Hello, thank you for joining me today. I'm your technical interviewer for the ${jobTitle} position at ${company}. Could you please introduce yourself and share your background?"
@@ -1136,12 +1138,12 @@ Good luck!`)
             )}
           </div>
         ) : (
-          // During Interview - Full screen layout with camera maximized and conversation on right
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 h-screen w-screen fixed inset-0 top-16 bg-white">
-            {/* Left Panel - Full Screen Camera with Floating Controls */}
-            <div className="lg:col-span-8 flex flex-col gap-0 h-full overflow-hidden relative">
-              {/* Camera Screen - Full height, maximized */}
-              <div className="bg-slate-900 rounded-none shadow-none overflow-hidden flex items-center justify-center w-full h-full">
+          // During Interview - Fully responsive layout with camera and conversation
+          <div className="h-[calc(100vh-64px)] w-full flex flex-col lg:flex-row gap-4 p-3 md:p-4 lg:gap-0">
+            {/* Left Panel - Camera with Controls - Takes full width on mobile, adjusts on desktop */}
+            <div className="w-full lg:flex-1 flex flex-col gap-3 lg:gap-0">
+              {/* Camera Screen - Responsive sizing with padding for controls */}
+              <div className="flex-1 bg-slate-900 rounded-lg lg:rounded-none overflow-hidden flex items-center justify-center relative min-h-[300px] lg:min-h-full">
                 {cameraOn ? (
                   <video
                     ref={videoRef}
@@ -1153,45 +1155,45 @@ Good luck!`)
                   />
                 ) : (
                   <div className="flex flex-col items-center gap-2">
-                    <VideoOff size={64} className="text-slate-400" />
-                    <span className="text-slate-400 text-base">Camera Off</span>
+                    <VideoOff size={48} className="text-slate-400" />
+                    <span className="text-slate-400 text-sm">Camera Off</span>
                   </div>
                 )}
-              </div>
 
-              {/* Floating Control Buttons - Positioned at bottom center over video */}
-              <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-3 bg-white/90 backdrop-blur-md border border-slate-200 rounded-full px-4 py-3 shadow-lg hover:shadow-xl transition-shadow">
-                <button
-                  onClick={() => setMicOn(!micOn)}
-                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
-                    micOn ? 'bg-[#11cd68] text-white hover:bg-[#0a9f5d]' : 'bg-red-500 text-white hover:bg-red-600'
-                  }`}
-                  title={micOn ? 'Mute' : 'Unmute'}
-                >
-                  {micOn ? <Mic size={24} /> : <MicOff size={24} />}
-                </button>
-                <button
-                  onClick={() => setCameraOn(!cameraOn)}
-                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
-                    cameraOn ? 'bg-[#11cd68] text-white hover:bg-[#0a9f5d]' : 'bg-red-500 text-white hover:bg-red-600'
-                  }`}
-                  title={cameraOn ? 'Stop Camera' : 'Start Camera'}
-                >
-                  {cameraOn ? <Video size={24} /> : <VideoOff size={24} />}
-                </button>
-                <div className="w-px bg-slate-300" />
-                <button
-                  onClick={handleEnd}
-                  className="w-12 h-12 rounded-full flex items-center justify-center bg-red-600 text-white hover:bg-red-700 transition-all"
-                  title="End Interview"
-                >
-                  <Phone size={24} style={{ transform: 'rotate(135deg)' }} />
-                </button>
+                {/* Floating Control Buttons - Always visible and accessible */}
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-40 flex gap-2 md:gap-3 bg-white/95 backdrop-blur-md border border-slate-200 rounded-full px-3 md:px-4 py-2 md:py-3 shadow-lg hover:shadow-xl transition-shadow">
+                  <button
+                    onClick={() => setMicOn(!micOn)}
+                    className={`w-10 md:w-12 h-10 md:h-12 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
+                      micOn ? 'bg-[#11cd68] text-white hover:bg-[#0a9f5d]' : 'bg-red-500 text-white hover:bg-red-600'
+                    }`}
+                    title={micOn ? 'Mute' : 'Unmute'}
+                  >
+                    {micOn ? <Mic size={18} className="md:block" /> : <MicOff size={18} />}
+                  </button>
+                  <button
+                    onClick={() => setCameraOn(!cameraOn)}
+                    className={`w-10 md:w-12 h-10 md:h-12 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
+                      cameraOn ? 'bg-[#11cd68] text-white hover:bg-[#0a9f5d]' : 'bg-red-500 text-white hover:bg-red-600'
+                    }`}
+                    title={cameraOn ? 'Stop Camera' : 'Start Camera'}
+                  >
+                    {cameraOn ? <Video size={18} /> : <VideoOff size={18} />}
+                  </button>
+                  <div className="w-px bg-slate-300 hidden md:block" />
+                  <button
+                    onClick={handleEnd}
+                    className="w-10 md:w-12 h-10 md:h-12 rounded-full flex items-center justify-center bg-red-600 text-white hover:bg-red-700 transition-all flex-shrink-0"
+                    title="End Interview"
+                  >
+                    <Phone size={18} style={{ transform: 'rotate(135deg)' }} />
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Right Panel - Full Conversation Transcript with AI Agent Animation */}
-            <div className="lg:col-span-4 flex flex-col h-full overflow-hidden border-l border-slate-200">
+            {/* Right Panel - Full Conversation Transcript with AI Agent Animation - Hidden on small screens, visible on desktop */}
+            <div className="hidden lg:flex lg:w-96 flex-col h-full overflow-hidden border-l border-slate-200 bg-white">
               <ConversationDisplay 
                 messages={messages}
                 isListening={isListening}
@@ -1200,12 +1202,12 @@ Good luck!`)
               
               {/* Animated AI Agent Speaking Sphere */}
               <div className="flex-1 flex flex-col items-center justify-end p-4 bg-gradient-to-b from-slate-50 to-slate-100">
-                <div className="relative w-28 h-28 flex items-center justify-center mb-3">
+                <div className="relative w-24 h-24 md:w-28 md:h-28 flex items-center justify-center mb-3">
                   {/* Outer glow effect */}
                   <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-400 via-purple-400 to-cyan-400 opacity-20 blur-3xl animate-pulse" />
                   
                   {/* Main sphere with gradient */}
-                  <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 shadow-2xl overflow-hidden">
+                  <div className="relative w-16 md:w-20 h-16 md:h-20 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 shadow-2xl overflow-hidden">
                     {/* Inner light effect */}
                     <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white to-transparent opacity-30 animate-spin" style={{ animationDuration: '3s' }} />
                     
@@ -1224,11 +1226,20 @@ Good luck!`)
                 </div>
                 
                 {/* Status text */}
-                <p className="text-sm font-medium text-slate-600">AI Agent</p>
+                <p className="text-xs md:text-sm font-medium text-slate-600">AI Agent</p>
                 <p className="text-xs text-slate-500 mt-1">
                   {isListening ? 'Listening...' : savingConversation ? 'Processing...' : 'Ready'}
                 </p>
               </div>
+            </div>
+
+            {/* Mobile Conversation View - Show on small screens below camera */}
+            <div className="lg:hidden w-full h-auto max-h-64 md:max-h-96 overflow-y-auto bg-white rounded-lg border border-slate-200">
+              <ConversationDisplay 
+                messages={messages}
+                isListening={isListening}
+                loading={savingConversation}
+              />
             </div>
           </div>
         )}
