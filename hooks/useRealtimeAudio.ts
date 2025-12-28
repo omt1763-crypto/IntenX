@@ -56,7 +56,7 @@ export function useRealtimeAudio(): UseRealtimeAudioReturn {
       console.log('[RealtimeAudio] Starting connection...')
 
       // Connect to backend WebSocket proxy
-      const wsUrl = `ws://localhost:8001/ws/realtime`
+      const wsUrl = `wss://intenx-1.onrender.com/ws/realtime`
       console.log('[RealtimeAudio] Connecting to backend WebSocket proxy:', wsUrl)
       
       const ws = new WebSocket(wsUrl)
