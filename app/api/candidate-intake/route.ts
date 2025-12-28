@@ -70,7 +70,6 @@ export async function POST(req: Request) {
       console.error('[CandidateIntake] Error code:', error.code)
       console.error('[CandidateIntake] Error message:', error.message)
       console.error('[CandidateIntake] Error details:', error.details)
-      console.error('[CandidateIntake] Error context:', error.context)
       
       // Check if table doesn't exist
       if (error.code === '42P01' || error.message?.includes('does not exist')) {
