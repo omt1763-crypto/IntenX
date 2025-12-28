@@ -13,10 +13,21 @@ export async function POST(req: Request) {
     const jobId = formData.get('jobId') as string
     const resumeFile = formData.get('resume') as File | null
 
-    console.log('[CandidateIntake] Received:', { name, email, phone, position, jobId })
+    console.log('═'.repeat(80))
+    console.log('[CandidateIntake API] 📥 Received candidate form submission')
+    console.log('[CandidateIntake API] Candidate data:', {
+      name: name || '(empty)',
+      email: email || '(empty)',
+      phone: phone || '(empty)',
+      position: position || '(empty)',
+      jobId: jobId || '(empty)',
+      resumeFileName: resumeFile?.name || 'none'
+    })
+    console.log('═'.repeat(80))
 
     // Validate required fields
     if (!name || !email || !phone || !position) {
+      console.error('[CandidateIntake API] ❌ Validation failed: Missing required fields')
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -26,11 +37,14 @@ export async function POST(req: Request) {
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
+      console.error('[CandidateIntake API] ❌ Validation failed: Invalid email format')
       return NextResponse.json(
         { error: 'Invalid email format' },
         { status: 400 }
       )
     }
+
+    console.log('[CandidateIntake API] ✅ Validation passed, attempting database insert...')
 
     // Store candidate intake info in job_applicants table (for recruiter dashboard)
     const candidateId = randomUUID()
@@ -73,6 +87,7 @@ export async function POST(req: Request) {
       
       // Check if table doesn't exist
       if (error.code === '42P01' || error.message?.includes('does not exist')) {
+        console.error('[CandidateIntake API] ❌ TABLE NOT FOUND - job_applicants table does not exist')
         return NextResponse.json(
           { 
             error: 'Database table not set up. Please create the job_applicants table in Supabase.' 
@@ -83,6 +98,7 @@ export async function POST(req: Request) {
 
       // Check if it's a column mismatch error
       if (error.code === '42703' || error.message?.includes('column')) {
+        console.error('[CandidateIntake API] ❌ COLUMN MISMATCH ERROR')
         return NextResponse.json(
           { 
             error: `Column error: ${error.message}. Expected columns: id, name, email, phone, position_applied, job_id, resume_url, status, created_at`
@@ -91,6 +107,9 @@ export async function POST(req: Request) {
         )
       }
 
+      // Log other database errors
+      console.error('[CandidateIntake API] ❌ DATABASE ERROR')
+      console.error('[CandidateIntake API] Error details:', error)
       return NextResponse.json(
         { 
           error: error.message || 'Failed to save candidate information',
@@ -101,8 +120,19 @@ export async function POST(req: Request) {
       )
     }
 
-    console.log('[CandidateIntake] ✅ Candidate successfully saved:', data?.id)
-    console.log('[CandidateIntake] Saved data:', data)
+    console.log('[CandidateIntake API] ✅ Candidate successfully saved to job_applicants table')
+    console.log('[CandidateIntake API] Saved record ID:', data?.id)
+    console.log('[CandidateIntake API] Saved data:', {
+      id: data?.id,
+      name: data?.name,
+      email: data?.email,
+      phone: data?.phone,
+      position_applied: data?.position_applied,
+      job_id: data?.job_id,
+      status: data?.status,
+      created_at: data?.created_at
+    })
+    console.log('═'.repeat(80))
 
     // TODO: Handle resume file upload to storage if needed
     // For now, we're just storing the filename in the database
@@ -113,7 +143,9 @@ export async function POST(req: Request) {
       candidateId: data?.id
     }, { status: 201 })
   } catch (error) {
-    console.error('[CandidateIntake] Error:', error)
+    console.error('[CandidateIntake API] ❌ UNEXPECTED ERROR')
+    console.error('[CandidateIntake API] Error details:', error)
+    console.error('[CandidateIntake API] Error type:', typeof error)
     return NextResponse.json(
       { error: 'Internal server error', details: String(error) },
       { status: 500 }

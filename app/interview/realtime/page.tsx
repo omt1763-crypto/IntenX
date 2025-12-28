@@ -272,6 +272,16 @@ export default function RealtimeInterviewPage() {
         throw new Error('Position applying for is required')
       }
 
+      console.log('[Interview Form] 📋 Form validation passed')
+      console.log('[Interview Form] Candidate info:', {
+        name: candidateInfo.name,
+        email: candidateInfo.email,
+        phone: candidateInfo.phone,
+        position: candidateInfo.position,
+        jobId: jobId,
+        hasResume: !!candidateInfo.resumeFile
+      })
+
       // Prepare form data
       const formData = new FormData()
       formData.append('name', candidateInfo.name)
@@ -283,24 +293,30 @@ export default function RealtimeInterviewPage() {
         formData.append('resume', candidateInfo.resumeFile)
       }
 
+      console.log('[Interview Form] 🚀 Submitting to /api/candidate-intake...')
+
       // Save candidate info to backend
       const response = await fetch('/api/candidate-intake', {
         method: 'POST',
         body: formData
       })
 
+      console.log('[Interview Form] 📡 API Response status:', response.status)
+      console.log('[Interview Form] API Response ok:', response.ok)
+
       if (!response.ok) {
         const errorData = await response.json()
+        console.error('[Interview Form] ❌ API Error:', errorData)
         throw new Error(errorData.error || 'Failed to save candidate information')
       }
 
       const result = await response.json()
-      console.log('[Interview] Candidate info saved:', result)
+      console.log('[Interview Form] ✅ Success! Candidate saved:', result)
 
       // Mark form as submitted and allow interview to proceed
       setCandidateFormSubmitted(true)
     } catch (err: any) {
-      console.error('[Interview] Error saving candidate info:', err)
+      console.error('[Interview Form] ❌ Error:', err.message)
       setFormError(err.message || 'Failed to save information')
     } finally {
       setFormLoading(false)
