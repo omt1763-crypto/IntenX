@@ -71,15 +71,15 @@ export default function RecruiterJobsPage() {
     try {
       if (!job?.created_at) {
         // If no created_at, default to 15 minutes (new job)
+        console.warn(`[Jobs] No created_at for job ${job.id}`)
         return LINK_TTL_SECONDS
       }
       
-      // Parse the created_at timestamp (handle both ISO and other formats)
+      // Ensure created_at is a valid timestamp
       const createdTime = new Date(job.created_at).getTime()
       
-      // Validate the date is valid
       if (isNaN(createdTime)) {
-        console.warn(`[Jobs] Invalid created_at for job ${job.id}: ${job.created_at}`)
+        console.warn(`[Jobs] Invalid date format for job ${job.id}: ${job.created_at}`)
         return LINK_TTL_SECONDS
       }
       
@@ -88,10 +88,11 @@ export default function RecruiterJobsPage() {
       const remainingMs = (LINK_TTL_SECONDS * 1000) - ageMs
       const remainingSecs = Math.max(0, Math.floor(remainingMs / 1000))
       
+      console.log(`[Jobs] Job ${job.id}: created=${new Date(createdTime).toISOString()}, now=${new Date(now).toISOString()}, ageMs=${ageMs}, remaining=${remainingSecs}s`)
+      
       return remainingSecs
     } catch (e) {
-      console.error(`[Jobs] Error calculating remaining time for job ${job.id}:`, e)
-      // If there's any error parsing the date, assume it's a new job
+      console.error(`[Jobs] Error for job ${job.id}:`, e, 'created_at:', job.created_at)
       return LINK_TTL_SECONDS
     }
   }

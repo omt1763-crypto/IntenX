@@ -188,7 +188,8 @@ async def websocket_realtime(websocket: WebSocket):
             
             openai_ws = await websockets.connect(
                 uri,
-                extra_headers=[('Authorization', f'Bearer {OPENAI_API_KEY}')],
+                subprotocols=['realtime'],
+                additional_headers={'Authorization': f'Bearer {OPENAI_API_KEY}'},
                 close_timeout=10,
             )
             logger.info(f"✅ WebSocket connected to OpenAI Realtime API")
