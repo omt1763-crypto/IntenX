@@ -99,6 +99,7 @@ export function AuthProvider({ children }) {
         console.log('[Auth] Auth state change event:', _event)
         
         if (currentSession?.user) {
+          console.log('[Auth] Session valid, updating state')
           setSession(currentSession)
           setUser(currentSession.user)
           setIsAuthenticated(true)
@@ -115,11 +116,23 @@ export function AuthProvider({ children }) {
             saveAuthState(currentSession.user, currentSession, data.role)
           }
         } else {
-          setSession(null)
-          setUser(null)
-          setRole(null)
-          setIsAuthenticated(false)
-          clearAuthState()
+          // Only clear if this is a SIGNED_OUT event, not INITIAL_SESSION
+          if (_event === 'SIGNED_OUT') {
+            console.log('[Auth] User signed out, clearing session')
+            setSession(null)
+            setUser(null)
+            setRole(null)
+            setIsAuthenticated(false)
+            clearAuthState()
+          } else {
+            // For INITIAL_SESSION and other events, keep cached session if available
+            if (!user && !session) {
+              console.log('[Auth] No current session and no cached session')
+              setIsAuthenticated(false)
+            } else {
+              console.log('[Auth] Keeping cached session for:', user?.email)
+            }
+          }
         }
       }
     )

@@ -34,6 +34,19 @@ export async function POST(req: Request) {
 
     // Store candidate intake info in job_applicants table (for recruiter dashboard)
     const candidateId = randomUUID()
+    
+    console.log('[CandidateIntake] Attempting to insert with data:', {
+      id: candidateId,
+      name,
+      email,
+      phone,
+      position_applied: position,
+      job_id: jobId,
+      resume_url: resumeFile?.name || null,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    })
+
     const { data, error } = await supabaseAdmin
       .from('job_applicants')
       .insert([
@@ -43,7 +56,7 @@ export async function POST(req: Request) {
           email,
           phone,
           position_applied: position,
-          job_id: jobId,
+          job_id: jobId || null,
           resume_url: resumeFile?.name || null,
           status: 'pending',
           created_at: new Date().toISOString()
@@ -53,16 +66,27 @@ export async function POST(req: Request) {
       .single()
 
     if (error) {
-      console.error('[CandidateIntake] Database error:', error)
+      console.error('[CandidateIntake] ❌ Database error:', error)
       console.error('[CandidateIntake] Error code:', error.code)
       console.error('[CandidateIntake] Error message:', error.message)
       console.error('[CandidateIntake] Error details:', error.details)
+      console.error('[CandidateIntake] Error context:', error.context)
       
       // Check if table doesn't exist
       if (error.code === '42P01' || error.message?.includes('does not exist')) {
         return NextResponse.json(
           { 
             error: 'Database table not set up. Please create the job_applicants table in Supabase.' 
+          },
+          { status: 500 }
+        )
+      }
+
+      // Check if it's a column mismatch error
+      if (error.code === '42703' || error.message?.includes('column')) {
+        return NextResponse.json(
+          { 
+            error: `Column error: ${error.message}. Expected columns: id, name, email, phone, position_applied, job_id, resume_url, status, created_at`
           },
           { status: 500 }
         )
@@ -78,7 +102,8 @@ export async function POST(req: Request) {
       )
     }
 
-    console.log('[CandidateIntake] Candidate saved:', data.id)
+    console.log('[CandidateIntake] ✅ Candidate successfully saved:', data?.id)
+    console.log('[CandidateIntake] Saved data:', data)
 
     // TODO: Handle resume file upload to storage if needed
     // For now, we're just storing the filename in the database
@@ -86,7 +111,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       message: 'Candidate information saved successfully',
-      candidateId: data.id
+      candidateId: data?.id
     }, { status: 201 })
   } catch (error) {
     console.error('[CandidateIntake] Error:', error)
