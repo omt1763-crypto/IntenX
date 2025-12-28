@@ -134,6 +134,22 @@ export async function POST(req) {
         console.error('[SaveInterview API] Error message:', createError.message)
       } else {
         console.log('[SaveInterview API] ✅ New applicant created for interview:', newApplicant?.id)
+        
+        // NOW UPDATE THE INTERVIEW WITH THE NEW APPLICANT ID
+        if (newApplicant?.id) {
+          const { error: updateInterviewError } = await supabaseAdmin
+            .from('interviews')
+            .update({
+              applicant_id: newApplicant.id
+            })
+            .eq('id', data.id)
+          
+          if (updateInterviewError) {
+            console.error('[SaveInterview API] Error linking interview to applicant:', updateInterviewError)
+          } else {
+            console.log('[SaveInterview API] ✅ Interview linked to applicant:', newApplicant.id)
+          }
+        }
       }
     }
     
