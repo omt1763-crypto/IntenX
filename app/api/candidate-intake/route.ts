@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { randomUUID } from 'crypto'
 
 export async function POST(req: Request) {
   try {
@@ -31,17 +32,20 @@ export async function POST(req: Request) {
       )
     }
 
-    // Store candidate intake info in database
+    // Store candidate intake info in job_applicants table (for recruiter dashboard)
+    const candidateId = randomUUID()
     const { data, error } = await supabaseAdmin
-      .from('candidate_intake')
+      .from('job_applicants')
       .insert([
         {
+          id: candidateId,
           name,
           email,
           phone,
-          position,
+          position_applied: position,
           job_id: jobId,
-          resume_filename: resumeFile?.name || null,
+          resume_url: resumeFile?.name || null,
+          status: 'pending',
           created_at: new Date().toISOString()
         }
       ])
@@ -58,7 +62,7 @@ export async function POST(req: Request) {
       if (error.code === '42P01' || error.message?.includes('does not exist')) {
         return NextResponse.json(
           { 
-            error: 'Database table not set up. Please create the candidate_intake table in Supabase.' 
+            error: 'Database table not set up. Please create the job_applicants table in Supabase.' 
           },
           { status: 500 }
         )
