@@ -1,11 +1,13 @@
 -- Create job_applicants table for tracking candidates who apply for jobs
 CREATE TABLE IF NOT EXISTS public.job_applicants (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  job_id UUID NOT NULL REFERENCES public.jobs(id) ON DELETE CASCADE,
+  job_id UUID REFERENCES public.jobs(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) NOT NULL,
+  phone VARCHAR(20),
   position_applied VARCHAR(255),
-  status VARCHAR(50) DEFAULT '',
+  resume_url VARCHAR(500),
+  status VARCHAR(50) DEFAULT 'pending',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
