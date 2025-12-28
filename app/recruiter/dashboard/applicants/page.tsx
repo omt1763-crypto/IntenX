@@ -414,7 +414,7 @@ export default function ApplicantsPage() {
                                 </span>
                               )}
                               <button
-                                onClick={() => router.push(`/recruiter/dashboard/applicants/${applicant.id}`)}
+                                onClick={() => router.push(`/recruiter/dashboard/applicants/detail?applicantId=${applicant.id}`)}
                                 className="px-5 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 whitespace-nowrap shadow-md hover:shadow-lg hover:scale-105 active:scale-95"
                               >
                                 View Details
