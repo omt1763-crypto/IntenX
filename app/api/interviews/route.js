@@ -90,8 +90,9 @@ export async function POST(req) {
     console.log('[SaveInterview API] Interview saved successfully:', data.id)
     console.log('[SaveInterview API] Saved interview with job_id:', data.job_id, 'applicant_id:', data.applicant_id)
     
-    // Update applicant record with interview_id if applicant_id exists
+    // Handle applicant record
     if (cleanData.applicant_id) {
+      // If we have an applicant ID, update it
       const { error: updateError } = await supabaseAdmin
         .from('job_applicants')
         .update({
@@ -104,6 +105,35 @@ export async function POST(req) {
         console.error('[SaveInterview API] Error updating applicant:', updateError)
       } else {
         console.log('[SaveInterview API] Applicant updated with interview_id:', data.id)
+      }
+    } else if (cleanData.job_id) {
+      // If no applicant ID but we have a job_id, create an applicant record
+      console.log('[SaveInterview API] No applicant ID provided, creating new applicant record for job:', cleanData.job_id)
+      
+      const { data: newApplicant, error: createError } = await supabaseAdmin
+        .from('job_applicants')
+        .insert([
+          {
+            job_id: cleanData.job_id,
+            name: cleanData.position || 'Interview Candidate',
+            email: cleanData.company || 'candidate@example.com',
+            phone: null,
+            position_applied: cleanData.position || 'Unknown Position',
+            resume_url: null,
+            interview_id: data.id,
+            status: 'completed',
+            created_at: new Date().toISOString()
+          }
+        ])
+        .select()
+        .single()
+
+      if (createError) {
+        console.error('[SaveInterview API] Error creating applicant record:', createError)
+        console.error('[SaveInterview API] Error code:', createError.code)
+        console.error('[SaveInterview API] Error message:', createError.message)
+      } else {
+        console.log('[SaveInterview API] ✅ New applicant created for interview:', newApplicant?.id)
       }
     }
     
