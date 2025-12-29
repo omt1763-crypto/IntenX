@@ -233,7 +233,7 @@ export default function Login() {
                 />
                 <span className="text-gray-700">Remember me</span>
               </label>
-              <Link href="#" className="text-purple-600 hover:text-purple-700 font-medium transition">
+              <Link href="/auth/forgot-password" className="text-purple-600 hover:text-purple-700 font-medium transition">
                 Forgot?
               </Link>
             </div>
