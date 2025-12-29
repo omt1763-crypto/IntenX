@@ -50,11 +50,15 @@ export function AuthProvider({ children }) {
     // Immediately load from localStorage for instant restore
     const savedAuth = loadAuthState()
     if (savedAuth?.user && savedAuth?.session && savedAuth?.role) {
-      console.log('[Auth] Restored session from localStorage:', savedAuth.user.email)
+      console.log('[Auth] ✅ Restored session from localStorage:', savedAuth.user.email)
       setUser(savedAuth.user)
       setSession(savedAuth.session)
       setRole(savedAuth.role)
       setIsAuthenticated(true)
+      // Mark as hydrated immediately since we have cached data
+      setIsHydrated(true)
+    } else {
+      console.log('[Auth] ⏳ No cached session, verifying with Supabase...')
     }
 
     // Then verify with Supabase (non-blocking)
@@ -63,7 +67,7 @@ export function AuthProvider({ children }) {
         const { data: { session: currentSession } } = await supabase.auth.getSession()
         
         if (currentSession?.user) {
-          console.log('[Auth] Valid Supabase session found')
+          console.log('[Auth] ✅ Valid Supabase session found')
           setSession(currentSession)
           setUser(currentSession.user)
           setIsAuthenticated(true)
@@ -81,6 +85,7 @@ export function AuthProvider({ children }) {
           }
         } else if (!savedAuth?.user) {
           // Only clear if we don't have a cached session
+          console.log('[Auth] ❌ No session found anywhere')
           setSession(null)
           setUser(null)
           setRole(null)
@@ -88,16 +93,22 @@ export function AuthProvider({ children }) {
           clearAuthState()
         }
         
-        // Mark hydration complete after verification
+        // Mark hydration complete after verification (even if we had cached data)
         setIsHydrated(true)
       } catch (error) {
-        console.warn('[Auth] Session verification error:', error.message)
+        console.warn('[Auth] ⚠️ Session verification error:', error.message)
         // Still mark as hydrated even on error so pages can proceed
         setIsHydrated(true)
       }
     }
 
-    verifySession()
+    // Only verify with Supabase if we don't already have cached data
+    if (!savedAuth?.user) {
+      verifySession()
+    } else {
+      // We have cached data, so just verify in background without blocking
+      verifySession().catch(err => console.warn('[Auth] Background verification failed:', err))
+    }
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(

@@ -26,35 +26,50 @@ export async function GET(req) {
 
     if (applicantError) {
       console.error('[InterviewDetail API] Error fetching applicant:', applicantError)
+      return NextResponse.json(
+        { error: 'Applicant not found' },
+        { status: 404 }
+      )
     }
 
-    // Get interview data by applicant_id
+    if (!applicantData) {
+      console.log('[InterviewDetail API] No applicant found:', applicantId)
+      return NextResponse.json(
+        { error: 'Applicant not found' },
+        { status: 404 }
+      )
+    }
+
+    console.log('[InterviewDetail API] Applicant found, looking for interview_id:', applicantData.interview_id)
+
+    // Get interview data using interview_id from applicant record
     const { data: interviewData, error: interviewError } = await supabaseAdmin
       .from('interviews')
       .select('*')
-      .eq('applicant_id', applicantId)
-      .order('created_at', { ascending: false })
-      .limit(1)
+      .eq('id', applicantData.interview_id)
       .single()
 
-    if (interviewError) {
-      console.error('[InterviewDetail API] Error fetching interview:', interviewError)
-      return NextResponse.json(
-        { 
-          error: 'Interview not found',
-          code: interviewError.code,
-          message: interviewError.message
-        },
-        { status: 404 }
-      )
-    }
+    if (interviewError || !interviewData) {
+      console.error('[InterviewDetail API] Error fetching interview:', interviewError?.message || 'Not found')
+      
+      // Fallback: Try to find by applicant_id if it exists as a field
+      const { data: fallbackData, error: fallbackError } = await supabaseAdmin
+        .from('interviews')
+        .select('*')
+        .eq('applicant_id', applicantId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
 
-    if (!interviewData) {
-      console.log('[InterviewDetail API] No interview found for applicant:', applicantId)
-      return NextResponse.json(
-        { error: 'Interview not found' },
-        { status: 404 }
-      )
+      if (fallbackError || !fallbackData) {
+        console.error('[InterviewDetail API] Interview not found - tried both methods')
+        return NextResponse.json(
+          { error: 'Interview not found' },
+          { status: 404 }
+        )
+      }
+
+      interviewData = fallbackData
     }
 
     console.log('[InterviewDetail API] Interview found:', interviewData.id)
