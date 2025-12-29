@@ -19,7 +19,7 @@ export async function GET(req) {
 
     let query = supabaseAdmin
       .from('activity_logs')
-      .select('*, user:users(id, first_name, last_name, email, role)', { count: 'exact' })
+      .select('*', { count: 'exact' })
 
     if (action && action !== 'all') {
       query = query.eq('action', action)
@@ -37,8 +37,24 @@ export async function GET(req) {
       return NextResponse.json({ error: error.message, details: error }, { status: 400 })
     }
 
+    // Fetch user details for each log
+    const enrichedLogs = await Promise.all(
+      (logs || []).map(async (log) => {
+        const { data: user } = await supabaseAdmin
+          .from('users')
+          .select('id, first_name, last_name, email, role')
+          .eq('id', log.user_id)
+          .single()
+
+        return {
+          ...log,
+          user: user || { id: log.user_id, first_name: null, last_name: null, email: null, role: null }
+        }
+      })
+    )
+
     return NextResponse.json({
-      logs: logs || [],
+      logs: enrichedLogs || [],
       count: count || 0,
       page,
       limit,
