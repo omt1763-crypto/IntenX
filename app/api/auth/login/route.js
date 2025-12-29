@@ -35,6 +35,21 @@ export async function POST(req) {
 
     console.log('[Login] Auth successful, user ID:', data.user?.id)
 
+    // Check if email is confirmed
+    if (!data.user.email_confirmed_at) {
+      console.log('[Login] Email not confirmed for user:', email)
+      return NextResponse.json(
+        { 
+          error: 'Please confirm your email before logging in. Check your inbox for the verification link.',
+          needsEmailVerification: true,
+          email: email,
+        },
+        { status: 403 }
+      )
+    }
+
+    console.log('[Login] Email confirmed for user:', email)
+
     // Fetch user profile to check role
     const { data: userProfiles, error: profileError } = await supabaseAdmin
       .from('users')

@@ -48,6 +48,8 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [emailNotVerified, setEmailNotVerified] = useState(false)
+  const [unverifiedEmail, setUnverifiedEmail] = useState('')
   const router = useRouter()
   const { login } = useAuth()
 
@@ -58,6 +60,7 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault()
     setError('')
+    setEmailNotVerified(false)
     setLoading(true)
 
     if (!email || !password) {
@@ -84,7 +87,16 @@ export default function Login() {
         router.push('/business/dashboard')
       }
     } catch (err) {
-      setError(err.message || 'Failed to login')
+      const errorMsg = err.message || 'Failed to login'
+      
+      // Check if error is about email verification
+      if (errorMsg.includes('confirm your email')) {
+        setEmailNotVerified(true)
+        setUnverifiedEmail(email)
+        setError('')
+      } else {
+        setError(errorMsg)
+      }
       setLoading(false)
     }
   }
@@ -242,6 +254,23 @@ export default function Login() {
             {error && (
               <div className="p-2.5 sm:p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm">
                 {error}
+              </div>
+            )}
+
+            {/* Email Not Verified Message */}
+            {emailNotVerified && (
+              <div className="p-3 sm:p-4 rounded-lg bg-amber-50 border border-amber-200">
+                <h4 className="font-semibold text-amber-900 mb-2 text-xs sm:text-sm">Email Not Verified</h4>
+                <p className="text-amber-800 text-xs sm:text-sm mb-3">
+                  Please confirm your email before logging in. Check your inbox for the verification link.
+                </p>
+                <Link 
+                  href={`/auth/verify-email-pending?email=${encodeURIComponent(unverifiedEmail)}`}
+                  className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-4 rounded-lg transition text-xs sm:text-sm"
+                >
+                  Go to Verification Page
+                  <ArrowRight className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+                </Link>
               </div>
             )}
 
