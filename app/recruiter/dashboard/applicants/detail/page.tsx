@@ -45,13 +45,14 @@ export default function ApplicantDetailPage() {
     }
   }, [applicantId, isHydrated, mounted])
 
-  // Redirect to login ONLY if auth is complete and user is not authenticated AND we've tried to load but got no data
+  // Redirect to login ONLY if we're 100% sure user is not authenticated
+  // If authUser exists, user is authenticated even if isAuthenticated flag is temporarily false
   useEffect(() => {
-    if (mounted && isHydrated && !isAuthenticated && !loading && !interview && noInterviewFound) {
-      console.log('[ApplicantDetail] Not authenticated and no data available, redirecting to login')
+    if (mounted && isHydrated && !authUser && !loading && !interview && noInterviewFound) {
+      console.log('[ApplicantDetail] No authUser and no data available, redirecting to login')
       router.push('/auth/login')
     }
-  }, [isHydrated, isAuthenticated, mounted, loading, interview, noInterviewFound])
+  }, [isHydrated, authUser, mounted, loading, interview, noInterviewFound])
 
   const loadInterviewData = async () => {
     try {

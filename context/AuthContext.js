@@ -143,11 +143,20 @@ export function AuthProvider({ children }) {
             clearAuthState()
           } else {
             // For INITIAL_SESSION and other events, keep cached session if available
-            if (!user && !session) {
+            // Check localStorage directly in case React state hasn't updated yet
+            const savedAuth = loadAuthState()
+            if (!savedAuth?.user) {
               console.log('[Auth] No current session and no cached session')
               setIsAuthenticated(false)
             } else {
-              console.log('[Auth] Keeping cached session for:', user?.email)
+              console.log('[Auth] Keeping cached session for:', savedAuth.user?.email)
+              // Ensure state is set from cache if it isn't already
+              if (!user) {
+                setUser(savedAuth.user)
+                setSession(savedAuth.session)
+                setRole(savedAuth.role)
+                setIsAuthenticated(true)
+              }
             }
           }
         }

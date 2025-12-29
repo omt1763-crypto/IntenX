@@ -53,9 +53,10 @@ export default function BusinessApplicantsPage() {
   }, [])
 
   // Redirect to login ONLY if we're 100% sure user is not authenticated
-  // Prevent redirect loops by checking if we already attempted
+  // Use authUser as the source of truth - if authUser exists, they're logged in
+  // Don't redirect if we have cached auth data in localStorage
   useEffect(() => {
-    if (mounted && isHydrated && !isAuthenticated && !redirectAttempted && !authUser) {
+    if (mounted && isHydrated && !authUser && !redirectAttempted) {
       // Extra safety check: if there's any auth data in localStorage, don't redirect
       const savedAuth = typeof window !== 'undefined' ? localStorage.getItem('authState') : null
       if (!savedAuth) {
@@ -66,14 +67,14 @@ export default function BusinessApplicantsPage() {
         console.log('[BusinessApplicants] Auth data exists in localStorage, not redirecting')
       }
     }
-  }, [isHydrated, isAuthenticated, mounted, redirectAttempted, authUser])
+  }, [isHydrated, mounted, redirectAttempted, authUser])
 
-  // Load applicants after auth is verified
+  // Load applicants after we have a userId (authUser exists)
   useEffect(() => {
-    if (userId && isAuthenticated && isHydrated && mounted) {
+    if (userId && mounted) {
       loadApplicants()
     }
-  }, [userId, isAuthenticated, isHydrated, mounted])
+  }, [userId, mounted])
 
   const loadApplicants = async () => {
     try {
