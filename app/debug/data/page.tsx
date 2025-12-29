@@ -48,7 +48,12 @@ export default function AdminDebugPage() {
   const [loading, setLoading] = useState(false)
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
   const [selectAll, setSelectAll] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'jobs' | 'applications' | 'interviews' | 'subscriptions' | 'control'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'jobs' | 'applications' | 'interviews' | 'subscriptions' | 'logs' | 'control'>('overview')
+  const [activityLogs, setActivityLogs] = useState<any[]>([])
+  const [filterAction, setFilterAction] = useState('all')
+  const [filterLogUser, setFilterLogUser] = useState('all')
+  const [logPage, setLogPage] = useState(1)
+  const [logTotalCount, setLogTotalCount] = useState(0)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [newUser, setNewUser] = useState({ email: '', full_name: '', role: 'candidate' as 'recruiter' | 'candidate' | 'business' })
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -151,6 +156,31 @@ export default function AdminDebugPage() {
       console.error('[AdminDebug] Failed to load data:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchActivityLogs = async (pageNum = 1) => {
+    try {
+      const params = new URLSearchParams({
+        page: pageNum,
+        limit: '50',
+      })
+
+      if (filterAction !== 'all') {
+        params.append('action', filterAction)
+      }
+      if (filterLogUser !== 'all') {
+        params.append('userId', filterLogUser)
+      }
+
+      const response = await fetch(`/api/debug/activity-logs?${params}`)
+      const data = await response.json()
+
+      setActivityLogs(data.logs || [])
+      setLogTotalCount(data.count || 0)
+      setLogPage(pageNum)
+    } catch (error) {
+      console.error('Error fetching activity logs:', error)
     }
   }
 
@@ -319,13 +349,19 @@ export default function AdminDebugPage() {
             { id: 'jobs', label: 'Jobs', icon: Briefcase },
             { id: 'applications', label: 'Applications', icon: MessageSquare },
             { id: 'interviews', label: 'Interviews', icon: BarChart3 },
+            { id: 'logs', label: 'Activity Logs', icon: Activity },
             { id: 'control', label: 'Control', icon: Settings }
           ].map(item => {
             const Icon = item.icon
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id as any)}
+                onClick={() => {
+                  setActiveTab(item.id as any)
+                  if (item.id === 'logs') {
+                    fetchActivityLogs(1)
+                  }
+                }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
                   activeTab === item.id
                     ? 'bg-blue-100 text-blue-600'
@@ -1015,6 +1051,138 @@ export default function AdminDebugPage() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* Activity Logs Tab */}
+        {activeTab === 'logs' && (
+          <div className="space-y-6">
+            {/* Filters */}
+            <div className="bg-white rounded-lg shadow p-4">
+              <div className="flex gap-4 items-end flex-wrap">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Action</label>
+                  <select
+                    value={filterAction}
+                    onChange={(e) => {
+                      setFilterAction(e.target.value)
+                      fetchActivityLogs(1)
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="all">All Actions</option>
+                    <option value="signup">Signup</option>
+                    <option value="login">Login</option>
+                    <option value="interview_start">Interview Start</option>
+                    <option value="interview_complete">Interview Complete</option>
+                    <option value="job_create">Job Created</option>
+                    <option value="job_apply">Job Applied</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">User</label>
+                  <select
+                    value={filterLogUser}
+                    onChange={(e) => {
+                      setFilterLogUser(e.target.value)
+                      fetchActivityLogs(1)
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="all">All Users</option>
+                    {users.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.full_name} ({user.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setFilterAction('all')
+                    setFilterLogUser('all')
+                    fetchActivityLogs(1)
+                  }}
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+
+            {/* Logs Table */}
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              {activityLogs.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Timestamp</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">User</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Action</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Description</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">IP</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {activityLogs.map((log) => (
+                        <tr key={log.id} className="hover:bg-gray-50 transition">
+                          <td className="px-6 py-4 text-sm text-gray-900">
+                            {new Date(log.created_at).toLocaleString()}
+                          </td>
+                          <td className="px-6 py-4 text-sm">
+                            <div className="font-semibold text-gray-900">
+                              {log.user?.first_name} {log.user?.last_name}
+                            </div>
+                            <div className="text-xs text-gray-500">{log.user?.email}</div>
+                          </td>
+                          <td className="px-6 py-4 text-sm">
+                            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
+                              {log.action.replace(/_/g, ' ').toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600">{log.description}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600">{log.ip_address || 'N/A'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-8 text-center">
+                  <Activity className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-600">No activity logs found</p>
+                </div>
+              )}
+            </div>
+
+            {/* Pagination */}
+            {Math.ceil((logTotalCount || 0) / 50) > 1 && (
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-600">
+                  Total: {logTotalCount} logs
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => fetchActivityLogs(logPage - 1)}
+                    disabled={logPage === 1}
+                    className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 hover:bg-gray-50"
+                  >
+                    Previous
+                  </button>
+                  <div className="px-4 py-2">Page {logPage}</div>
+                  <button
+                    onClick={() => fetchActivityLogs(logPage + 1)}
+                    disabled={logPage === Math.ceil((logTotalCount || 0) / 50)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 hover:bg-gray-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
