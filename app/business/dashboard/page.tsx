@@ -56,10 +56,10 @@ export default function BusinessDashboard() {
     }
   }, [authLoading, userId, isAuthenticated, authUser, router])
 
-  // Redirect if user is not a business
+  // Redirect if user is not a business or company
   useEffect(() => {
-    if (!authLoading && role && role !== 'business') {
-      console.log('[BusinessDashboard] User role is', role, ', not business. Redirecting to', role === 'recruiter' ? '/recruiter/dashboard' : '/auth/login')
+    if (!authLoading && role && role !== 'business' && role !== 'company') {
+      console.log('[BusinessDashboard] User role is', role, ', not business/company. Redirecting to', role === 'recruiter' ? '/recruiter/dashboard' : '/auth/login')
       router.replace(role === 'recruiter' ? '/recruiter/dashboard' : '/auth/login')
     }
   }, [authLoading, role, router])
