@@ -235,7 +235,12 @@ export default function ApplicantDetailPage() {
       </main>
     )
   }
-  if (!isAuthenticated) return null
+  
+  // Only redirect to login if hydration is complete AND we're not authenticated AND we don't have data
+  if (isHydrated && !isAuthenticated && !interview && !loading) {
+    console.log('[ApplicantDetail] Auth failed and no data loaded, redirecting to login')
+    return null
+  }
 
   return (
     <main className="flex h-screen bg-slate-50 overflow-hidden">
