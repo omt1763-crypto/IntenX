@@ -38,21 +38,21 @@ export default function ApplicantDetailPage() {
     console.log('[ApplicantDetail] Mounted with params:', params)
   }, [])
 
-  // Redirect to login if auth is hydrated and user is not authenticated
+  // Load interview data as soon as we have applicantId and mounted (don't wait for auth)
   useEffect(() => {
-    if (mounted && isHydrated && !isAuthenticated) {
-      console.log('[ApplicantDetail] Not authenticated, redirecting to login')
-      router.push('/auth/login')
-    }
-  }, [isHydrated, isAuthenticated, mounted])
-
-  // Load interview data after auth is verified
-  useEffect(() => {
-    if (applicantId && userId && isAuthenticated && isHydrated && mounted) {
-      console.log('[ApplicantDetail] Loading interview for applicantId:', applicantId)
+    if (applicantId && mounted && isHydrated) {
+      console.log('[ApplicantDetail] Loading interview data...')
       loadInterviewData()
     }
-  }, [applicantId, userId, isAuthenticated, isHydrated, mounted])
+  }, [applicantId, isHydrated, mounted])
+
+  // Redirect to login ONLY if auth is complete and user is not authenticated AND we've tried to load but got no data
+  useEffect(() => {
+    if (mounted && isHydrated && !isAuthenticated && !loading && !interview && noInterviewFound) {
+      console.log('[ApplicantDetail] Not authenticated and no data available, redirecting to login')
+      router.push('/auth/login')
+    }
+  }, [isHydrated, isAuthenticated, mounted, loading, interview, noInterviewFound])
 
   const loadInterviewData = async () => {
     try {
