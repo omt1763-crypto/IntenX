@@ -58,7 +58,7 @@ export default function RecruiterProfilePage() {
       supabase
         .from('recruiter_stats')
         .select('*')
-        .eq('recruiter_id', userId)
+        .eq('id', userId)
         .single()
         .then(({ data, error }) => {
           if (!error && data) {

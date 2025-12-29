@@ -44,6 +44,7 @@ export default function BusinessApplicantsPage() {
   const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
+  const [redirectAttempted, setRedirectAttempted] = useState(false)
 
   const userId = authUser?.id
 
@@ -51,13 +52,21 @@ export default function BusinessApplicantsPage() {
     setMounted(true)
   }, [])
 
-  // Redirect to login if auth is hydrated and user is not authenticated
+  // Redirect to login ONLY if we're 100% sure user is not authenticated
+  // Prevent redirect loops by checking if we already attempted
   useEffect(() => {
-    if (mounted && isHydrated && !isAuthenticated) {
-      console.log('[BusinessApplicants] Not authenticated, redirecting to login')
-      router.push('/auth/login')
+    if (mounted && isHydrated && !isAuthenticated && !redirectAttempted && !authUser) {
+      // Extra safety check: if there's any auth data in localStorage, don't redirect
+      const savedAuth = typeof window !== 'undefined' ? localStorage.getItem('authState') : null
+      if (!savedAuth) {
+        console.log('[BusinessApplicants] No authentication found, redirecting to login')
+        setRedirectAttempted(true)
+        router.push('/auth/login')
+      } else {
+        console.log('[BusinessApplicants] Auth data exists in localStorage, not redirecting')
+      }
     }
-  }, [isHydrated, isAuthenticated, mounted])
+  }, [isHydrated, isAuthenticated, mounted, redirectAttempted, authUser])
 
   // Load applicants after auth is verified
   useEffect(() => {
