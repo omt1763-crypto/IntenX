@@ -3,6 +3,12 @@ import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET(req) {
   try {
+    // Verify admin access via debug password
+    const debugPassword = req.headers.get('x-debug-password')
+    if (debugPassword !== process.env.DEBUG_PASSWORD) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get('page')) || 1
     const limit = parseInt(searchParams.get('limit')) || 50
@@ -28,18 +34,18 @@ export async function GET(req) {
 
     if (error) {
       console.error('[ActivityLogs API] Error:', error)
-      return NextResponse.json({ error: error.message }, { status: 400 })
+      return NextResponse.json({ error: error.message, details: error }, { status: 400 })
     }
 
     return NextResponse.json({
-      logs,
-      count,
+      logs: logs || [],
+      count: count || 0,
       page,
       limit,
       totalPages: Math.ceil((count || 0) / limit),
     })
   } catch (error) {
-    console.error('[ActivityLogs API] Exception:', error)
+    console.error('[ActivityLogs API] Exception:', error.message, error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

@@ -173,8 +173,17 @@ export default function AdminDebugPage() {
         params.append('userId', filterLogUser)
       }
 
-      const response = await fetch(`/api/debug/activity-logs?${params}`)
+      const response = await fetch(`/api/debug/activity-logs?${params}`, {
+        headers: {
+          'x-debug-password': 'admin@123',
+        }
+      })
       const data = await response.json()
+
+      if (!response.ok) {
+        console.error('Error fetching activity logs:', data.error)
+        return
+      }
 
       setActivityLogs(data.logs || [])
       setLogTotalCount(data.count || 0)
