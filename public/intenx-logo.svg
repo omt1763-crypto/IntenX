@@ -1,0 +1,13 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Top Left Quarter Circle -->
+  <path d="M 50 50 Q 50 80 80 80 L 80 50 Q 80 50 50 50 Z" fill="#6366F1"/>
+  
+  <!-- Top Right Quarter Circle -->
+  <path d="M 120 50 L 120 80 Q 150 80 150 50 Q 120 50 120 50 Z" fill="#6366F1"/>
+  
+  <!-- Bottom Left Quarter Circle -->
+  <path d="M 50 120 Q 50 150 80 150 L 80 120 Q 50 120 50 120 Z" fill="#6366F1"/>
+  
+  <!-- Bottom Right Quarter Circle -->
+  <path d="M 120 120 L 120 150 Q 150 150 150 120 Q 120 120 120 120 Z" fill="#6366F1"/>
+</svg>

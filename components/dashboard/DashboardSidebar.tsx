@@ -1,7 +1,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { 
-  Diamond, 
   LayoutDashboard, 
   Zap, 
   TrendingUp, 
@@ -81,8 +81,14 @@ const DashboardSidebar = ({ userType }: DashboardSidebarProps) => {
       <div className="p-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-white/20 to-white/10 flex items-center justify-center backdrop-blur-sm border border-white/20">
-            <Diamond className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 flex items-center justify-center">
+            <Image 
+              src="/intenx-logo.svg" 
+              alt="IntenX" 
+              width={40} 
+              height={40}
+              className="w-10 h-10"
+            />
           </div>
           {!collapsed && (
             <div>
