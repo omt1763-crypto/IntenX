@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { validateEmailForSignup } from '@/lib/email-validation'
+import { logActivity } from '@/lib/activity-logger'
 
 export async function POST(req) {
   try {
@@ -124,6 +125,23 @@ export async function POST(req) {
         { status: 500 }
       )
     }    console.log('[Signup] User profile created successfully')
+
+    // Log signup activity
+    await logActivity({
+      userId: userId,
+      action: 'signup',
+      entityType: 'user',
+      entityId: userId,
+      description: `New user signed up as ${role}`,
+      metadata: {
+        email: email,
+        firstName: firstName,
+        lastName: lastName,
+        role: role,
+      },
+      ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
+      userAgent: req.headers.get('user-agent'),
+    })
 
     // Step 3: Supabase automatically sends verification email
     console.log('[Signup] Signup completed successfully for:', email)

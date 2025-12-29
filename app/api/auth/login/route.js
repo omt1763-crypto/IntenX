@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase, supabaseAdmin } from '@/lib/supabase'
+import { logActivity, updateLastLogin } from '@/lib/activity-logger'
 
 export async function POST(req) {
   try {
@@ -99,13 +100,25 @@ export async function POST(req) {
 
     console.log('[Login] User profile found, role:', userProfile.role)
 
-    // Note: Role matching is optional - proceed with login regardless
-    // if (userProfile.role !== role) {
-    //   return NextResponse.json(
-    //     { error: `This account is registered as a ${userProfile.role}` },
-    //     { status: 403 }
-    //   )
-    // }
+    // Log the login activity
+    await logActivity({
+      userId: data.user.id,
+      action: 'login',
+      entityType: 'user',
+      entityId: data.user.id,
+      description: `User logged in as ${userProfile.role}`,
+      metadata: {
+        email: data.user.email,
+        role: userProfile.role,
+      },
+      ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
+      userAgent: req.headers.get('user-agent'),
+    })
+
+    // Update last login timestamp
+    await updateLastLogin(data.user.id)
+
+    console.log('[Login] Login activity logged')
 
     return NextResponse.json(
       {
