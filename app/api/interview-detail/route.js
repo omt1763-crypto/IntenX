@@ -43,11 +43,17 @@ export async function GET(req) {
     console.log('[InterviewDetail API] Applicant found, looking for interview_id:', applicantData.interview_id)
 
     // Get interview data using interview_id from applicant record
-    const { data: interviewData, error: interviewError } = await supabaseAdmin
+    let interviewData = null
+    let interviewError = null
+    
+    const primaryQuery = await supabaseAdmin
       .from('interviews')
       .select('*')
       .eq('id', applicantData.interview_id)
       .single()
+    
+    interviewData = primaryQuery.data
+    interviewError = primaryQuery.error
 
     if (interviewError || !interviewData) {
       console.error('[InterviewDetail API] Error fetching interview:', interviewError?.message || 'Not found')
