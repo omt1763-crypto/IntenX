@@ -162,7 +162,7 @@ export default function AdminDebugPage() {
   const fetchActivityLogs = async (pageNum = 1) => {
     try {
       const params = new URLSearchParams({
-        page: pageNum,
+        page: pageNum.toString(),
         limit: '50',
       })
 
