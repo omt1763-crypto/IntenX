@@ -71,17 +71,19 @@ export default function ApplicantsPage() {
   }, [isHydrated, mounted, redirectAttempted, authUser])
 
   // Load applicants after we have a userId (authUser exists)
+  // Re-load when filterJobId changes
   useEffect(() => {
     if (userId && mounted) {
       loadApplicants()
     }
-  }, [userId, mounted])
+  }, [userId, mounted, filterJobId])
 
   const loadApplicants = async () => {
     try {
       if (!userId) return
 
       console.log('[ApplicantsPage] Loading applicants for recruiter:', userId)
+      console.log('[ApplicantsPage] Current filterJobId:', filterJobId)
       const response = await fetch(`/api/get-applicants?recruiterId=${userId}`)
       const result = await response.json()
 
@@ -96,6 +98,7 @@ export default function ApplicantsPage() {
         
         // If filtering by jobId, expand only that job
         if (filterJobId) {
+          console.log('[ApplicantsPage] Filtering to show only jobId:', filterJobId)
           setExpandedJobs(new Set([filterJobId]))
         } else {
           // Default: expand all jobs
@@ -235,7 +238,8 @@ export default function ApplicantsPage() {
       </main>
     )
   }
-  if (!isAuthenticated) return null
+  // Use authUser instead of isAuthenticated flag
+  if (!authUser) return null
 
   const statusStats = getStatusStats()
   const filteredGroups = getFilteredJobGroups()

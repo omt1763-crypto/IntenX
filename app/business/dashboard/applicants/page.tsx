@@ -240,7 +240,8 @@ export default function BusinessApplicantsPage() {
       </main>
     )
   }
-  if (!isAuthenticated) return null
+  // Use authUser instead of isAuthenticated flag
+  if (!authUser) return null
 
   const statusStats = getStatusStats()
   const filteredGroups = getFilteredJobGroups()
