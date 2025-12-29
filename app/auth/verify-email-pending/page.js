@@ -1,25 +1,73 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { Mail, CheckCircle2, ArrowLeft } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Mail, CheckCircle2, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 export default function VerifyEmailPendingPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
+  const [resending, setResending] = useState(false)
+  const [resendStatus, setResendStatus] = useState('idle') // idle, sending, success, error
+  const [resendMessage, setResendMessage] = useState('')
 
   useEffect(() => {
     // Get email from query or localStorage
     const urlParams = new URLSearchParams(window.location.search)
     const emailParam = urlParams.get('email')
     if (emailParam) {
-      setEmail(emailParam)
+      setEmail(decodeURIComponent(emailParam))
       localStorage.setItem('pendingVerificationEmail', emailParam)
     } else {
       const stored = localStorage.getItem('pendingVerificationEmail')
       if (stored) setEmail(stored)
     }
   }, [])
+
+  const handleResendEmail = async () => {
+    if (!email) {
+      setResendStatus('error')
+      setResendMessage('Email address not found. Please sign up again.')
+      return
+    }
+
+    setResending(true)
+    setResendStatus('sending')
+    setResendMessage('')
+
+    try {
+      console.log('[VerifyEmailPending] Resending verification email to:', email)
+
+      // Use resendIdentifierToken to resend the verification email
+      const { error } = await supabase.auth.resendIdentifierToken(email, 'signup')
+
+      if (error) {
+        console.error('[VerifyEmailPending] Resend error:', error)
+        setResendStatus('error')
+        setResendMessage(error.message || 'Failed to resend email. Please try again.')
+        setResending(false)
+        return
+      }
+
+      console.log('[VerifyEmailPending] Verification email resent successfully')
+      setResendStatus('success')
+      setResendMessage('Verification email sent! Check your inbox and spam folder.')
+      
+      // Reset status after 5 seconds
+      setTimeout(() => {
+        setResendStatus('idle')
+        setResendMessage('')
+      }, 5000)
+    } catch (err) {
+      console.error('[VerifyEmailPending] Error:', err)
+      setResendStatus('error')
+      setResendMessage(err.message || 'Failed to resend email. Please try again.')
+    }
+
+    setResending(false)
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center px-4">
@@ -60,11 +108,45 @@ export default function VerifyEmailPendingPage() {
             </ol>
           </div>
 
+          {/* Status Messages */}
+          {resendStatus === 'success' && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg mb-4 flex gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <p className="text-green-700 text-sm">{resendMessage}</p>
+            </div>
+          )}
+
+          {resendStatus === 'error' && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg mb-4 flex gap-2">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-red-700 text-sm">{resendMessage}</p>
+            </div>
+          )}
+
           <div className="space-y-3 mb-6">
             <p className="text-xs text-slate-500">
-              Didn't receive an email? Check your spam folder or try signing up again.
+              Didn't receive an email? Check your spam folder or resend below.
             </p>
           </div>
+
+          {/* Resend Button */}
+          <button
+            onClick={handleResendEmail}
+            disabled={resending}
+            className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-semibold mb-3 flex items-center justify-center gap-2"
+          >
+            {resending ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                Sending...
+              </>
+            ) : (
+              <>
+                <Mail className="w-4 h-4" />
+                Resend Verification Email
+              </>
+            )}
+          </button>
 
           <button
             onClick={() => router.push('/auth/login')}
