@@ -77,19 +77,23 @@ export async function POST(req) {
     const userId = authData.user.id
     console.log('[Signup] Auth user created with ID:', userId)
 
-    // Step 1.5: Send verification email using Supabase admin API
+    // Step 1.5: Send verification email
+    // Use the same method as resend - it works because it uses custom SMTP
     console.log('[Signup] Sending verification email to:', email)
     try {
-      const { error: emailError } = await supabaseAdmin.auth.admin.sendRawUserConfirmationEmail(userId)
+      const { error: emailError } = await supabaseAdmin.auth.resend({
+        type: 'signup',
+        email: email,
+      })
       if (emailError) {
         console.error('[Signup] Warning: Failed to send verification email:', emailError)
-        // Don't fail signup if email fails - user can resend
+        // Don't fail signup if email fails - user can resend later
       } else {
         console.log('[Signup] Verification email sent successfully')
       }
     } catch (emailSendError) {
       console.error('[Signup] Exception sending verification email:', emailSendError)
-      // Don't fail signup if email fails - user can resend
+      // Don't fail signup if email fails - user can resend later
     }
 
     // Step 2: Create user profile in users table
