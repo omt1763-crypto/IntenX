@@ -40,8 +40,11 @@ export default function VerifyEmailPendingPage() {
     try {
       console.log('[VerifyEmailPending] Resending verification email to:', email)
 
-      // Use resendIdentifierToken to resend the verification email
-      const { error } = await supabase.auth.resendIdentifierToken(email, 'signup')
+      // Use the correct Supabase method to resend email
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+      })
 
       if (error) {
         console.error('[VerifyEmailPending] Resend error:', error)

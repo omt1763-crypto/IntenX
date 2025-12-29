@@ -77,6 +77,21 @@ export async function POST(req) {
     const userId = authData.user.id
     console.log('[Signup] Auth user created with ID:', userId)
 
+    // Step 1.5: Send verification email using Supabase admin API
+    console.log('[Signup] Sending verification email to:', email)
+    try {
+      const { error: emailError } = await supabaseAdmin.auth.admin.sendRawUserConfirmationEmail(userId)
+      if (emailError) {
+        console.error('[Signup] Warning: Failed to send verification email:', emailError)
+        // Don't fail signup if email fails - user can resend
+      } else {
+        console.log('[Signup] Verification email sent successfully')
+      }
+    } catch (emailSendError) {
+      console.error('[Signup] Exception sending verification email:', emailSendError)
+      // Don't fail signup if email fails - user can resend
+    }
+
     // Step 2: Create user profile in users table
     // Use a placeholder for password_hash since it's managed by Supabase Auth
     console.log('[Signup] Creating user profile in database...')
