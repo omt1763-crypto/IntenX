@@ -85,73 +85,127 @@ export default function ApplicantDetailPage() {
   }
 
   const generateAssessment = (data: Interview) => {
-    // Calculate scores based on conversation and skills
-    const conversationLength = data.conversation?.length || 0
+    // Improved scoring based on quality, not just quantity
+    const userMessages = data.conversation?.filter(m => m.role === 'user') || []
     const skillsCount = data.skills?.length || 0
-    const duration = data.duration || 0
 
-    // Simple scoring logic based on actual interview data
-    let relevantAccomplishments = 0
+    console.log('[Assessment] Analyzing', userMessages.length, 'user messages with', skillsCount, 'skills')
+
     let driveInitiative = 0
+    let relevantAccomplishments = 0
     let problemSolving = 0
 
-    // Analyze conversation for engagement - count user messages
-    const userMessages = data.conversation?.filter(m => m.role === 'user') || []
-    const aiMessages = data.conversation?.filter(m => m.role === 'ai' || m.role === 'assistant') || []
+    // ═══════════════════════════════════════════════════════════════════════
+    // 1️⃣ DRIVE & INITIATIVE (0-60 pts)
+    // Measures: Response completion, follow-ups, consistency
+    // ═══════════════════════════════════════════════════════════════════════
     
-    console.log('[Assessment] User messages:', userMessages.length, 'AI messages:', aiMessages.length)
-
-    // Drive & Initiative: based on how many times candidate engaged
-    if (userMessages.length > 8) {
-      driveInitiative = 80
-    } else if (userMessages.length > 5) {
-      driveInitiative = 60
-    } else if (userMessages.length > 2) {
-      driveInitiative = 40
-    } else if (userMessages.length > 0) {
-      driveInitiative = 20
+    const totalQuestions = data.conversation?.filter(m => m.role === 'ai' || m.role === 'assistant')?.length || 1
+    const responseCompletionRate = (userMessages.length / Math.max(totalQuestions, 1)) * 100
+    
+    // Response completion rate: how many questions did they answer?
+    if (responseCompletionRate >= 90) {
+      driveInitiative += 20  // Completed all/almost all questions
+    } else if (responseCompletionRate >= 70) {
+      driveInitiative += 15
+    } else if (responseCompletionRate >= 50) {
+      driveInitiative += 10
     }
 
-    // Relevant Accomplishments: based on response length and detail
-    const avgResponseLength = userMessages.reduce((sum, msg) => sum + (msg.content?.length || 0), 0) / Math.max(userMessages.length, 1)
-    if (avgResponseLength > 200) {
-      relevantAccomplishments = 70
-    } else if (avgResponseLength > 100) {
-      relevantAccomplishments = 50
-    } else if (avgResponseLength > 50) {
-      relevantAccomplishments = 30
-    } else if (userMessages.length > 0) {
-      relevantAccomplishments = 15
+    // Follow-up questions: did candidate ask clarifying questions?
+    const askedFollowUps = userMessages.some(m => 
+      m.content?.toLowerCase().includes('?') && 
+      m.content?.toLowerCase().includes('what') || 
+      m.content?.toLowerCase().includes('how')
+    ) ? 20 : 0
+    driveInitiative += askedFollowUps
+
+    // Consistency: do responses maintain quality throughout?
+    const avgLength = userMessages.reduce((sum, msg) => sum + (msg.content?.length || 0), 0) / Math.max(userMessages.length, 1)
+    const responses = userMessages.map(m => m.content?.length || 0)
+    const consistency = responses.length > 0 && responses.every(len => len > 50) ? 20 : 10
+    driveInitiative += consistency
+
+    driveInitiative = Math.min(60, driveInitiative)
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 2️⃣ RELEVANT ACCOMPLISHMENTS / EVIDENCE SCORE (0-80 pts)
+    // Measures: Specificity, real examples, ownership language
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    let evidenceScore = 0
+
+    userMessages.forEach(msg => {
+      const content = msg.content?.toLowerCase() || ''
+      
+      // Specificity: numbers, metrics, tools mentioned
+      const hasNumbers = /\d+/.test(content) ? 5 : 0
+      const hasMetrics = ['improve', 'increase', 'decrease', 'reduce', '%', 'faster', 'scale'].some(word => content.includes(word)) ? 5 : 0
+      const hasTools = ['python', 'javascript', 'react', 'node', 'sql', 'api', 'database', 'framework', 'library'].some(tool => content.includes(tool)) ? 5 : 0
+      
+      evidenceScore += hasNumbers + hasMetrics + hasTools
+
+      // Real examples: ownership language
+      const hasOwnershipLanguage = ['i built', 'i created', 'i led', 'i designed', 'i developed', 'i implemented', 'i decided', 'i improved'].some(phrase => content.includes(phrase)) ? 10 : 0
+      evidenceScore += hasOwnershipLanguage
+
+      // Concrete outcomes
+      const hasOutcomes = ['result', 'achieved', 'completed', 'delivered', 'impact', 'outcome', 'delivered'].some(word => content.includes(word)) ? 5 : 0
+      evidenceScore += hasOutcomes
+    })
+
+    relevantAccomplishments = Math.min(80, evidenceScore)
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 3️⃣ PROBLEM SOLVING → REASONING SCORE (0-90 pts)
+    // Measures: Reasoning steps, trade-offs, problem breakdown
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    let reasoningScore = 0
+
+    userMessages.forEach(msg => {
+      const content = msg.content?.toLowerCase() || ''
+      
+      // Clear approach: step-by-step thinking
+      const hasApproach = ['first', 'then', 'next', 'step', 'process', 'approach', 'method'].some(word => content.includes(word)) ? 30 : 0
+      reasoningScore += hasApproach
+
+      // Constraints considered: trade-offs, limitations
+      const hasConstraints = ['trade-off', 'tradeoff', 'consider', 'limitation', 'constraint', 'challenge', 'however', 'but', 'although'].some(word => content.includes(word)) ? 30 : 0
+      reasoningScore += hasConstraints
+
+      // Outcome evaluated: reflection, lessons learned
+      const hasOutcomeEval = ['learned', 'realized', 'discovered', 'improved', 'better', 'success', 'failed', 'lesson', 'outcome'].some(word => content.includes(word)) ? 30 : 0
+      reasoningScore += hasOutcomeEval
+    })
+
+    // Bonus: explicit skill mentions show technical depth
+    if (skillsCount > 3) {
+      reasoningScore += Math.min(30, skillsCount * 5)
     }
 
-    // Problem Solving: based on skills extracted
-    if (skillsCount > 5) {
-      problemSolving = 75
-    } else if (skillsCount > 3) {
-      problemSolving = 55
-    } else if (skillsCount > 1) {
-      problemSolving = 35
-    } else if (skillsCount > 0) {
-      problemSolving = 20
-    }
+    problemSolving = Math.min(90, reasoningScore)
+
+    console.log('[Assessment] Scores:', { driveInitiative, relevantAccomplishments, problemSolving })
 
     // Calculate overall job suitability
     const jobSuitability = Math.round(
       (relevantAccomplishments + driveInitiative + problemSolving) / 3
     )
 
+    const summary = generateSummary(userMessages.length, data)
+
     setAssessment({
       jobSuitability: jobSuitability,
       relevantAccomplishments,
       driveInitiative,
       problemSolving,
-      cultureScopes: 30,
-      leadershipInfluence: 25,
+      cultureScopes: 60,
+      leadershipInfluence: 55,
       userMessageCount: userMessages.length,
       skillsCount: skillsCount,
-      avgResponseLength: Math.round(avgResponseLength),
-      summary: generateSummary(userMessages.length, data),
-      recommendation: jobSuitability > 50 ? 'Consider for Interview' : 'Do Not Hire'
+      summary: summary,
+      recommendation: jobSuitability > 60 ? 'Consider for Interview' : 'Do Not Hire'
     })
   }
 
