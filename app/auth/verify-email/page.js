@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -9,9 +9,6 @@ import { supabase } from '@/lib/supabase'
 
 export default function VerifyEmail() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const token = searchParams.get('token')
-  const type = searchParams.get('type') // 'email' for email verification
   const [status, setStatus] = useState('verifying') // verifying, success, error
   const [message, setMessage] = useState('Verifying your email...')
   const [mounted, setMounted] = useState(false)
@@ -28,59 +25,65 @@ export default function VerifyEmail() {
         setStatus('verifying')
         setMessage('Verifying your email address...')
 
-        // If we have a token and type, it's a Supabase email verification link
-        if (token && type === 'email') {
-          console.log('[VerifyEmail] Processing Supabase email verification token')
-          
-          // Supabase will process the token automatically when we redirect to the callback URL
-          // Just confirm the user's email is verified in our users table
-          const { data: { user }, error } = await supabase.auth.verifyOtp({
-            token_hash: token,
-            type: 'email',
-          })
+        // Get the hash from the URL (Supabase sends tokens in fragment)
+        const hash = typeof window !== 'undefined' ? window.location.hash : ''
+        console.log('[VerifyEmail] URL hash:', hash)
 
-          if (error || !user) {
-            console.error('[VerifyEmail] Token verification error:', error)
-            setStatus('error')
-            setMessage('Invalid or expired verification link. Please try signing up again.')
-            return
-          }
+        if (hash) {
+          // Parse the hash to extract tokens
+          const params = new URLSearchParams(hash.substring(1))
+          const accessToken = params.get('access_token')
+          const type = params.get('type')
 
-          console.log('[VerifyEmail] Token verified, user:', user.id)
-          
-          // Update our users table to mark email as verified
-          try {
-            const response = await fetch('/api/auth/verify-email', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userId: user.id }),
-            })
+          console.log('[VerifyEmail] Extracted from hash - type:', type, 'has token:', !!accessToken)
 
-            const data = await response.json()
+          if (accessToken && type === 'signup') {
+            console.log('[VerifyEmail] Processing Supabase signup verification')
             
-            if (response.ok && data.success) {
-              setStatus('success')
-              setMessage('Email verified successfully! 🎉')
-              
-              // Redirect to login after 3 seconds
-              setTimeout(() => {
-                router.push('/auth/login?message=Email%20verified.%20You%20can%20now%20log%20in.')
-              }, 3000)
-            } else {
-              setStatus('success')
-              setMessage('Email verified successfully! 🎉')
-              setTimeout(() => {
-                router.push('/auth/login')
-              }, 3000)
+            // Supabase automatically creates a session with the access token in the fragment
+            // The session is already active from the hash redirect
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+            if (sessionError || !session) {
+              console.error('[VerifyEmail] Session error:', sessionError)
+              // Try to set session from the URL tokens
+              if (accessToken) {
+                const { data, error } = await supabase.auth.setSession({
+                  access_token: accessToken,
+                  refresh_token: params.get('refresh_token'),
+                })
+                
+                if (error) {
+                  throw error
+                }
+              }
             }
-          } catch (apiError) {
-            console.error('[VerifyEmail] API error marking email as verified:', apiError)
-            // Still show success since Supabase verified it
+
+            // Get current user to confirm email is verified
+            const { data: { user }, error } = await supabase.auth.getUser()
+
+            if (error || !user) {
+              console.error('[VerifyEmail] User fetch error:', error)
+              setStatus('error')
+              setMessage('Error retrieving user information. Please try signing up again.')
+              return
+            }
+
+            console.log('[VerifyEmail] User verified:', user.id, 'email verified:', user.user_metadata?.email_verified)
+            
             setStatus('success')
             setMessage('Email verified successfully! 🎉')
+            
+            // Redirect to login after 2 seconds
             setTimeout(() => {
-              router.push('/auth/login')
-            }, 3000)
+              router.push('/auth/login?message=Email%20verified.%20You%20can%20now%20log%20in.')
+            }, 2000)
+          } else if (!accessToken) {
+            setStatus('error')
+            setMessage('Invalid verification link. Please check your email for the correct link.')
+          } else {
+            setStatus('error')
+            setMessage('This link is for a different type of request. Please check your email.')
           }
         } else {
           setStatus('error')
@@ -94,7 +97,7 @@ export default function VerifyEmail() {
     }
 
     verifyEmail()
-  }, [mounted, token, type, router])
+  }, [mounted, router])
 
   if (!mounted) {
     return null
