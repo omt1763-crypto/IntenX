@@ -51,12 +51,12 @@ export async function POST(req) {
     if (checkError) {
       console.error('[Signup] Error checking existing user:', checkError)
       // Continue anyway
-    }    // Step 1: Create user in Supabase Auth (auto-confirm email for now)
+    }    // Step 1: Create user in Supabase Auth with email verification
     console.log('[Signup] Creating auth user for:', email)
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: true, // Auto-confirm email - skip verification for now
+      email_confirm: false, // Require email verification
     })
 
     if (authError) {
@@ -106,13 +106,14 @@ export async function POST(req) {
       )
     }    console.log('[Signup] User profile created successfully')
 
-    // Step 3: Email verification disabled for now - user can sign up directly
+    // Step 3: Supabase automatically sends verification email
     console.log('[Signup] Signup completed successfully for:', email)
+    console.log('[Signup] Supabase has sent verification email to:', email)
     
     return NextResponse.json({
       user: userData,
-      message: 'Account created successfully! You can now log in.',
-      redirect: '/auth/login',
+      message: 'Account created! Check your email to verify your address before logging in.',
+      redirect: '/auth/verify-email-pending?email=' + encodeURIComponent(email),
     }, { status: 201 })
   } catch (error) {
     console.error('[Signup] Unexpected error:', error)

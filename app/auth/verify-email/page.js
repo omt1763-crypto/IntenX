@@ -5,11 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { supabase } from '@/lib/supabase'
 
 export default function VerifyEmail() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const token = searchParams.get('token') || ''
+  const token = searchParams.get('token')
+  const type = searchParams.get('type') // 'email' for email verification
   const [status, setStatus] = useState('verifying') // verifying, success, error
   const [message, setMessage] = useState('Verifying your email...')
   const [mounted, setMounted] = useState(false)
@@ -19,41 +21,80 @@ export default function VerifyEmail() {
   }, [])
 
   useEffect(() => {
-    if (!token || !mounted) return
+    if (!mounted) return
 
     const verifyEmail = async () => {
       try {
         setStatus('verifying')
         setMessage('Verifying your email address...')
 
-        const response = await fetch('/api/auth/verify-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token }),
-        })
-
-        const data = await response.json()
-
-        if (response.ok && data.success) {
-          setStatus('success')
-          setMessage('Email verified successfully! 🎉')
+        // If we have a token and type, it's a Supabase email verification link
+        if (token && type === 'email') {
+          console.log('[VerifyEmail] Processing Supabase email verification token')
           
-          // Redirect to login after 3 seconds
-          setTimeout(() => {
-            router.push('/auth/login?message=Email%20verified.%20You%20can%20now%20log%20in.')
-          }, 3000)
+          // Supabase will process the token automatically when we redirect to the callback URL
+          // Just confirm the user's email is verified in our users table
+          const { data: { user }, error } = await supabase.auth.verifyOtp({
+            token_hash: token,
+            type: 'email',
+          })
+
+          if (error || !user) {
+            console.error('[VerifyEmail] Token verification error:', error)
+            setStatus('error')
+            setMessage('Invalid or expired verification link. Please try signing up again.')
+            return
+          }
+
+          console.log('[VerifyEmail] Token verified, user:', user.id)
+          
+          // Update our users table to mark email as verified
+          try {
+            const response = await fetch('/api/auth/verify-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: user.id }),
+            })
+
+            const data = await response.json()
+            
+            if (response.ok && data.success) {
+              setStatus('success')
+              setMessage('Email verified successfully! 🎉')
+              
+              // Redirect to login after 3 seconds
+              setTimeout(() => {
+                router.push('/auth/login?message=Email%20verified.%20You%20can%20now%20log%20in.')
+              }, 3000)
+            } else {
+              setStatus('success')
+              setMessage('Email verified successfully! 🎉')
+              setTimeout(() => {
+                router.push('/auth/login')
+              }, 3000)
+            }
+          } catch (apiError) {
+            console.error('[VerifyEmail] API error marking email as verified:', apiError)
+            // Still show success since Supabase verified it
+            setStatus('success')
+            setMessage('Email verified successfully! 🎉')
+            setTimeout(() => {
+              router.push('/auth/login')
+            }, 3000)
+          }
         } else {
           setStatus('error')
-          setMessage(data.message || 'Failed to verify email. The link may have expired.')
+          setMessage('Invalid verification link. Please check your email for the correct link.')
         }
       } catch (error) {
+        console.error('[VerifyEmail] Error during verification:', error)
         setStatus('error')
         setMessage('Error verifying email: ' + error.message)
       }
     }
 
     verifyEmail()
-  }, [token, mounted, router])
+  }, [mounted, token, type, router])
 
   if (!mounted) {
     return null
