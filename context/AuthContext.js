@@ -11,6 +11,7 @@ export function AuthProvider({ children }) {
   const [role, setRole] = useState(null)
   const [loading, setLoading] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isHydrated, setIsHydrated] = useState(false)
 
   // Save auth state to localStorage
   const saveAuthState = (userData, sessionData, userRole) => {
@@ -86,8 +87,13 @@ export function AuthProvider({ children }) {
           setIsAuthenticated(false)
           clearAuthState()
         }
+        
+        // Mark hydration complete after verification
+        setIsHydrated(true)
       } catch (error) {
         console.warn('[Auth] Session verification error:', error.message)
+        // Still mark as hydrated even on error so pages can proceed
+        setIsHydrated(true)
       }
     }
 
@@ -242,7 +248,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, role, loading, isAuthenticated, signup, login, logout }}>
+    <AuthContext.Provider value={{ user, session, role, loading, isAuthenticated, isHydrated, signup, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

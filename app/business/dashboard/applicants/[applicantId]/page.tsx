@@ -23,7 +23,7 @@ interface Interview {
 export default function ApplicantDetailPage() {
   const router = useRouter()
   const params = useParams()
-  const { user: authUser, isAuthenticated } = useAuth()
+  const { user: authUser, isAuthenticated, isHydrated } = useAuth()
   const [interview, setInterview] = useState<Interview | null>(null)
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
@@ -36,11 +36,23 @@ export default function ApplicantDetailPage() {
   useEffect(() => {
     setMounted(true)
     console.log('[ApplicantDetail] Mounted with params:', params)
-    if (applicantId && userId && isAuthenticated) {
+  }, [])
+
+  // Redirect to login if auth is hydrated and user is not authenticated
+  useEffect(() => {
+    if (mounted && isHydrated && !isAuthenticated) {
+      console.log('[ApplicantDetail] Not authenticated, redirecting to login')
+      router.push('/auth/login')
+    }
+  }, [isHydrated, isAuthenticated, mounted])
+
+  // Load interview data after auth is verified
+  useEffect(() => {
+    if (applicantId && userId && isAuthenticated && isHydrated && mounted) {
       console.log('[ApplicantDetail] Loading interview for applicantId:', applicantId)
       loadInterviewData()
     }
-  }, [applicantId, userId, isAuthenticated])
+  }, [applicantId, userId, isAuthenticated, isHydrated, mounted])
 
   const loadInterviewData = async () => {
     try {
@@ -211,6 +223,20 @@ export default function ApplicantDetailPage() {
   }
 
   if (!mounted) return null
+  // Don't render null during hydration, show loading instead
+  if (!isHydrated) {
+    return (
+      <main className="flex h-screen bg-slate-50 overflow-hidden">
+        <Sidebar role="company" />
+        <div className="flex-1 overflow-auto ml-64 flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="text-slate-600 mt-4">Loading...</p>
+          </div>
+        </div>
+      </main>
+    )
+  }
   if (!isAuthenticated) return null
 
   return (

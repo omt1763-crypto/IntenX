@@ -35,7 +35,7 @@ interface JobGroup {
 export default function ApplicantsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user: authUser, isAuthenticated } = useAuth()
+  const { user: authUser, isAuthenticated, isHydrated } = useAuth()
   const { isOpen: isSidebarOpen } = useSidebar()
   const [applicants, setApplicants] = useState<Applicant[]>([])
   const [jobGroups, setJobGroups] = useState<JobGroup[]>([])
@@ -50,12 +50,22 @@ export default function ApplicantsPage() {
 
   useEffect(() => {
     setMounted(true)
-    if (userId && isAuthenticated) {
-      loadApplicants()
-    } else if (mounted && !isAuthenticated) {
+  }, [])
+
+  // Redirect to login if auth is hydrated and user is not authenticated
+  useEffect(() => {
+    if (mounted && isHydrated && !isAuthenticated) {
+      console.log('[ApplicantsPage] Not authenticated, redirecting to login')
       router.push('/auth/login')
     }
-  }, [userId, isAuthenticated, mounted])
+  }, [isHydrated, isAuthenticated, mounted])
+
+  // Load applicants after auth is verified
+  useEffect(() => {
+    if (userId && isAuthenticated && isHydrated && mounted) {
+      loadApplicants()
+    }
+  }, [userId, isAuthenticated, isHydrated, mounted])
 
   const loadApplicants = async () => {
     try {
@@ -201,6 +211,20 @@ export default function ApplicantsPage() {
     return stats
   }
   if (!mounted) return null
+  // Don't render null during hydration, show loading instead
+  if (!isHydrated) {
+    return (
+      <main className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50">
+        <Sidebar role="recruiter" />
+        <div className="flex-1 overflow-auto flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="text-slate-600 mt-4">Loading...</p>
+          </div>
+        </div>
+      </main>
+    )
+  }
   if (!isAuthenticated) return null
 
   const statusStats = getStatusStats()
