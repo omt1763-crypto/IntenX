@@ -32,7 +32,7 @@ const Navbar = () => {
         {/* Logo */}
         <div className="flex items-center gap-2">
           <Image 
-            src="/intenx-logo.svg" 
+            src="/intenx-logo.png" 
             alt="IntenX" 
             width={32} 
             height={32}
