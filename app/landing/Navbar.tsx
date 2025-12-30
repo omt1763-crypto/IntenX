@@ -1,6 +1,5 @@
 'use client';
 
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 
 const navLinks = [
@@ -31,11 +30,9 @@ const Navbar = () => {
       <nav className="mx-auto max-w-6xl nav-glass rounded-full px-6 py-3 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2">
-          <Image 
+          <img 
             src="/intenx-logo.png" 
             alt="IntenX" 
-            width={32} 
-            height={32}
             className="w-8 h-8"
           />
         </div>
