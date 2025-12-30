@@ -34,7 +34,7 @@ const Navbar = () => {
           <img 
             src="/intenx-logo.png" 
             alt="IntenX" 
-            style={{ width: '100px', height: 'auto', objectFit: 'contain', maxHeight: '60px' }}
+            style={{ width: '140px', height: 'auto', objectFit: 'contain', maxHeight: '70px' }}
           />
         </div>
 
