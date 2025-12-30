@@ -62,7 +62,7 @@ const ROICalculatorPage = () => {
           </div>
 
           {/* Main Calculator Container */}
-          <div className="grid lg:grid-cols-2 gap-8 mb-12">
+          <div className="grid lg:grid-cols-2 gap-8">
             {/* Input Section */}
             <div className="rounded-xl border border-border bg-card p-8 shadow-lg">
               <h3 className="font-semibold text-lg text-foreground mb-6">Customize Your Scenario</h3>
@@ -91,21 +91,21 @@ const ROICalculatorPage = () => {
               </div>
 
               {/* Input Fields */}
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* Average Salary */}
                 <div>
-                  <div className="flex justify-between items-center mb-2">
+                  <div className="flex justify-between items-center mb-1.5">
                     <label htmlFor="salary" className="text-sm font-medium text-foreground">
                       Average salary per role (USD)
                     </label>
-                    <span className="text-sm text-muted-foreground">What is the typical average salary for these hires?</span>
+                    <span className="text-xs text-muted-foreground">What is the typical average salary for these hires?</span>
                   </div>
                   <input
                     id="salary"
                     type="number"
                     value={avgSalary}
                     onChange={(e) => setAvgSalary(Number(e.target.value))}
-                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-600"
+                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm"
                     min="0"
                     step="1000"
                   />
@@ -113,18 +113,18 @@ const ROICalculatorPage = () => {
 
                 {/* Agency Fee */}
                 <div>
-                  <div className="flex justify-between items-center mb-2">
+                  <div className="flex justify-between items-center mb-1.5">
                     <label htmlFor="fee" className="text-sm font-medium text-foreground">
                       Agency fee (% of salary)
                     </label>
-                    <span className="text-sm text-muted-foreground">Standard agency fees are often 15% - 25%.</span>
+                    <span className="text-xs text-muted-foreground">Standard agency fees are often 15% - 25%.</span>
                   </div>
                   <input
                     id="fee"
                     type="number"
                     value={agencyFee}
                     onChange={(e) => setAgencyFee(Number(e.target.value))}
-                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-600"
+                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm"
                     min="0"
                     max="100"
                     step="1"
@@ -133,18 +133,18 @@ const ROICalculatorPage = () => {
 
                 {/* Number of Roles */}
                 <div>
-                  <div className="flex justify-between items-center mb-2">
+                  <div className="flex justify-between items-center mb-1.5">
                     <label htmlFor="roles" className="text-sm font-medium text-foreground">
                       Number of roles per year
                     </label>
-                    <span className="text-sm text-muted-foreground">How many openings do you fill annually?</span>
+                    <span className="text-xs text-muted-foreground">How many openings do you fill annually?</span>
                   </div>
                   <input
                     id="roles"
                     type="number"
                     value={rolesPerYear}
                     onChange={(e) => setRolesPerYear(Number(e.target.value))}
-                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-600"
+                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm"
                     min="1"
                     step="5"
                   />
@@ -152,21 +152,19 @@ const ROICalculatorPage = () => {
 
                 {/* Applicants Per Role */}
                 <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label htmlFor="applicants" className="text-sm font-medium text-foreground">
-                      Average applicants per role
-                    </label>
-                    <span className="text-sm text-muted-foreground">We assume your ATS filters out ~50% before Valitron.</span>
-                  </div>
+                  <label htmlFor="applicants" className="text-sm font-medium text-foreground block mb-1.5">
+                    Average applicants per role
+                  </label>
                   <input
                     id="applicants"
                     type="number"
                     value={applicantsPerRole}
                     onChange={(e) => setApplicantsPerRole(Number(e.target.value))}
-                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-600"
+                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm"
                     min="1"
                     step="10"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">We assume your ATS filters out ~50% before Valitron.</p>
                 </div>
               </div>
             </div>
@@ -230,21 +228,27 @@ const ROICalculatorPage = () => {
               </div>
 
               {/* CTA */}
-              <div className="rounded-xl border border-purple-300 bg-gradient-to-br from-purple-50 to-blue-50 p-8 text-center">
-                <h3 className="font-semibold text-foreground mb-2">Ready to validate these numbers?</h3>
-                <p className="text-sm text-muted-foreground mb-6">
-                  Start with a single role pilot and see your ROI with real data. Most companies have results within 1 week. No long-term commitment required.
-                </p>
-                <div className="flex gap-3 justify-center flex-wrap">
-                  <a href="/auth/signup">
-                    <button style={{ backgroundColor: '#8241FF' }} className="px-6 py-3 text-white hover:opacity-90 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 justify-center">
-                      Start Your Pilot
-                      <ArrowRight className="w-4 h-4" />
+              <div className="rounded-2xl border-2 border-purple-300 bg-gradient-to-br from-purple-50 via-blue-50 to-purple-50 p-10 text-center relative overflow-hidden shadow-xl">
+                {/* Decorative elements */}
+                <div className="absolute top-5 right-10 w-40 h-40 bg-purple-200/20 rounded-full blur-2xl" />
+                <div className="absolute bottom-5 left-5 w-32 h-32 bg-blue-200/20 rounded-full blur-2xl" />
+                
+                <div className="relative z-10">
+                  <h3 className="font-bold text-2xl text-foreground mb-3">Ready to validate these numbers?</h3>
+                  <p className="text-base text-muted-foreground mb-8 max-w-xl mx-auto">
+                    Start with a single role pilot and see your ROI with real data. Most companies have results within 1 week. No long-term commitment required.
+                  </p>
+                  <div className="flex gap-4 justify-center flex-wrap">
+                    <a href="/auth/signup">
+                      <button style={{ backgroundColor: '#8241FF' }} className="px-8 py-3 text-white hover:opacity-90 rounded-full font-semibold text-base transition-all flex items-center gap-2 justify-center shadow-lg hover:shadow-xl">
+                        Start Your Pilot
+                        <ArrowRight className="w-5 h-5" />
+                      </button>
+                    </a>
+                    <button className="px-8 py-3 text-purple-600 border-2 border-purple-200 hover:bg-purple-100/50 rounded-full font-semibold text-base transition-all hover:shadow-lg">
+                      Talk to our team
                     </button>
-                  </a>
-                  <button className="px-6 py-3 text-purple-600 border border-purple-200 hover:bg-purple-50 rounded-lg font-semibold text-sm transition-all">
-                    Talk to our team
-                  </button>
+                  </div>
                 </div>
               </div>
             </div>
