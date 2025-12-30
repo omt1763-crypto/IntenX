@@ -11,7 +11,7 @@ const ROICalculator = () => {
   const [applicantsPerRole, setApplicantsPerRole] = useState(150);
 
   // Constants
-  const VALITRON_COST_PER_INTERVIEW = 4;
+  const INTENTX_COST_PER_INTERVIEW = 4;
   const POSTING_COST_PER_ROLE = 400;
 
   // Calculations
@@ -23,17 +23,17 @@ const ROICalculator = () => {
   const agencyFeePerHire = (avgSalary * agencyFee) / 100;
   const totalAgencyFeesPerYear = rolesPerYear * agencyFeePerHire;
 
-  // Valitron costs
-  const valitronCostPerHire = VALITRON_COST_PER_INTERVIEW * (totalInterviews / rolesPerYear);
-  const totalValitronCost = totalInterviews * VALITRON_COST_PER_INTERVIEW;
+  // IntenX costs
+  const intentxCostPerHire = INTENTX_COST_PER_INTERVIEW * (totalInterviews / rolesPerYear);
+  const totalIntentxCost = totalInterviews * INTENTX_COST_PER_INTERVIEW;
 
   // In-house costs
-  const totalInHouseScreeningCost = rolesPerYear * POSTING_COST_PER_ROLE + totalValitronCost;
+  const totalInHouseScreeningCost = rolesPerYear * POSTING_COST_PER_ROLE + totalIntentxCost;
 
   // Savings
   const annualSavings = totalAgencyFeesPerYear - totalInHouseScreeningCost;
-  const savingsPerHire = agencyFeePerHire - (valitronCostPerHire + POSTING_COST_PER_ROLE);
-  const reductionPercent = ((agencyFeePerHire - (valitronCostPerHire + POSTING_COST_PER_ROLE)) / agencyFeePerHire) * 100;
+  const savingsPerHire = agencyFeePerHire - (intentxCostPerHire + POSTING_COST_PER_ROLE);
+  const reductionPercent = ((agencyFeePerHire - (intentxCostPerHire + POSTING_COST_PER_ROLE)) / agencyFeePerHire) * 100;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -53,7 +53,7 @@ const ROICalculator = () => {
             ROI Calculator
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto mb-8">
-            Estimate your savings with Valitron. Switch between scenarios to match how you recruit today.
+            Estimate your savings with IntenX. Switch between scenarios to match how you recruit today.
           </p>
         </div>
 
@@ -152,7 +152,7 @@ const ROICalculator = () => {
                   <label htmlFor="applicants" className="text-sm font-medium text-foreground">
                     Average applicants per role
                   </label>
-                  <span className="text-sm text-muted-foreground">We assume your ATS filters out ~50% before Valitron.</span>
+                    <span className="text-sm text-muted-foreground">We assume your ATS filters out ~50% before IntenX.</span>
                 </div>
                 <input
                   id="applicants"
@@ -177,7 +177,7 @@ const ROICalculator = () => {
                   {formatCurrency(Math.max(0, annualSavings))}
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">Numbers include Valitron costs at ${VALITRON_COST_PER_INTERVIEW} per interview.</p>
+              <p className="text-xs text-muted-foreground">Numbers include IntenX costs at ${INTENTX_COST_PER_INTERVIEW} per interview.</p>
             </div>
 
             {/* Per-Hire Economics */}
@@ -189,13 +189,13 @@ const ROICalculator = () => {
                   <span className="font-semibold text-foreground">{formatCurrency(agencyFeePerHire)}</span>
                 </div>
                 <div className="flex justify-between items-center pb-4 border-b border-border">
-                  <span className="text-sm text-muted-foreground">Estimated Valitron cost per hire</span>
-                  <span className="font-semibold text-foreground">{formatCurrency(valitronCostPerHire)}</span>
+                  <span className="text-sm text-muted-foreground">Estimated IntenX cost per hire</span>
+                  <span className="font-semibold text-foreground">{formatCurrency(intentxCostPerHire)}</span>
                 </div>
                 <div className="flex justify-between items-center pb-4 border-b border-border">
                   <div>
                     <span className="text-sm text-muted-foreground">Cost of posting job ads in-house</span>
-                    <p className="text-xs text-muted-foreground mt-1">Estimated staff time to post roles on job boards and manage Valitron screening: ~{formatCurrency(POSTING_COST_PER_ROLE)} per role</p>
+                    <p className="text-xs text-muted-foreground mt-1">Estimated staff time to post roles on job boards and manage IntenX screening: ~{formatCurrency(POSTING_COST_PER_ROLE)} per role</p>
                   </div>
                   <span className="font-semibold text-foreground">{formatCurrency(POSTING_COST_PER_ROLE)}</span>
                 </div>
