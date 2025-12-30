@@ -7,6 +7,7 @@ const navLinks = [
   { label: "Features", href: "#features" },
   { label: "Pricing", href: "#pricing" },
   { label: "FAQs", href: "#faqs" },
+  { label: "ROI Calculator", href: "/roi-calculator" },
 ];
 
 const Navbar = () => {
