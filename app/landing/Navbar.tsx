@@ -33,7 +33,7 @@ const Navbar = () => {
           <img 
             src="/intenx-logo.png" 
             alt="IntenX" 
-            className="w-8 h-8"
+            className="w-16 h-16"
           />
         </div>
 
