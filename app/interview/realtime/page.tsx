@@ -108,8 +108,10 @@ export default function RealtimeInterviewPage() {
   const [applicantData, setApplicantData] = useState<any>(null)
   const [timer, setTimer] = useState(0)
   const [isPractice, setIsPractice] = useState(false)
-  const [maxDuration] = useState(120) // 2 minutes for practice mode
+  const [maxDuration] = useState(600) // 10 minutes (600 seconds) for all interviews
   const [timeWarning, setTimeWarning] = useState(false)
+  const [interviewCount, setInterviewCount] = useState(0)
+  const [freeInterviewsRemaining, setFreeInterviewsRemaining] = useState(2)
   const [micOn, setMicOn] = useState(true)
   const [cameraOn, setCameraOn] = useState(true)
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
@@ -514,7 +516,7 @@ export default function RealtimeInterviewPage() {
     }
   }, [cameraOn, interviewStarted])
 
-  // Timer with 2-minute limit for practice mode
+  // Timer with 10-minute limit for all interviews
   useEffect(() => {
     if (!interviewStarted) return
     
@@ -522,10 +524,11 @@ export default function RealtimeInterviewPage() {
       setTimer(t => {
         const newTime = t + 1
         
-        // For practice interviews, auto-end at 2 minutes (120 seconds)
-        if (isPractice && newTime >= maxDuration) {
-          console.log('[Timer] 📝 Practice interview time limit reached! Auto-ending...')
+        // ⏱️ Auto-end at 10 minutes (600 seconds) - applies to ALL interviews
+        if (newTime >= maxDuration) {
+          console.log('[Timer] ⏱️ 10-MINUTE INTERVIEW TIME LIMIT REACHED! Auto-ending interview...')
           setInterviewStarted(false)
+          setPermissionError('Interview time limit reached (10 minutes max). Your interview has been ended.')
           // Trigger the handleEnd function after a brief delay
           setTimeout(() => {
             document.getElementById('end-interview-btn')?.click()
@@ -533,10 +536,15 @@ export default function RealtimeInterviewPage() {
           return newTime
         }
         
-        // Show warning at 30 seconds remaining for practice mode
-        if (isPractice && newTime === maxDuration - 30) {
-          console.log('[Timer] ⏰ 30 seconds remaining in practice interview!')
+        // 🔔 Show warning at 1 minute remaining (9 minutes into interview)
+        if (newTime === maxDuration - 60) {
+          console.log('[Timer] 🔔 1 MINUTE REMAINING! Interview will end soon!')
           setTimeWarning(true)
+        }
+        
+        // 🔔 Show warning at 5 minutes remaining
+        if (newTime === maxDuration - 300) {
+          console.log('[Timer] 🔔 5 MINUTES REMAINING in your interview')
         }
         
         return newTime
@@ -544,7 +552,7 @@ export default function RealtimeInterviewPage() {
     }, 1000)
     
     return () => clearInterval(interval)
-  }, [interviewStarted, isPractice, maxDuration])
+  }, [interviewStarted, maxDuration])
 
   const handleStart = async () => {
     try {
