@@ -98,7 +98,7 @@ export default function CTASection() {
           </p>
 
           <a
-            href="mailto:support@intenx.com"
+            href="mailto:brancrave@gmail.com"
             className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-500 to-cyan-400 text-white rounded-xl font-semibold shadow-lg hover:shadow-2xl hover:from-blue-600 hover:to-cyan-500 hover:scale-110 active:scale-95 transition-all duration-300"
           >
             Contact our support team

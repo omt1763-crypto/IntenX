@@ -111,8 +111,8 @@ export default function Footer() {
                 <Mail size={20} className="text-purple-600 mt-1 flex-shrink-0" />
                 <div>
                   <p className="text-sm text-gray-600">Email</p>
-                  <a href="mailto:support@intenx.com" className="text-gray-700 hover:text-purple-600 transition-colors">
-                    support@intenx.com
+                  <a href="mailto:brancrave@gmail.com" className="text-gray-700 hover:text-purple-600 transition-colors">
+                    brancrave@gmail.com
                   </a>
                 </div>
               </li>
@@ -120,8 +120,8 @@ export default function Footer() {
                 <Phone size={20} className="text-purple-600 mt-1 flex-shrink-0" />
                 <div>
                   <p className="text-sm text-gray-600">Phone</p>
-                  <a href="tel:+14155552671" className="text-gray-700 hover:text-purple-600 transition-colors">
-                    +1 (415) 555-2671
+                  <a href="tel:+919146342478" className="text-gray-700 hover:text-purple-600 transition-colors">
+                    +91 9146342478
                   </a>
                 </div>
               </li>
@@ -130,8 +130,8 @@ export default function Footer() {
                 <div>
                   <p className="text-sm text-gray-600">Address</p>
                   <p className="text-gray-700 hover:text-purple-600 transition-colors">
-                    San Francisco, CA<br />
-                    United States
+                    Pune<br />
+                    India
                   </p>
                 </div>
               </li>
