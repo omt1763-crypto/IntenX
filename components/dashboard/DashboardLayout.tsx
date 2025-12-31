@@ -10,9 +10,9 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children, userType }: DashboardLayoutProps) => {
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="min-h-screen flex w-full bg-background flex-col md:flex-row">
         <DashboardSidebar userType={userType} />
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto w-full">
           <div className="relative min-h-screen">
             {/* Subtle grid background */}
             <div
@@ -25,11 +25,11 @@ const DashboardLayout = ({ children, userType }: DashboardLayoutProps) => {
                 backgroundSize: "60px 60px",
               }}
             />
-            {/* Decorative blurs */}
-            <div className="absolute top-0 right-0 w-96 h-96 bg-flow-purple/5 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-flow-blue/5 rounded-full blur-3xl" />
+            {/* Decorative blurs - hidden on mobile */}
+            <div className="hidden md:block absolute top-0 right-0 w-96 h-96 bg-flow-purple/5 rounded-full blur-3xl" />
+            <div className="hidden md:block absolute bottom-0 left-1/4 w-64 h-64 bg-flow-blue/5 rounded-full blur-3xl" />
             
-            <div className="relative z-10 p-6 lg:p-8">
+            <div className="relative z-10 p-4 sm:p-6 md:p-8">
               {children}
             </div>
           </div>

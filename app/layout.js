@@ -6,16 +6,22 @@ import SecurityWrapper from '@/components/SecurityWrapper'
 export const metadata = {
   title: 'InterviewVerse - AI-Powered Interview Platform',
   description: 'Master your interview skills with AI-powered mock interviews and real-time feedback.',
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=5',
 }
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+      </head>
       <body className="bg-neutral-50 dark:bg-neutral-900">
         <SecurityWrapper>
           <AuthProvider>
             <SidebarProvider>
-              <div className="min-h-screen">
+              <div className="min-h-screen w-full">
                 {children}
               </div>
             </SidebarProvider>

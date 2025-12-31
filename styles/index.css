@@ -6,6 +6,32 @@
 
 html {
   scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Mobile-first responsive design */
+@media (max-width: 640px) {
+  body {
+    font-size: 14px;
+  }
+  
+  /* Ensure proper spacing on mobile */
+  main {
+    overflow-x: hidden;
+  }
+  
+  /* Touch-friendly button sizing */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Optimize images for mobile */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
 }
 
 @layer base {

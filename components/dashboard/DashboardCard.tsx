@@ -25,7 +25,7 @@ const DashboardCard = ({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border/50 p-6 shadow-card",
+        "rounded-lg sm:rounded-2xl border border-border/50 p-4 sm:p-6 shadow-card",
         gradientClasses[gradient],
         hover && "transition-all duration-300 hover:shadow-lg hover:-translate-y-1",
         className

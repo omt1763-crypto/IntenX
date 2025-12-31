@@ -189,8 +189,8 @@ export default function BusinessDashboard() {
       <Sidebar key="business-sidebar" role="company" />
 
       {/* Content */}
-      <div className={`relative z-10 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-20'} pt-24 pb-16 min-h-screen`}>
-        <div className="w-full px-8 lg:px-12">
+      <div className={`relative z-10 transition-all duration-300 ${isSidebarOpen ? 'md:ml-64' : 'md:ml-20'} pt-16 md:pt-24 pb-16 min-h-screen`}>
+        <div className="w-full px-4 sm:px-6 md:px-8 lg:px-12">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <p className="text-slate-600 text-lg">Loading dashboard...</p>
@@ -202,23 +202,23 @@ export default function BusinessDashboard() {
         ) : (
         <>
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-5xl font-bold text-slate-900 mb-2">Company Hub</h1>
-          <p className="text-lg text-slate-600 font-light">Manage jobs, track candidates, and conduct interviews</p>
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-2">Company Hub</h1>
+          <p className="text-base sm:text-lg text-slate-600 font-light">Manage jobs, track candidates, and conduct interviews</p>
         </div>
 
         {/* Header */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900">Performance Analytics</h2>
+        <div className="mb-6 md:mb-8">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Performance Analytics</h2>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 mb-8">
           {/* Total Jobs Card with Chart */}
           <DashboardCard hover>
             <div className="mb-8">
-              <h3 className="text-xl font-bold text-gray-900">Jobs Posted Trend</h3>
-              <p className="text-xs text-gray-600 mt-2">Last 7 days</p>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">Jobs Posted Trend</h3>
+              <p className="text-xs sm:text-sm text-gray-600 mt-2">Last 7 days</p>
             </div>
-            <div className="h-80 flex items-end justify-between gap-4 px-6 py-6 bg-gray-50 rounded-lg">
+            <div className="h-64 sm:h-72 md:h-80 flex items-end justify-between gap-2 sm:gap-4 px-4 sm:px-6 py-6 bg-gray-50 rounded-lg overflow-x-auto">
               {jobs.length > 0 ? (
                 (() => {
                   const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -231,9 +231,9 @@ export default function BusinessDashboard() {
                   )
                   const maxCount = Math.max(...jobCounts, 1)
                   return jobCounts.map((count, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-3 group">
+                    <div key={i} className="flex-1 flex flex-col items-center gap-2 sm:gap-3 group min-w-[2rem]">
                       <div className="w-full h-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-lg shadow-md hover:shadow-lg transition group-hover:from-blue-600 group-hover:to-blue-500" style={{ height: `${(count / maxCount) * 240}px` }}></div>
-                      <span className="text-xs text-gray-600 font-semibold">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]}</span>
+                      <span className="text-xs text-gray-600 font-semibold text-center">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]}</span>
                     </div>
                   ))
                 })()
@@ -245,7 +245,7 @@ export default function BusinessDashboard() {
             </div>
             <button 
               onClick={() => router.push('/business/dashboard/jobs')}
-              className="w-full mt-6 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium hover:shadow-lg transition-all hover:scale-105">
+              className="w-full mt-6 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium hover:shadow-lg transition-all hover:scale-105 text-sm sm:text-base">
               View All Jobs
             </button>
           </DashboardCard>
@@ -273,17 +273,17 @@ export default function BusinessDashboard() {
         {/* Second Row - Key Metrics */}
         <div className="mb-8">
           <div className="mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">Key Metrics</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Key Metrics</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             {/* Total Jobs Stat */}
             <DashboardCard hover>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Total Jobs</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-1">{stats.totalJobs}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Total Jobs</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1">{stats.totalJobs}</p>
                 </div>
-                <Briefcase className="w-10 h-10 text-blue-500/20" />
+                <Briefcase className="w-8 sm:w-10 h-8 sm:h-10 text-blue-500/20" />
               </div>
               {stats.jobPercentDirection === 'up' && (
                 <p className="text-xs text-green-600 font-semibold mt-4 flex items-center gap-1">
@@ -302,37 +302,57 @@ export default function BusinessDashboard() {
                 <Activity className="w-10 h-10 text-yellow-500/20" />
               </div>
             </DashboardCard>
-          </div>
+            {/* Total Candidates Stat */}
+            <DashboardCard hover>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-gray-600">Total Candidates</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1">{stats.totalCandidates}</p>
+                </div>
+                <Users className="w-8 sm:w-10 h-8 sm:h-10 text-green-500/20" />
+              </div>
+            </DashboardCard>
+
+            {/* Total Interviews Stat */}
+            <DashboardCard hover>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-gray-600">Total Interviews</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1">{stats.totalInterviews}</p>
+                </div>
+                <Activity className="w-8 sm:w-10 h-8 sm:h-10 text-yellow-500/20" />
+              </div>
+            </DashboardCard>          </div>
         </div>
 
         {/* Recent Applicants Section */}
         <div className="grid grid-cols-1 gap-6 mb-12">
-          <div className="relative overflow-hidden rounded-3xl backdrop-blur-xl bg-white/50 border border-white/60 shadow-lg hover:shadow-2xl transition-all duration-300 p-8">
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl backdrop-blur-xl bg-white/50 border border-white/60 shadow-lg hover:shadow-2xl transition-all duration-300 p-4 sm:p-6 md:p-8">
             <div className="absolute inset-0 bg-gradient-to-br from-white to-[#f0fdf4]/30 opacity-0 hover:opacity-100 transition-opacity" />
             
             <div className="relative z-10">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
-                  <Users className="w-6 h-6 text-[#11cd68]" />
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-4">
+                <h2 className="text-lg sm:text-2xl font-bold text-slate-900 flex items-center gap-2 sm:gap-3">
+                  <Users className="w-5 sm:w-6 h-5 sm:h-6 text-[#11cd68]" />
                   Recent Applicants
                 </h2>
                 <button 
                   onClick={() => router.push('/business/dashboard/applicants')}
-                  className="text-sm text-[#11cd68] hover:text-[#0fb359] font-semibold transition-colors">
+                  className="text-xs sm:text-sm text-[#11cd68] hover:text-[#0fb359] font-semibold transition-colors">
                   View All →
                 </button>
               </div>
 
               {applicants.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {applicants.map((applicant) => (
-                    <div key={applicant.id} className="p-4 rounded-xl bg-white/50 hover:bg-white/80 border border-white/40 hover:border-white/60 transition-all">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <p className="font-semibold text-slate-900">{applicant.first_name} {applicant.last_name}</p>
-                          <p className="text-sm text-slate-600">{applicant.position_applied || applicant.jobs?.title}</p>
+                    <div key={applicant.id} className="p-3 sm:p-4 rounded-xl bg-white/50 hover:bg-white/80 border border-white/40 hover:border-white/60 transition-all">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-slate-900 text-sm sm:text-base">{applicant.first_name} {applicant.last_name}</p>
+                          <p className="text-xs sm:text-sm text-slate-600">{applicant.position_applied || applicant.jobs?.title}</p>
                         </div>
-                        <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                        <span className={`text-xs font-semibold px-3 py-1 rounded-full flex-shrink-0 ${
                           applicant.status === 'shortlisted' ? 'bg-green-100 text-green-800' :
                           applicant.status === 'rejected' ? 'bg-red-100 text-red-800' :
                           'bg-blue-100 text-blue-800'
@@ -345,7 +365,7 @@ export default function BusinessDashboard() {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-slate-500">No applicants yet</p>
+                  <p className="text-slate-500 text-sm sm:text-base">No applicants yet</p>
                 </div>
               )}
             </div>
@@ -353,45 +373,45 @@ export default function BusinessDashboard() {
         </div>
 
         {/* Quick Actions Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <button
             onClick={() => router.push('/business/dashboard/jobs')}
-            className="group relative overflow-hidden rounded-2xl p-6 backdrop-blur-xl bg-white/50 border border-white/60 hover:border-white/80 shadow-lg hover:shadow-2xl transition-all duration-300"
+            className="group relative overflow-hidden rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-xl bg-white/50 border border-white/60 hover:border-white/80 shadow-lg hover:shadow-2xl transition-all duration-300"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <Briefcase className="w-8 h-8 text-blue-500 mb-3" />
-            <h3 className="font-semibold text-slate-900 mb-1">Jobs</h3>
-            <p className="text-sm text-slate-600">Manage your job postings</p>
+            <Briefcase className="w-6 sm:w-8 h-6 sm:h-8 text-blue-500 mb-2 sm:mb-3" />
+            <h3 className="font-semibold text-slate-900 mb-1 text-sm sm:text-base">Jobs</h3>
+            <p className="text-xs sm:text-sm text-slate-600">Manage your job postings</p>
           </button>
 
           <button
             onClick={() => router.push('/business/dashboard/applicants')}
-            className="group relative overflow-hidden rounded-2xl p-6 backdrop-blur-xl bg-white/50 border border-white/60 hover:border-white/80 shadow-lg hover:shadow-2xl transition-all duration-300"
+            className="group relative overflow-hidden rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-xl bg-white/50 border border-white/60 hover:border-white/80 shadow-lg hover:shadow-2xl transition-all duration-300"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <Users className="w-8 h-8 text-green-500 mb-3" />
-            <h3 className="font-semibold text-slate-900 mb-1">Applicants</h3>
-            <p className="text-sm text-slate-600">Review candidate applications</p>
+            <Users className="w-6 sm:w-8 h-6 sm:h-8 text-green-500 mb-2 sm:mb-3" />
+            <h3 className="font-semibold text-slate-900 mb-1 text-sm sm:text-base">Applicants</h3>
+            <p className="text-xs sm:text-sm text-slate-600">Review candidate applications</p>
           </button>
 
           <button
             onClick={() => router.push('/business/dashboard/profile')}
-            className="group relative overflow-hidden rounded-2xl p-6 backdrop-blur-xl bg-white/50 border border-white/60 hover:border-white/80 shadow-lg hover:shadow-2xl transition-all duration-300"
+            className="group relative overflow-hidden rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-xl bg-white/50 border border-white/60 hover:border-white/80 shadow-lg hover:shadow-2xl transition-all duration-300"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <Activity className="w-8 h-8 text-purple-500 mb-3" />
-            <h3 className="font-semibold text-slate-900 mb-1">Company Profile</h3>
-            <p className="text-sm text-slate-600">Update company information</p>
+            <Activity className="w-6 sm:w-8 h-6 sm:h-8 text-purple-500 mb-2 sm:mb-3" />
+            <h3 className="font-semibold text-slate-900 mb-1 text-sm sm:text-base">Company Profile</h3>
+            <p className="text-xs sm:text-sm text-slate-600">Update company information</p>
           </button>
 
           <button
             onClick={() => router.push('/business/dashboard/billing')}
-            className="group relative overflow-hidden rounded-2xl p-6 backdrop-blur-xl bg-white/50 border border-white/60 hover:border-white/80 shadow-lg hover:shadow-2xl transition-all duration-300"
+            className="group relative overflow-hidden rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-xl bg-white/50 border border-white/60 hover:border-white/80 shadow-lg hover:shadow-2xl transition-all duration-300"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-red-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <TrendingUp className="w-8 h-8 text-orange-500 mb-3" />
-            <h3 className="font-semibold text-slate-900 mb-1">Billing</h3>
-            <p className="text-sm text-slate-600">Manage your subscription</p>
+            <TrendingUp className="w-6 sm:w-8 h-6 sm:h-8 text-orange-500 mb-2 sm:mb-3" />
+            <h3 className="font-semibold text-slate-900 mb-1 text-sm sm:text-base">Billing</h3>
+            <p className="text-xs sm:text-sm text-slate-600">Manage your subscription</p>
           </button>
         </div>
         </>

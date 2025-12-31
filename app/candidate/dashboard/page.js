@@ -420,8 +420,8 @@ function CandidateDashboardContent() {
       </div>
 
       {/* Main Content Area */}
-      <div className="relative z-10 ml-64 pt-8 pb-16 min-h-screen w-full">
-        <div className="w-full px-8 lg:px-12">
+      <div className="relative z-10 md:ml-64 pt-8 md:pt-8 pb-16 min-h-screen w-full">
+        <div className="w-full px-4 sm:px-6 md:px-8 lg:px-12">
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <p className="text-slate-600 text-lg">Loading dashboard...</p>
@@ -432,7 +432,7 @@ function CandidateDashboardContent() {
               {activeSection === 'dashboard' && (
                 <>
                   {/* Analytics Board - Performance Metrics */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-12">
                     {/* Performance Trend Chart */}
                     <div className="lg:col-span-2 group relative overflow-hidden rounded-3xl p-8 backdrop-blur-xl bg-gradient-to-br from-slate-50/90 to-white/80 border border-white/60 hover:border-white/80 shadow-xl hover:shadow-2xl transition-all duration-300">
                       <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/5 via-transparent to-purple-400/5 opacity-0 group-hover:opacity-100 transition-opacity" />
