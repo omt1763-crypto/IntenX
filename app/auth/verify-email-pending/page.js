@@ -1,11 +1,12 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Mail, CheckCircle2, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
-export default function VerifyEmailPendingPage() {
+function VerifyEmailPendingPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
@@ -172,5 +173,26 @@ export default function VerifyEmailPendingPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function VerifyEmailPendingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center px-4">
+        <div className="max-w-md w-full">
+          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+            <div className="animate-pulse">
+              <div className="h-16 w-16 bg-gray-200 rounded-full mx-auto mb-6"></div>
+              <div className="h-8 bg-gray-200 rounded w-3/4 mx-auto mb-4"></div>
+              <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded w-5/6 mx-auto"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <VerifyEmailPendingPageContent />
+    </Suspense>
   )
 }
