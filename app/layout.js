@@ -6,7 +6,12 @@ import SecurityWrapper from '@/components/SecurityWrapper'
 export const metadata = {
   title: 'InterviewVerse - AI-Powered Interview Platform',
   description: 'Master your interview skills with AI-powered mock interviews and real-time feedback.',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=5',
+}
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
 }
 
 export default function RootLayout({ children }) {
