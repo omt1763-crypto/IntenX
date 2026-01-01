@@ -166,38 +166,30 @@ ${JSON.stringify(skillsPayload, null, 2)}
             if (msg.type === 'session.created') {
               console.log('[RealtimeAudio] ✅ Session created with instructions embedded')
               
-              // Send welcome message as AI greeting
-              const welcomeMessage = `Welcome to your technical interview!
-
-Please keep your microphone and camera ON during the session. This interview is being recorded for evaluation purposes.
-
-You will be asked a series of questions. If you are unsure about any question, simply say "skip" and we will move to the next one.
-
-Good luck!`
-              
-              // Create an AI message item with the welcome message
+              // Send an initial message to trigger AI to generate welcome
+              // The system prompt will make the AI generate the welcome and introduction
               ws.send(JSON.stringify({
                 type: 'conversation.item.create',
                 item: {
                   type: 'message',
-                  role: 'assistant',
+                  role: 'user',
                   content: [
                     {
-                      type: 'output_text',
-                      text: welcomeMessage
+                      type: 'input_text',
+                      text: 'Hello, I am ready to start the interview.'
                     }
                   ]
                 }
               }))
               
-              console.log('[RealtimeAudio] 🎤 Sent welcome message for AI to speak')
+              console.log('[RealtimeAudio] 📤 Sent initial greeting to trigger AI welcome')
               
-              // Request the AI to read this welcome message
+              // Request the AI to respond with welcome message
               ws.send(JSON.stringify({
                 type: 'response.create'
               }))
               
-              console.log('[RealtimeAudio] ⏳ Requesting AI to speak welcome message...')
+              console.log('[RealtimeAudio] ⏳ Requesting AI to generate and speak welcome message...')
             }
             
             // Just log session.updated but don't create responses
