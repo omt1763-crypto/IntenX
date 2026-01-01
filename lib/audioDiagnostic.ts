@@ -3,6 +3,7 @@
  * Use this to test noise suppression and calibrate for your environment
  */
 
+import React, { useRef } from 'react'
 import { AdvancedAudioProcessor, detectVoiceActivity } from '@/lib/advancedAudioProcessing'
 
 export interface AudioTestResult {
@@ -309,8 +310,5 @@ export function AudioTestResultsDisplay({ result }: { result: AudioTestResult | 
     </div>
   )
 }
-
-import React from 'react'
-import { useRef } from 'react'
 
 export default AudioDiagnostic
