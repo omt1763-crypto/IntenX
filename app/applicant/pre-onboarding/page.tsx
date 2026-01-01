@@ -1,12 +1,13 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { User, Briefcase, Mail, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react'
 
-export default function ApplicantPreOnboarding() {
+function ApplicantPreOnboardingContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const jobId = searchParams.get('jobId')
@@ -300,5 +301,17 @@ export default function ApplicantPreOnboarding() {
         </div>
       </motion.div>
     </div>
+  )
+}
+
+export default function ApplicantPreOnboarding() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    }>
+      <ApplicantPreOnboardingContent />
+    </Suspense>
   )
 }

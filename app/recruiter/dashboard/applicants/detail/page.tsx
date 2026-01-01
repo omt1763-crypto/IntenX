@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
@@ -20,7 +21,7 @@ interface Interview {
   notes: string
 }
 
-export default function ApplicantDetailPage() {
+function ApplicantDetailPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user: authUser, isAuthenticated, isHydrated } = useAuth()
@@ -560,5 +561,13 @@ export default function ApplicantDetailPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function ApplicantDetailPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-900 flex items-center justify-center"><p className="text-white">Loading...</p></div>}>
+      <ApplicantDetailPageContent />
+    </Suspense>
   )
 }
