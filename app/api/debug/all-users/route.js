@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req) {
   try {
     const { data: users, error } = await supabaseAdmin
       .from('users')
       .select('*')
-      .order('last_login_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false, nullsFirst: false })
 
     if (error) {
       console.error('[AllUsers API] Error:', error)
