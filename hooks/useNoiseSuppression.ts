@@ -17,7 +17,7 @@ export interface UseNoiseSuppressionReturn {
   setNoiseProfile: (audioData: Float32Array) => void
   
   // Control methods
-  enableNoiseSuppressionr: () => void
+  enableNoiseSuppression: () => void
   disableNoiseSuppression: () => void
   isEnabled: boolean
   
@@ -120,7 +120,7 @@ export function useNoiseSuppression(
   return {
     processAudio,
     setNoiseProfile,
-    enableNoiseSuppression: enableNoiseSuppression,
+    enableNoiseSuppression,
     disableNoiseSuppression,
     isEnabled,
     updateConfig,
