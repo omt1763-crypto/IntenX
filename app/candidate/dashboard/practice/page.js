@@ -9,8 +9,9 @@ export default function PracticeTypesPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [savedSetup, setSavedSetup] = useState(null)
+  const [isHydrated, setIsHydrated] = useState(false)
 
-  // Load saved setup on mount
+  // Load saved setup on mount (client-side only)
   useEffect(() => {
     const saved = localStorage.getItem('interviewSetupSaved')
     if (saved) {
@@ -34,6 +35,9 @@ export default function PracticeTypesPage() {
         console.error('Failed to load saved setup:', err)
       }
     }
+    
+    // Mark that we've hydrated from localStorage
+    setIsHydrated(true)
   }, [])
 
   const practiceTypes = [
@@ -168,6 +172,7 @@ export default function PracticeTypesPage() {
           </div>
 
           {/* Practice Cards Grid */}
+          {isHydrated && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {practiceTypes.map((type) => (
               <div
@@ -211,6 +216,7 @@ export default function PracticeTypesPage() {
               </div>
             ))}
           </div>
+          )}
 
           {/* Tips Section */}
           <div className="mt-16">
