@@ -76,6 +76,13 @@ export default function PracticeTypesPage() {
   ]
 
   const handleStartPractice = async (practiceType) => {
+    // Check if interview settings have been configured
+    if (!savedSetup) {
+      alert('⚠️ Please configure your interview settings first!\n\nYour role, experience level, and resume information help the AI ask relevant questions tailored to your profile.')
+      router.push('/interview/setup')
+      return
+    }
+
     setLoading(true)
     try {
       // Get interview setup data from sessionStorage
@@ -128,6 +135,22 @@ export default function PracticeTypesPage() {
             <h1 className="text-5xl font-bold text-slate-900 mb-2">Practice Types</h1>
             <p className="text-lg text-slate-600 font-light">Choose your interview practice mode</p>
             
+            {!savedSetup && (
+              <div className="mt-6 p-4 bg-red-50 border-2 border-red-300 rounded-xl">
+                <p className="text-red-900 font-semibold flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-500" />
+                  ⚠️ Interview settings required!
+                </p>
+                <p className="text-red-800 text-sm mt-2">Please configure your role, experience level, and upload your resume before starting practice. This helps the AI ask relevant questions tailored to your profile.</p>
+                <button
+                  onClick={() => router.push('/interview/setup')}
+                  className="mt-3 inline-flex items-center gap-2 px-6 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-all"
+                >
+                  ⚙️ Configure Settings
+                </button>
+              </div>
+            )}
+            
             {savedSetup && (
               <div className="mt-6 p-4 bg-cyan-50 border-2 border-cyan-300 rounded-xl">
                 <p className="text-cyan-900 font-semibold flex items-center gap-2">
@@ -141,15 +164,6 @@ export default function PracticeTypesPage() {
                   → Update settings
                 </button>
               </div>
-            )}
-            
-            {!savedSetup && (
-              <button
-                onClick={() => router.push('/interview/setup')}
-                className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-50 to-cyan-50 border-2 border-purple-300 text-purple-700 font-semibold rounded-xl hover:bg-cyan-100 transition-all"
-              >
-                ⚙️ Configure Interview Settings
-              </button>
             )}
           </div>
 
@@ -183,10 +197,15 @@ export default function PracticeTypesPage() {
 
                   <button
                     onClick={() => handleStartPractice(type)}
-                    disabled={loading}
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-500 to-cyan-400 border border-purple-400 text-white font-semibold hover:bg-cyan-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={loading || !savedSetup}
+                    className={`w-full py-3 rounded-xl font-semibold transition-all ${
+                      !savedSetup
+                        ? 'bg-gray-300 text-gray-600 cursor-not-allowed opacity-50 border border-gray-400'
+                        : 'bg-gradient-to-r from-purple-500 to-cyan-400 border border-purple-400 text-white hover:bg-cyan-500'
+                    } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title={!savedSetup ? 'Please configure interview settings first' : ''}
                   >
-                    {loading ? 'Starting...' : 'Start Practice'}
+                    {loading ? 'Starting...' : !savedSetup ? '⚙️ Configure Settings First' : 'Start Practice'}
                   </button>
                 </div>
               </div>
