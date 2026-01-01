@@ -479,11 +479,3 @@ export default function ApplicantsPage() {
     </Suspense>
   )
 }
-
-export default function ApplicantsPage() {
-  return (
-    <Suspense fallback={<div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh'}}><p style={{color: 'white'}}>Loading...</p></div>}>
-      <ApplicantsPageContent />
-    </Suspense>
-  )
-}

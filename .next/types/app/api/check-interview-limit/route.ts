@@ -1,4 +1,4 @@
-// File: C:\Users\omt91\Downloads\main\interviewverse_frontend\app\api\check-interview-limit\route.js
+// File: C:\Users\omt91\Downloads\main\interviewverse_frontend\app\api\check-interview-limit\route.ts
 import * as entry from '../../../../../app/api/check-interview-limit/route.js'
 import type { NextRequest } from 'next/server.js'
 

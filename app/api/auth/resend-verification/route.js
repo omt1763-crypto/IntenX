@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import nodemailer from 'nodemailer'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * API endpoint to resend verification email
  * Generates a new verification link and sends it to the user's email

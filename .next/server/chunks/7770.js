@@ -1,1 +1,0 @@
-"use strict";exports.id=7770,exports.ids=[7770],exports.modules={47770:(e,s,r)=>{r.d(s,{OQ:()=>i,pR:()=>p});var E=r(58617);let o=process.env.NEXT_PUBLIC_SUPABASE_URL,_=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,t=process.env.SUPABASE_SERVICE_ROLE_KEY;if(!o||!_)throw Error("Missing Supabase environment variables");let i=(0,E.eI)(o,_),p=(0,E.eI)(o,t||_)}};
