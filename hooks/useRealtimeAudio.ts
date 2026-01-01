@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { generateInterviewerInstructions, formatInterviewContext, validateGuardrails } from '@/config/interviewer-guardrails'
+import { AdvancedAudioProcessor, detectVoiceActivity, normalizeAudio, highPassFilter } from '@/lib/advancedAudioProcessing'
 
 export interface ConversationMessage {
   role: 'ai' | 'user'
@@ -32,6 +33,8 @@ export function useRealtimeAudio(): UseRealtimeAudioReturn {
   const reconnectAttemptsRef = useRef<number>(0)
   const pendingInstructionsRef = useRef<string>('')
   const hasActiveResponseRef = useRef<boolean>(false)
+  const audioProcessorRef = useRef<AdvancedAudioProcessor | null>(null)
+  const noiseProfileSetRef = useRef<boolean>(false)
   const maxReconnectAttempts = 3
   const languageSwitchRequestedRef = useRef<boolean>(false)
 
@@ -602,6 +605,10 @@ Good luck!`
         await audioCtx.audioWorklet.addModule('/worklet/realtime-audio-worklet.js')
       } catch (e) {
         console.error('[RealtimeAudio] Failed to load worklet, using fallback:', e)
+        // Initialize noise suppression processor
+        audioProcessorRef.current = new AdvancedAudioProcessor(4096)
+        console.log('[RealtimeAudio] ✅ Noise suppression processor initialized')
+        
         // Fallback: create a simple processor
         const workletCode = `
           class RealtimeAudioWorklet extends AudioWorkletProcessor {
@@ -610,6 +617,8 @@ Good luck!`
               this.port.onmessage = (e) => {
                 if (e.data.type === 'start') {
                   this.isRecording = true
+                  this.calibrationStart = 0
+                  this.noiseProfileSet = false
                   console.log('[Worklet] Recording started')
                 } else if (e.data.type === 'stop') {
                   this.isRecording = false
@@ -617,8 +626,12 @@ Good luck!`
                 }
               }
               this.isRecording = false
-              this.noiseGateThreshold = 0.02 // Gate threshold for noise suppression
+              this.noiseGateThreshold = 0.02
               this.bufferSize = 0
+              this.calibrationStart = 0
+              this.noiseProfileSet = false
+              this.calibrationDuration = 2000
+              this.audioFrames = 0
             }
             
             process(inputs, outputs, parameters) {
@@ -628,30 +641,76 @@ Good luck!`
               if (input && input.length > 0) {
                 const audioData = input[0]
                 
-                // Apply noise gate - suppress very quiet audio (background noise)
-                const gatedAudio = new Float32Array(audioData.length)
-                let hasSignal = false
-                
-                for (let i = 0; i < audioData.length; i++) {
-                  const sample = audioData[i]
-                  const amplitude = Math.abs(sample)
+                // Track calibration
+                if (!this.noiseProfileSet) {
+                  const now = Date.now()
+                  if (!this.calibrationStart) {
+                    this.calibrationStart = now
+                    this.port.postMessage({
+                      type: 'calibration',
+                      progress: 0,
+                      message: 'Starting noise profile calibration...'
+                    })
+                  }
                   
-                  if (amplitude > this.noiseGateThreshold) {
-                    gatedAudio[i] = sample
-                    hasSignal = true
-                  } else {
-                    gatedAudio[i] = 0 // Suppress noise
+                  const elapsed = now - this.calibrationStart
+                  const progress = Math.min(100, (elapsed / this.calibrationDuration) * 100)
+                  
+                  if (progress % 25 < 1) { // Update every 25%
+                    this.port.postMessage({
+                      type: 'calibration',
+                      progress: Math.round(progress),
+                      message: \`Calibrating noise profile: \${Math.round(progress)}%\`
+                    })
+                  }
+                  
+                  if (elapsed >= this.calibrationDuration) {
+                    this.noiseProfileSet = true
+                    this.port.postMessage({
+                      type: 'calibration_complete',
+                      message: 'Noise profile calibrated!'
+                    })
                   }
                 }
                 
-                // Only send if there's actual speech signal
-                if (hasSignal) {
+                // Process audio with noise suppression
+                let processedAudio = audioData
+                
+                // Apply high-pass filter to remove rumble
+                const filtered = new Float32Array(audioData.length)
+                let prev = 0
+                for (let i = 0; i < audioData.length; i++) {
+                  filtered[i] = 0.99 * (prev + audioData[i] - (audioData[i > 0 ? i - 1 : 0]))
+                  prev = filtered[i]
+                }
+                processedAudio = filtered
+                
+                // Apply noise suppression gating
+                const gatedAudio = new Float32Array(processedAudio.length)
+                let rms = 0
+                for (let i = 0; i < processedAudio.length; i++) {
+                  rms += processedAudio[i] * processedAudio[i]
+                }
+                rms = Math.sqrt(rms / processedAudio.length)
+                
+                const hasVoice = rms > this.noiseGateThreshold
+                const gateAmount = hasVoice ? 1.0 : 0.1
+                
+                for (let i = 0; i < processedAudio.length; i++) {
+                  gatedAudio[i] = processedAudio[i] * gateAmount
+                }
+                
+                // Send processed audio
+                if (hasVoice || this.bufferSize < 5) {
                   this.port.postMessage({
                     type: 'audio',
-                    audio: gatedAudio
+                    audio: gatedAudio,
+                    hasVoice: hasVoice
                   })
-                  this.bufferSize++
+                  this.bufferSize = 0
                 }
+                
+                this.bufferSize++
               }
               return true
             }
@@ -671,8 +730,39 @@ Good luck!`
 
       // Handle audio chunks from worklet
       workletNode.port.onmessage = (event) => {
+        // Handle calibration messages
+        if (event.data.type === 'calibration') {
+          console.log('[RealtimeAudio] 🎙️ Calibration:', event.data.message)
+        }
+        
+        if (event.data.type === 'calibration_complete') {
+          console.log('[RealtimeAudio] ✅ Calibration complete:', event.data.message)
+          noiseProfileSetRef.current = true
+        }
+        
+        // Handle audio data
         if (event.data.type === 'audio' && ws.readyState === WebSocket.OPEN) {
-          const audioData = event.data.audio // Float32Array
+          let audioData = event.data.audio // Float32Array
+          
+          // Apply advanced noise suppression if processor is ready
+          if (audioProcessorRef.current) {
+            const { audio, metrics } = audioProcessorRef.current.processAudio(audioData)
+            audioData = audio
+            
+            // Log metrics every second for debugging
+            if (Date.now() % 1000 < 50) {
+              console.log('[RealtimeAudio] 📊 Audio Quality:', {
+                SNR: metrics.snr.toFixed(2),
+                Volume: metrics.volume.toFixed(2),
+                NoiseLevel: metrics.noiseLevel.toFixed(2),
+                IsSpeech: metrics.isSpeech,
+                IsClipping: metrics.isClipping
+              })
+            }
+          }
+          
+          // Normalize audio
+          audioData = normalizeAudio(audioData)
           
           // Convert to PCM16
           const pcm16 = new Int16Array(audioData.length)
