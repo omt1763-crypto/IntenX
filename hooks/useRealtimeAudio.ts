@@ -36,6 +36,8 @@ export function useRealtimeAudio(): UseRealtimeAudioReturn {
   const audioProcessorRef = useRef<AdvancedAudioProcessor | null>(null)
   const noiseProfileSetRef = useRef<boolean>(false)
   const aiIsSpeakingRef = useRef<boolean>(false) // Track if AI is currently speaking
+  const messageQueueRef = useRef<ConversationMessage[]>([]) // Queue messages to send in order
+  const isProcessingResponseRef = useRef<boolean>(false) // Track if we're in the middle of an AI response
   const maxReconnectAttempts = 3
   const languageSwitchRequestedRef = useRef<boolean>(false)
 
@@ -208,8 +210,10 @@ Good luck!`
               console.log('[RealtimeAudio] ✅ Response created, AI will speak soon')
               console.log('[RealtimeAudio] 🔴 BLOCKING USER INPUT - AI is speaking')
               aiIsSpeakingRef.current = true // AI is now speaking
+              isProcessingResponseRef.current = true // Mark that we're processing AI response
               hasActiveResponseRef.current = true
               setIsListening(true)
+              aiTranscriptRef.current = '' // Reset transcript for this response
             }
             
             if (msg.type === 'response.text.delta') {
@@ -252,10 +256,23 @@ Good luck!`
               console.log('[RealtimeAudio] Full response.done message:', JSON.stringify(msg, null, 2))
               console.log('[RealtimeAudio] 🟢 AI FINISHED SPEAKING - User can now speak')
               aiIsSpeakingRef.current = false // AI finished speaking, allow user to speak
+              isProcessingResponseRef.current = false // Mark that we finished processing AI response
               hasActiveResponseRef.current = false
               setIsListening(false)
               
-              // Check if we have text from response.output
+              // Process accumulated AI message ONCE when response is done
+              if (aiTranscriptRef.current.trim() && onConversationRef.current) {
+                console.log('[RealtimeAudio] ✅ CALLING callback with COMPLETE AI message:', aiTranscriptRef.current.substring(0, 100))
+                onConversationRef.current({
+                  role: 'ai',
+                  content: aiTranscriptRef.current,
+                  timestamp: new Date()
+                })
+                console.log('[RealtimeAudio] ✅ Callback invoked from response.done with complete message')
+                aiTranscriptRef.current = '' // Clear transcript after sending
+              }
+              
+              // Check if we have additional text from response.output
               if (msg.response && msg.response.output) {
                 console.log('[RealtimeAudio] ✅ Response has output array with', msg.response.output.length, 'items')
                 for (let i = 0; i < msg.response.output.length; i++) {
@@ -270,7 +287,8 @@ Good luck!`
                       // Extract text from output_audio (has transcript field)
                       if (contentItem.type === 'output_audio' && contentItem.transcript) {
                         console.log('[RealtimeAudio] 📝 Found transcript in output_audio:', contentItem.transcript, 'from role:', messageRole)
-                        if (onConversationRef.current) {
+                        // Only call callback if we haven't already sent the message via aiTranscriptRef
+                        if (messageRole === 'user' && onConversationRef.current) {
                           onConversationRef.current({
                             role: messageRole,
                             content: contentItem.transcript,
@@ -303,7 +321,8 @@ Good luck!`
                       // Also handle regular text content
                       else if (contentItem.type === 'text' && contentItem.text) {
                         console.log('[RealtimeAudio] 📝 Found text in response output:', contentItem.text)
-                        if (onConversationRef.current) {
+                        // Only call if role is user (to avoid duplicate AI messages)
+                        if (item.role !== 'assistant' && onConversationRef.current) {
                           onConversationRef.current({
                             role: messageRole,
                             content: contentItem.text,
@@ -314,20 +333,6 @@ Good luck!`
                     }
                   }
                 }
-              } else {
-                console.warn('[RealtimeAudio] ⚠️ No response.output found in response.done')
-              }
-              
-              // Save any remaining text from transcript
-              if (aiTranscriptRef.current.trim() && onConversationRef.current) {
-                console.log('[RealtimeAudio] ✅ CALLING callback with remaining AI message from response.done:', aiTranscriptRef.current.substring(0, 100))
-                onConversationRef.current({
-                  role: 'ai',
-                  content: aiTranscriptRef.current,
-                  timestamp: new Date()
-                })
-                console.log('[RealtimeAudio] ✅ Callback invoked from response.done')
-                aiTranscriptRef.current = ''
               }
             }
             

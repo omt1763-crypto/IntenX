@@ -628,10 +628,14 @@ Good luck!`)
       await connect((msg) => {
         console.log('[Page] 🎯 Received conversation message:', msg.role, msg.content)
         
-        // Update AI speaking state
+        // Update AI speaking state ONLY when receiving AI messages
         if (msg.role === 'ai') {
           setAiIsSpeaking(true)
           console.log('[Page] 🔴 AI started speaking - blocking user input')
+        } else if (msg.role === 'user') {
+          // User message means AI is done speaking
+          setAiIsSpeaking(false)
+          console.log('[Page] 🟢 User speaking - AI finished')
         }
         
         // Add message to conversation manager
@@ -642,10 +646,8 @@ Good luck!`)
         if (msg.role === 'ai') {
           waitingForUser = true
         }
-        // If user responds, AI is done speaking
+        // If user responds, AI can speak again
         if (msg.role === 'user') {
-          setAiIsSpeaking(false)
-          console.log('[Page] 🟢 User speaking - AI finished')
           waitingForUser = false
         }
       }, interviewData?.skills || [], interviewData?.systemPrompt)
