@@ -35,6 +35,7 @@ export function useRealtimeAudio(): UseRealtimeAudioReturn {
   const hasActiveResponseRef = useRef<boolean>(false)
   const audioProcessorRef = useRef<AdvancedAudioProcessor | null>(null)
   const noiseProfileSetRef = useRef<boolean>(false)
+  const aiIsSpeakingRef = useRef<boolean>(false) // Track if AI is currently speaking
   const maxReconnectAttempts = 3
   const languageSwitchRequestedRef = useRef<boolean>(false)
 
@@ -205,6 +206,8 @@ Good luck!`
             // Handle response events
             if (msg.type === 'response.created') {
               console.log('[RealtimeAudio] ✅ Response created, AI will speak soon')
+              console.log('[RealtimeAudio] 🔴 BLOCKING USER INPUT - AI is speaking')
+              aiIsSpeakingRef.current = true // AI is now speaking
               hasActiveResponseRef.current = true
               setIsListening(true)
             }
@@ -247,6 +250,8 @@ Good luck!`
             if (msg.type === 'response.done') {
               console.log('[RealtimeAudio] ===== RESPONSE.DONE EVENT =====')
               console.log('[RealtimeAudio] Full response.done message:', JSON.stringify(msg, null, 2))
+              console.log('[RealtimeAudio] 🟢 AI FINISHED SPEAKING - User can now speak')
+              aiIsSpeakingRef.current = false // AI finished speaking, allow user to speak
               hasActiveResponseRef.current = false
               setIsListening(false)
               
@@ -742,6 +747,12 @@ Good luck!`
         
         // Handle audio data
         if (event.data.type === 'audio' && ws.readyState === WebSocket.OPEN) {
+          // Block user audio input while AI is speaking
+          if (aiIsSpeakingRef.current) {
+            console.log('[RealtimeAudio] 🔴 User audio blocked - AI is currently speaking')
+            return // Don't send user audio while AI is speaking
+          }
+          
           let audioData = event.data.audio // Float32Array
           
           // Apply advanced noise suppression if processor is ready

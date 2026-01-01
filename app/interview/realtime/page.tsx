@@ -119,6 +119,7 @@ export default function RealtimeInterviewPage() {
   const [showPaywall, setShowPaywall] = useState(false)
   const [subscriptionInfo, setSubscriptionInfo] = useState<any>(null)
   const [savingConversation, setSavingConversation] = useState(false)
+  const [aiIsSpeaking, setAiIsSpeaking] = useState(false) // Track if AI is speaking
   
   // Pre-interview form state
   const [candidateFormSubmitted, setCandidateFormSubmitted] = useState(false)
@@ -606,6 +607,13 @@ Good luck!`)
 
       await connect((msg) => {
         console.log('[Page] 🎯 Received conversation message:', msg.role, msg.content)
+        
+        // Update AI speaking state
+        if (msg.role === 'ai') {
+          setAiIsSpeaking(true)
+          console.log('[Page] 🔴 AI started speaking - blocking user input')
+        }
+        
         // Add message to conversation manager
         addMessage(msg.role, msg.content)
         console.log('[Page] 📋 Message added to conversation manager')
@@ -614,8 +622,10 @@ Good luck!`)
         if (msg.role === 'ai') {
           waitingForUser = true
         }
-        // If user responds, allow next AI question
+        // If user responds, AI is done speaking
         if (msg.role === 'user') {
+          setAiIsSpeaking(false)
+          console.log('[Page] 🟢 User speaking - AI finished')
           waitingForUser = false
         }
       }, interviewData?.skills || [], interviewData?.systemPrompt)
@@ -1251,8 +1261,22 @@ Good luck!`)
                 
                 {/* Status text */}
                 <p className="text-xs md:text-sm font-medium text-slate-600">AI Agent</p>
-                <p className="text-xs text-slate-500 mt-1">
-                  {isListening ? 'Listening...' : savingConversation ? 'Processing...' : 'Ready'}
+                <p className={`text-xs mt-1 font-medium ${
+                  aiIsSpeaking 
+                    ? 'text-red-600 animate-pulse' 
+                    : isListening 
+                    ? 'text-green-600' 
+                    : savingConversation 
+                    ? 'text-blue-600' 
+                    : 'text-slate-500'
+                }`}>
+                  {aiIsSpeaking 
+                    ? '🔴 Please wait - AI is speaking...' 
+                    : isListening 
+                    ? '🎤 Your turn - speak now!' 
+                    : savingConversation 
+                    ? 'Processing...' 
+                    : 'Ready'}
                 </p>
               </div>
             </div>
