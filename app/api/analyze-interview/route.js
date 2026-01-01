@@ -12,6 +12,7 @@ export async function POST(req) {
     console.log('[AnalyzeInterview API] Analyzing interview for applicant:', applicantId)
     console.log('[AnalyzeInterview API] Conversation messages:', conversation?.length || 0)
     console.log('[AnalyzeInterview API] Skills extracted:', skills?.length || 0)
+    console.log('[AnalyzeInterview API] Interview duration:', duration, 'seconds')
 
     if (!conversation || !Array.isArray(conversation) || conversation.length === 0) {
       console.error('[AnalyzeInterview API] Invalid conversation:', conversation)
@@ -20,6 +21,68 @@ export async function POST(req) {
         { status: 400 }
       )
     }
+
+    // Validate minimum interview participation
+    const MINIMUM_DURATION = 30 // seconds - require at least 30 seconds
+    const MINIMUM_CANDIDATE_MESSAGES = 2 // require at least 2 candidate responses
+    const MINIMUM_AVG_MESSAGE_LENGTH = 10 // characters - require meaningful responses
+
+    // Count candidate messages and check their length
+    const candidateMessages = conversation
+      .filter(msg => msg.role === 'user')
+      .filter(msg => msg.content && msg.content.trim().length > 0)
+    
+    console.log('[AnalyzeInterview API] Candidate messages count:', candidateMessages.length)
+    
+    const avgCandidateMessageLength = candidateMessages.length > 0
+      ? candidateMessages.reduce((sum, msg) => sum + (msg.content?.length || 0), 0) / candidateMessages.length
+      : 0
+
+    console.log('[AnalyzeInterview API] Average candidate message length:', avgCandidateMessageLength)
+
+    // Reject if interview is too short
+    if (duration < MINIMUM_DURATION) {
+      console.warn(`[AnalyzeInterview API] Interview too short: ${duration}s < ${MINIMUM_DURATION}s`)
+      return NextResponse.json(
+        {
+          error: 'Interview duration too short',
+          message: `Interview must be at least ${MINIMUM_DURATION} seconds long. Current: ${duration}s`,
+          minRequired: MINIMUM_DURATION,
+          actual: duration
+        },
+        { status: 400 }
+      )
+    }
+
+    // Reject if not enough candidate participation
+    if (candidateMessages.length < MINIMUM_CANDIDATE_MESSAGES) {
+      console.warn(`[AnalyzeInterview API] Not enough candidate responses: ${candidateMessages.length} < ${MINIMUM_CANDIDATE_MESSAGES}`)
+      return NextResponse.json(
+        {
+          error: 'Not enough candidate participation',
+          message: `Candidate must provide at least ${MINIMUM_CANDIDATE_MESSAGES} responses. Got: ${candidateMessages.length}`,
+          minRequired: MINIMUM_CANDIDATE_MESSAGES,
+          actual: candidateMessages.length
+        },
+        { status: 400 }
+      )
+    }
+
+    // Reject if responses are too short (not meaningful)
+    if (avgCandidateMessageLength < MINIMUM_AVG_MESSAGE_LENGTH) {
+      console.warn(`[AnalyzeInterview API] Candidate responses too short: avg ${avgCandidateMessageLength} chars < ${MINIMUM_AVG_MESSAGE_LENGTH}`)
+      return NextResponse.json(
+        {
+          error: 'Candidate responses too brief',
+          message: `Responses must be more detailed. Average length: ${Math.round(avgCandidateMessageLength)} characters (minimum: ${MINIMUM_AVG_MESSAGE_LENGTH})`,
+          minRequired: MINIMUM_AVG_MESSAGE_LENGTH,
+          actual: Math.round(avgCandidateMessageLength)
+        },
+        { status: 400 }
+      )
+    }
+
+    console.log('[AnalyzeInterview API] Interview validation passed - proceeding with analysis')
 
     if (!OPENAI_API_KEY) {
       console.error('[AnalyzeInterview API] Missing OPENAI_API_KEY')
@@ -39,7 +102,14 @@ export async function POST(req) {
       : 'No specific skills identified'
 
     // Create prompt for AI to analyze - request JSON ONLY
-    const analysisPrompt = `Analyze this job interview VERY CAREFULLY. Return ONLY a valid JSON object, no other text.
+    const analysisPrompt = `You are an expert HR recruiter and interview analyst. Analyze this job interview VERY CAREFULLY and critically.
+
+IMPORTANT SCORING GUIDELINES:
+- Score 0-30: Candidate showed little to no relevant experience, unclear communication, or lack of preparation
+- Score 31-50: Basic understanding but missing depth, limited examples, vague answers
+- Score 51-70: Good understanding, relevant examples, clear communication but some gaps
+- Score 71-85: Strong understanding, multiple relevant examples, excellent communication
+- Score 86-100: Exceptional understanding, comprehensive examples, outstanding communication and fit
 
 INTERVIEW CONVERSATION:
 ${conversationText}
@@ -49,20 +119,28 @@ ${skillsText}
 
 INTERVIEW DURATION: ${duration} seconds
 
-Analyze the candidate's performance and respond with ONLY this JSON structure (no markdown, no extra text):
+CRITICAL EVALUATION REQUIREMENTS:
+1. ONLY score high (>70) if candidate demonstrates CLEAR, SPECIFIC examples of relevant experience
+2. ONLY score high if candidate shows UNDERSTANDING of the target skills/role
+3. Score lower if candidate gives generic, vague, or off-topic answers
+4. Weight scores based on how specifically candidate addressed job requirements
+5. If candidate barely spoke, scores should be much lower (0-40 range)
+6. Be HARSH on vague answers - require concrete examples
+
+Respond with ONLY valid JSON (no markdown, no extra text):
 {
-  "jobSuitability": <number 0-100>,
-  "relevantAccomplishments": <number 0-100>,
-  "driveInitiative": <number 0-100>,
-  "problemSolving": <number 0-100>,
-  "cultureScopes": <number 0-100>,
-  "leadershipInfluence": <number 0-100>,
-  "overall": <number 0-100>,
-  "recommendation": "<'Strong Candidate' or 'Consider for Interview' or 'Do Not Hire'>",
-  "summary": "<2-3 sentence summary of candidate performance>",
-  "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
-  "weaknesses": ["<weakness 1>", "<weakness 2>"],
-  "areasToExplore": ["<area 1>", "<area 2>"]
+  "jobSuitability": <number 0-100 - How well does candidate fit this specific job?>,
+  "relevantAccomplishments": <number 0-100 - Did candidate show SPECIFIC relevant achievements?>,
+  "driveInitiative": <number 0-100 - Did candidate show motivation and proactive thinking?>,
+  "problemSolving": <number 0-100 - Did candidate demonstrate problem-solving with concrete examples?>,
+  "cultureScopes": <number 0-100 - Would candidate fit company culture?>,
+  "leadershipInfluence": <number 0-100 - Did candidate show leadership or collaboration skills?>,
+  "overall": <number 0-100 - OVERALL ASSESSMENT (be critical and conservative in scoring)>,
+  "recommendation": "<MUST be one of: 'Strong Candidate' (overall 75+) | 'Consider for Interview' (overall 50-74) | 'Do Not Hire' (overall <50)>",
+  "summary": "<2-3 sentences - what are the key observations about this candidate? Be specific.>",
+  "strengths": ["<specific strength based on what they said>", "<another specific strength>", "<third if applicable>"],
+  "weaknesses": ["<specific weakness or gap>", "<another weakness>"],
+  "areasToExplore": ["<follow-up question or area>", "<another area to probe>"]
 }`
 
     console.log('[AnalyzeInterview API] Sending to OpenAI for analysis...')

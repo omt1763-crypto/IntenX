@@ -771,6 +771,7 @@ Good luck!`)
           console.log('[Page] Analyzing interview with AI...')
           console.log('[Page] Conversation to analyze:', JSON.stringify(messages, null, 2))
           console.log('[Page] Number of messages:', messages.length)
+          console.log('[Page] Interview duration:', timer, 'seconds')
           
           try {
             if (!messages || messages.length === 0) {
@@ -792,9 +793,23 @@ Good luck!`)
 
               if (analysisResponse.ok) {
                 console.log('[Page] Interview analysis completed:', analysisResult.analysis)
+                console.log('[Page] Final score:', analysisResult.analysis.overall)
               } else {
-                console.error('[Page] Analysis failed:', analysisResult.error)
-                console.error('[Page] Status code:', analysisResponse.status)
+                console.warn('[Page] Analysis validation failed:', analysisResult.message)
+                console.warn('[Page] Analysis error:', analysisResult.error)
+                console.warn('[Page] Status code:', analysisResponse.status)
+                console.warn('[Page] This interview did not meet minimum requirements for scoring')
+                
+                // Show user-friendly message about why analysis wasn't performed
+                if (analysisResult.minRequired && analysisResult.actual !== undefined) {
+                  if (analysisResult.error === 'Interview duration too short') {
+                    console.warn(`[Page] Interview was only ${analysisResult.actual}s, minimum required: ${analysisResult.minRequired}s`)
+                  } else if (analysisResult.error === 'Not enough candidate participation') {
+                    console.warn(`[Page] Only ${analysisResult.actual} candidate responses, minimum required: ${analysisResult.minRequired}`)
+                  } else if (analysisResult.error === 'Candidate responses too brief') {
+                    console.warn(`[Page] Average response length: ${analysisResult.actual} chars, minimum required: ${analysisResult.minRequired}`)
+                  }
+                }
               }
             }
           } catch (analysisError) {
