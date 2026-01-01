@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Mail, Phone, FileText, Calendar, CheckCircle2, Clock } from 'lucide-react'
@@ -23,7 +23,7 @@ interface Applicant {
   }
 }
 
-export default function ApplicantsPage() {
+function RecruiterJobsApplicantsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuth()
@@ -177,5 +177,13 @@ export default function ApplicantsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ApplicantsPage() {
+  return (
+    <Suspense fallback={<div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh'}}><p style={{color: 'white'}}>Loading...</p></div>}>
+      <RecruiterJobsApplicantsPageContent />
+    </Suspense>
   )
 }

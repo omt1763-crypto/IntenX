@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { Suspense, useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Phone, LogOut, Mic, MicOff, Video, VideoOff, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useRealtimeAudio } from '@/hooks/useRealtimeAudio'
@@ -112,7 +112,7 @@ REMEMBER:
 You are ONLY a technical job interviewer for this specific ${jobTitle} position. Your role is to fairly assess the candidate's qualifications based on the job description and required skills. Be respectful, professional, and focused on job-related competencies. Most importantly, act like a human interviewer - when someone gives you a vague or incomplete answer, ask follow-up questions naturally to get the information you need. Don't settle for one-word answers to open-ended questions.`
 }
 
-export default function RealtimeInterviewPage() {
+function RealtimeInterviewPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { role, user, session, loading: authLoading } = useAuth()
@@ -1323,5 +1323,13 @@ Good luck!`)
         />
       )}
     </div>
+  )
+}
+
+export default function RealtimeInterviewPage() {
+  return (
+    <Suspense fallback={<div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh'}}><p style={{color: 'white'}}>Loading...</p></div>}>
+      <RealtimeInterviewPageContent />
+    </Suspense>
   )
 }

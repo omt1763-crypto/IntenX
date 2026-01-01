@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { useSidebar } from '@/context/SidebarContext'
@@ -32,7 +32,7 @@ interface JobGroup {
   expanded: boolean
 }
 
-export default function ApplicantsPage() {
+function ApplicantsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user: authUser, isAuthenticated, isHydrated } = useAuth()
@@ -469,5 +469,21 @@ export default function ApplicantsPage() {
           )}
         </div>      </div>
     </main>
+  )
+}
+
+export default function ApplicantsPage() {
+  return (
+    <Suspense fallback={<div style={{display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh"}}><p>Loading...</p></div>}>
+      <ApplicantsPageContent />
+    </Suspense>
+  )
+}
+
+export default function ApplicantsPage() {
+  return (
+    <Suspense fallback={<div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh'}}><p style={{color: 'white'}}>Loading...</p></div>}>
+      <ApplicantsPageContent />
+    </Suspense>
   )
 }
