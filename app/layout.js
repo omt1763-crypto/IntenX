@@ -2,6 +2,7 @@ import '../styles/index.css'
 import { AuthProvider } from '@/context/AuthContext'
 import { SidebarProvider } from '@/context/SidebarContext'
 import SecurityWrapper from '@/components/SecurityWrapper'
+import AnalyticsTracker from '@/components/AnalyticsTracker'
 
 export const metadata = {
   title: 'InterviewVerse - AI-Powered Interview Platform',
@@ -26,6 +27,7 @@ export default function RootLayout({ children }) {
         <SecurityWrapper>
           <AuthProvider>
             <SidebarProvider>
+              <AnalyticsTracker />
               <div className="min-h-screen w-full">
                 {children}
               </div>

@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Trash2, RefreshCw, CheckSquare, Square, BarChart3, Users2, Briefcase, MessageSquare, CreditCard, Lock, Menu, X, Home, Settings, LogOut, Plus, TrendingUp, Activity } from 'lucide-react'
+import { Trash2, RefreshCw, CheckSquare, Square, BarChart3, Users2, Briefcase, MessageSquare, CreditCard, Lock, Menu, X, Home, Settings, LogOut, Plus, TrendingUp, Activity, Globe, Smartphone, Monitor } from 'lucide-react'
 import DashboardCard from '@/components/dashboard/DashboardCard'
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts'
 
 interface UserData {
   id: string
@@ -48,7 +49,7 @@ export default function AdminDebugPage() {
   const [loading, setLoading] = useState(false)
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
   const [selectAll, setSelectAll] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'jobs' | 'applications' | 'interviews' | 'subscriptions' | 'logs' | 'control'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'jobs' | 'applications' | 'interviews' | 'subscriptions' | 'logs' | 'visitors' | 'control'>('overview')
   const [activityLogs, setActivityLogs] = useState<any[]>([])
   const [filterAction, setFilterAction] = useState('all')
   const [filterLogUser, setFilterLogUser] = useState('all')
@@ -57,6 +58,9 @@ export default function AdminDebugPage() {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [newUser, setNewUser] = useState({ email: '', full_name: '', role: 'candidate' as 'recruiter' | 'candidate' | 'business' })
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [analyticsData, setAnalyticsData] = useState<any>(null)
+  const [analyticsLoading, setAnalyticsLoading] = useState(false)
+  const [analyticsRefresh, setAnalyticsRefresh] = useState(0)
 
   // Check authentication on mount
   useEffect(() => {
@@ -190,6 +194,24 @@ export default function AdminDebugPage() {
       setLogPage(pageNum)
     } catch (error) {
       console.error('Error fetching activity logs:', error)
+    }
+  }
+
+  const loadAnalyticsData = async () => {
+    setAnalyticsLoading(true)
+    try {
+      const response = await fetch('/api/analytics/data?days=30', {
+        method: 'GET',
+        cache: 'no-store'
+      })
+      const data = await response.json()
+      if (data.success) {
+        setAnalyticsData(data)
+      }
+    } catch (error) {
+      console.error('Error loading analytics:', error)
+    } finally {
+      setAnalyticsLoading(false)
     }
   }
 
@@ -354,6 +376,7 @@ export default function AdminDebugPage() {
         <nav className="p-4 space-y-2">
           {[
             { id: 'overview', label: 'Overview', icon: Home },
+            { id: 'visitors', label: 'Visitors', icon: Globe },
             { id: 'users', label: 'Users', icon: Users2 },
             { id: 'jobs', label: 'Jobs', icon: Briefcase },
             { id: 'applications', label: 'Applications', icon: MessageSquare },
@@ -369,6 +392,9 @@ export default function AdminDebugPage() {
                   setActiveTab(item.id as any)
                   if (item.id === 'logs') {
                     fetchActivityLogs(1)
+                  }
+                  if (item.id === 'visitors') {
+                    loadAnalyticsData()
                   }
                 }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
@@ -1365,6 +1391,238 @@ export default function AdminDebugPage() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Visitors / Analytics Tab */}
+        {activeTab === 'visitors' && (
+          <div className="space-y-8 pb-12">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Website Analytics</h1>
+                <p className="text-gray-600 mt-2">Last 30 days analytics data</p>
+              </div>
+              <button
+                onClick={loadAnalyticsData}
+                disabled={analyticsLoading}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition disabled:opacity-50"
+              >
+                <RefreshCw size={20} className={analyticsLoading ? 'animate-spin' : ''} />
+                Refresh
+              </button>
+            </div>
+
+            {analyticsLoading ? (
+              <div className="text-center py-12">
+                <div className="inline-block">
+                  <RefreshCw className="animate-spin text-blue-600" size={32} />
+                  <p className="text-gray-600 mt-4">Loading analytics data...</p>
+                </div>
+              </div>
+            ) : analyticsData ? (
+              <>
+                {/* Key Metrics */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <DashboardCard gradient="blue" hover>
+                    <div className="flex items-start justify-between mb-4">
+                      <p className="text-gray-700 text-sm font-semibold">Total Visits</p>
+                      <Globe size={24} className="text-blue-600" />
+                    </div>
+                    <p className="text-4xl font-bold text-gray-900">{analyticsData.stats?.totalVisits || 0}</p>
+                    <p className="text-xs text-gray-600 mt-2">Page views</p>
+                  </DashboardCard>
+
+                  <DashboardCard gradient="green" hover>
+                    <div className="flex items-start justify-between mb-4">
+                      <p className="text-gray-700 text-sm font-semibold">Unique Visitors</p>
+                      <Users2 size={24} className="text-green-600" />
+                    </div>
+                    <p className="text-4xl font-bold text-gray-900">{analyticsData.stats?.uniqueVisitors || 0}</p>
+                    <p className="text-xs text-gray-600 mt-2">Unique sessions</p>
+                  </DashboardCard>
+
+                  <DashboardCard gradient="purple" hover>
+                    <div className="flex items-start justify-between mb-4">
+                      <p className="text-gray-700 text-sm font-semibold">Countries</p>
+                      <Globe size={24} className="text-purple-600" />
+                    </div>
+                    <p className="text-4xl font-bold text-gray-900">{analyticsData.stats?.uniqueCountries || 0}</p>
+                    <p className="text-xs text-gray-600 mt-2">Countries reached</p>
+                  </DashboardCard>
+
+                  <DashboardCard gradient="orange" hover>
+                    <div className="flex items-start justify-between mb-4">
+                      <p className="text-gray-700 text-sm font-semibold">Avg. Duration</p>
+                      <Activity size={24} className="text-orange-600" />
+                    </div>
+                    <p className="text-4xl font-bold text-gray-900">{analyticsData.stats?.avgVisitDuration || 0}s</p>
+                    <p className="text-xs text-gray-600 mt-2">Average time on site</p>
+                  </DashboardCard>
+                </div>
+
+                {/* Charts */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Visits Timeline */}
+                  <DashboardCard hover>
+                    <h3 className="text-xl font-bold text-gray-900 mb-6">Visits Over Time</h3>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <LineChart data={analyticsData.timelineData || []}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="date" stroke="#6b7280" />
+                        <YAxis stroke="#6b7280" />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                          cursor={{ stroke: '#e5e7eb' }}
+                        />
+                        <Line type="monotone" dataKey="visits" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', r: 5 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </DashboardCard>
+
+                  {/* Device Breakdown */}
+                  <DashboardCard hover>
+                    <h3 className="text-xl font-bold text-gray-900 mb-6">Visitors by Device</h3>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <PieChart>
+                        <Pie
+                          data={analyticsData.deviceData || []}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={true}
+                          label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                          outerRadius={120}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          <Cell fill="#3b82f6" />
+                          <Cell fill="#10b981" />
+                          <Cell fill="#f59e0b" />
+                          <Cell fill="#ef4444" />
+                          <Cell fill="#8b5cf6" />
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </DashboardCard>
+
+                  {/* Top Countries */}
+                  <DashboardCard hover>
+                    <h3 className="text-xl font-bold text-gray-900 mb-6">Top Visitors by Country</h3>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={analyticsData.countryData?.slice(0, 10) || []}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="country" stroke="#6b7280" />
+                        <YAxis stroke="#6b7280" />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                          cursor={{ fill: '#f3f4f6' }}
+                        />
+                        <Bar dataKey="visitors" fill="#10b981" radius={[8, 8, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </DashboardCard>
+
+                  {/* Top Pages */}
+                  <DashboardCard hover>
+                    <h3 className="text-xl font-bold text-gray-900 mb-6">Top Pages</h3>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={analyticsData.topPages?.slice(0, 10) || []} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis type="number" stroke="#6b7280" />
+                        <YAxis dataKey="page" type="category" stroke="#6b7280" width={150} />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                          cursor={{ fill: '#f3f4f6' }}
+                        />
+                        <Bar dataKey="views" fill="#f59e0b" radius={[0, 8, 8, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </DashboardCard>
+
+                  {/* Browser Distribution */}
+                  <DashboardCard hover>
+                    <h3 className="text-xl font-bold text-gray-900 mb-6">Browser Distribution</h3>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <PieChart>
+                        <Pie
+                          data={analyticsData.browserData || []}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={true}
+                          label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                          outerRadius={120}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          <Cell fill="#3b82f6" />
+                          <Cell fill="#10b981" />
+                          <Cell fill="#f59e0b" />
+                          <Cell fill="#ef4444" />
+                          <Cell fill="#8b5cf6" />
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </DashboardCard>
+
+                  {/* Top Cities */}
+                  <DashboardCard hover>
+                    <h3 className="text-xl font-bold text-gray-900 mb-6">Top Cities</h3>
+                    <div className="space-y-3">
+                      {analyticsData.topCities?.slice(0, 10).map((city: any, idx: number) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <span className="text-sm font-medium text-gray-700">{city.city}</span>
+                          <span className="text-sm font-bold text-blue-600 bg-blue-100 px-3 py-1 rounded-full">{city.visitors}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </DashboardCard>
+                </div>
+
+                {/* Recent Visitors Table */}
+                <DashboardCard hover>
+                  <h3 className="text-xl font-bold text-gray-900 mb-6">Recent Visitors</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-gray-700">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="px-4 py-3 text-left font-semibold text-gray-900">Time</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-900">Location</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-900">Page</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-900">Device</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-900">Browser</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {analyticsData.recentVisitors?.map((visitor: any, idx: number) => (
+                          <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50 transition">
+                            <td className="px-4 py-3 text-gray-700">{visitor.date}</td>
+                            <td className="px-4 py-3">
+                              <span className="text-sm font-medium text-gray-900">{visitor.city}</span>
+                              <br />
+                              <span className="text-xs text-gray-500">{visitor.country}</span>
+                            </td>
+                            <td className="px-4 py-3 text-gray-700 truncate max-w-xs">{visitor.page}</td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                                {visitor.device === 'mobile' ? '📱' : visitor.device === 'tablet' ? '📱' : '🖥️'} {visitor.device}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">{visitor.browser}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </DashboardCard>
+              </>
+            ) : (
+              <div className="text-center py-12 bg-gray-50 rounded-lg">
+                <Globe size={48} className="text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-600">No analytics data available yet. Check back after some visitors have accessed the site.</p>
+              </div>
+            )}
           </div>
         )}
       </div>
