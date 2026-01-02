@@ -35,13 +35,14 @@ export async function GET(req) {
     // Visits by country
     const visitorsByCountry = {}
     events?.forEach(e => {
-      if (e.country) {
+      if (e.country && e.country !== 'Unknown') {
         visitorsByCountry[e.country] = (visitorsByCountry[e.country] || 0) + 1
       }
     })
     const countryData = Object.entries(visitorsByCountry)
       .map(([country, count]) => ({ country, visitors: count }))
       .sort((a, b) => b.visitors - a.visitors)
+      .slice(0, 10) // Top 10 countries
 
     // Visits by device type
     const visitorsByDevice = {}

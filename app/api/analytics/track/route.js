@@ -7,19 +7,22 @@ export const dynamic = 'force-dynamic'
 async function getGeoLocation(ip) {
   try {
     // Using ip-api.com (free tier: 45 requests/minute)
-    const response = await fetch(`http://ip-api.com/json/${ip}?fields=country,countryCode,city,isp`, {
+    const response = await fetch(`https://ip-api.com/json/${ip}?fields=country,countryCode,city,isp`, {
       next: { revalidate: 3600 } // Cache for 1 hour
     })
     
-    if (!response.ok) return null
+    if (!response.ok) {
+      console.warn('[Analytics] IP-API returned non-ok status:', response.status)
+      return null
+    }
     
     const data = await response.json()
     
-    if (data.status === 'success') {
+    if (data.status === 'success' && data.country) {
       return {
         country: data.country,
-        country_code: data.countryCode,
-        city: data.city
+        country_code: data.countryCode || data.countryCode,
+        city: data.city || 'Unknown'
       }
     }
     return null
