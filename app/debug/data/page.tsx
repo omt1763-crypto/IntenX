@@ -1451,10 +1451,10 @@ export default function AdminDebugPage() {
                     <p className="text-xs text-gray-600 mt-2">Countries reached</p>
                   </DashboardCard>
 
-                  <DashboardCard gradient="orange" hover>
+                  <DashboardCard gradient="yellow" hover>
                     <div className="flex items-start justify-between mb-4">
                       <p className="text-gray-700 text-sm font-semibold">Avg. Duration</p>
-                      <Activity size={24} className="text-orange-600" />
+                      <Activity size={24} className="text-yellow-600" />
                     </div>
                     <p className="text-4xl font-bold text-gray-900">{analyticsData.stats?.avgVisitDuration || 0}s</p>
                     <p className="text-xs text-gray-600 mt-2">Average time on site</p>
