@@ -1433,10 +1433,10 @@ export default function AdminDebugPage() {
                     <p className="text-xs text-gray-600 mt-2">Page views</p>
                   </DashboardCard>
 
-                  <DashboardCard gradient="green" hover>
+                  <DashboardCard gradient="purple" hover>
                     <div className="flex items-start justify-between mb-4">
                       <p className="text-gray-700 text-sm font-semibold">Unique Visitors</p>
-                      <Users2 size={24} className="text-green-600" />
+                      <Users2 size={24} className="text-purple-600" />
                     </div>
                     <p className="text-4xl font-bold text-gray-900">{analyticsData.stats?.uniqueVisitors || 0}</p>
                     <p className="text-xs text-gray-600 mt-2">Unique sessions</p>
