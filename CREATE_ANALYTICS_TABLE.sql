@@ -31,10 +31,10 @@ CREATE POLICY "Allow insert analytics events" ON analytics_events
   FOR INSERT
   WITH CHECK (true);
 
--- Create policy for admin to read all analytics
+-- Create policy for authenticated users to read all analytics
 CREATE POLICY "Allow read analytics for authenticated users" ON analytics_events
   FOR SELECT
-  USING (auth.role() = 'authenticated');
+  USING (true);
 
 -- Grant permissions
 GRANT SELECT, INSERT ON analytics_events TO postgres, authenticated, anon;

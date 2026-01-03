@@ -35,7 +35,7 @@ export async function GET(req) {
     // Visits by country
     const visitorsByCountry = {}
     events?.forEach(e => {
-      if (e.country && e.country !== 'Unknown') {
+      if (e.country) {
         visitorsByCountry[e.country] = (visitorsByCountry[e.country] || 0) + 1
       }
     })

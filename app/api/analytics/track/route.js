@@ -21,7 +21,7 @@ async function getGeoLocation(ip) {
     if (data.status === 'success' && data.country) {
       return {
         country: data.country,
-        country_code: data.countryCode || data.countryCode,
+        country_code: data.countryCode || '',
         city: data.city || 'Unknown'
       }
     }
