@@ -4,15 +4,19 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
+// Create clients only if environment variables are available
+let supabase: any = null
+let supabaseAdmin: any = null
+
+if (supabaseUrl && supabaseAnonKey) {
+  // Client for frontend (limited permissions)
+  supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+  // Client for backend/API routes (full permissions)
+  supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey)
 }
 
-// Client for frontend (limited permissions)
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
-// Client for backend/API routes (full permissions)
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey)
+export { supabase, supabaseAdmin }
 
 // User type
 export interface User {
