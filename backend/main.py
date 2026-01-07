@@ -16,16 +16,16 @@ import json
 from openai import OpenAI
 from guardrails import generate_interview_instructions, validate_ai_response, validate_instructions_format
 
+# Setup logging first
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Load environment
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     logger.warning("⚠️ OPENAI_API_KEY not set in environment - WebSocket will fail")
     # Don't crash, let it fail gracefully with clear error
-
-# Setup logging first
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Use Supabase by default
 try:
@@ -78,8 +78,12 @@ class UserData(BaseModel):
     email: str
     name: str
 
-# Initialize OpenAI client
-client = OpenAI(api_key=OPENAI_API_KEY)
+# Initialize OpenAI client only if API key is set
+client = None
+if OPENAI_API_KEY:
+    client = OpenAI(api_key=OPENAI_API_KEY)
+else:
+    logger.warning("⚠️ OpenAI client not initialized - OPENAI_API_KEY not set")
 
 # Add CORS
 app.add_middleware(
@@ -347,6 +351,9 @@ async def extract_skills(request: ExtractSkillsRequest):
     Sends description directly to OpenAI like Valitron does
     """
     try:
+        if not client:
+            raise HTTPException(status_code=503, detail="OpenAI API key is not configured. Please set OPENAI_API_KEY environment variable.")
+        
         job_description = request.description
         if not job_description:
             raise HTTPException(status_code=400, detail="Job description is required")
