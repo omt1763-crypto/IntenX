@@ -101,6 +101,9 @@ export default function AdminDebugPage() {
         const usersData = data.users || []
         const jobsData = data.jobs || []
         const interviewsData = data.interviews || []
+        const applicationsData = [] // Not returned by our API yet
+        const subscriptionsData = [] // Not returned by our API yet
+        const paymentsData = [] // Not returned by our API yet
 
         console.log('[AdminDebug] Extracted data:', {
           users: usersData.length,
@@ -120,14 +123,14 @@ export default function AdminDebugPage() {
         setSubscriptions(subscriptionsData)
         setPayments(paymentsData)
 
-        // Use breakdown data from API if available
-        const recruiters = debugData.breakdown?.recruiters || usersData.filter(u => u.role === 'recruiter').length
-        const candidates = debugData.breakdown?.candidates || usersData.filter(u => u.role === 'candidate').length
+        // Calculate stats from the data we have
+        const recruiters = usersData.filter(u => u.role === 'recruiter').length
+        const candidates = usersData.filter(u => u.role === 'candidate').length
         const businesses = usersData.filter(u => u.role === 'business' || u.role === 'company').length
         
         const activeJobs = jobsData.filter(j => j.status !== 'closed').length
-        const pendingApplications = debugData.applicationStatus?.pending || applicationsData.filter(a => a.status === 'pending').length
-        const completedInterviews = debugData.interviewStats?.completed || interviewsData.filter(i => i.status === 'completed').length
+        const pendingApplications = applicationsData.filter(a => a.status === 'pending').length
+        const completedInterviews = interviewsData.filter(i => i.status === 'completed').length
         const totalRevenue = paymentsData.reduce((sum, p) => sum + (p.amount || 0), 0)
 
         setStats({
