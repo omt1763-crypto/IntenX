@@ -96,24 +96,16 @@ export default function AdminDebugPage() {
       
       console.log('[AdminDebug] API Response:', data)
       
-      if (data.success) {
-        const debugData = data.data
-        
-        // Extract users from the debug data
-        const usersData = debugData.users || []
-        const jobsData = debugData.jobs || []
-        const applicationsData = debugData.applicants || []
-        const interviewsData = debugData.interviews || []
-        const subscriptionsData = debugData.subscriptions || []
-        const paymentsData = debugData.payments || []
+      // Our API returns data directly (users, interviews, jobs, error)
+      if (!data.error && data.users) {
+        const usersData = data.users || []
+        const jobsData = data.jobs || []
+        const interviewsData = data.interviews || []
 
         console.log('[AdminDebug] Extracted data:', {
           users: usersData.length,
           jobs: jobsData.length,
-          applications: applicationsData.length,
-          interviews: interviewsData.length,
-          subscriptions: subscriptionsData.length,
-          payments: paymentsData.length
+          interviews: interviewsData.length
         })
         
         if (usersData.length > 0) {
