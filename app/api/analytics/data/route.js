@@ -11,12 +11,23 @@ export async function GET(req) {
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - days)
 
-    // Get all analytics events for the period
-    const { data: events, error } = await supabaseAdmin
+    // Get all analytics events for the period, excluding admin pages
+    const { data: allEvents, error } = await supabaseAdmin
       .from('analytics_events')
       .select('*')
       .gte('created_at', startDate.toISOString())
       .order('created_at', { ascending: true })
+
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    }
+
+    // Filter out admin pages from visitor analytics
+    const adminPages = ['/debug/data', '/debug', '/api/debug', '/api/analytics']
+    const events = allEvents?.filter(e => {
+      const pagePath = e.page_path || ''
+      return !adminPages.some(adminPage => pagePath.includes(adminPage))
+    }) || []
 
     if (error) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
