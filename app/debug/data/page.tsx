@@ -91,24 +91,31 @@ export default function AdminDebugPage() {
     setLoading(true)
     try {
       // Use API endpoint for data fetching (handles admin access properly)
-      const response = await fetch('/api/debug/data', { method: 'GET', cache: 'no-store' })
-      const data = await response.json()
+      const [mainResponse, appResponse] = await Promise.all([
+        fetch('/api/debug/data', { method: 'GET', cache: 'no-store' }),
+        fetch('/api/debug/applications', { method: 'GET', cache: 'no-store' })
+      ])
+      
+      const data = await mainResponse.json()
+      const appData = await appResponse.json()
       
       console.log('[AdminDebug] API Response:', data)
+      console.log('[AdminDebug] Applications Response:', appData)
       
       // Our API returns data directly (users, interviews, jobs, error)
       if (!data.error && data.users) {
         const usersData = data.users || []
         const jobsData = data.jobs || []
         const interviewsData = data.interviews || []
-        const applicationsData = [] // Not returned by our API yet
+        const applicationsData = appData.applications || []
         const subscriptionsData = [] // Not returned by our API yet
         const paymentsData = [] // Not returned by our API yet
 
         console.log('[AdminDebug] Extracted data:', {
           users: usersData.length,
           jobs: jobsData.length,
-          interviews: interviewsData.length
+          interviews: interviewsData.length,
+          applications: applicationsData.length
         })
         
         if (usersData.length > 0) {
