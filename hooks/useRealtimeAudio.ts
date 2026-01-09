@@ -50,6 +50,7 @@ export function useRealtimeAudio(): UseRealtimeAudioReturn {
   const lastUserSpeechTimeRef = useRef<number>(0) // NEW: Track when user last spoke
   const audioChunksSentSinceLastCommitRef = useRef<number>(0) // Track if any audio was actually sent
   const accumulatedAudioDurationMsRef = useRef<number>(0) // Track total audio duration sent
+  const keepAliveIntervalRef = useRef<NodeJS.Timeout | null>(null) // Keep-alive heartbeat
 
   const connect = useCallback(async (onConversation?: (msg: ConversationMessage) => void, skills?: Array<{name: string; reason?: string}>, systemPrompt?: string) => {
     if (onConversation) {
@@ -159,6 +160,23 @@ ${JSON.stringify(skillsPayload, null, 2)}
           
           // No longer need to store and send instructions separately
           pendingInstructionsRef.current = ''
+          
+          // Start keep-alive heartbeat to prevent idle timeout
+          if (keepAliveIntervalRef.current) {
+            clearInterval(keepAliveIntervalRef.current)
+          }
+          keepAliveIntervalRef.current = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+              // Send an empty message to keep connection alive
+              try {
+                ws.send(JSON.stringify({ type: 'session.ping' }))
+              } catch (e) {
+                // Silent fail - connection may be closing
+              }
+            }
+          }, 15000) // Every 15 seconds
+          
+          console.log('[RealtimeAudio] 💓 Keep-alive heartbeat started')
           
           resolve()
         }
@@ -598,7 +616,25 @@ ${JSON.stringify(skillsPayload, null, 2)}
         }
 
         ws.onclose = (event) => {
-          console.log(`[RealtimeAudio] WebSocket closed: ${event.code} ${event.reason}`)
+          console.log(`[RealtimeAudio] ❌ WebSocket closed: ${event.code} ${event.reason}`)
+          
+          // Log close code meanings
+          if (event.code === 1000) {
+            console.log('[RealtimeAudio] Normal closure')
+          } else if (event.code === 1006) {
+            console.log('[RealtimeAudio] Abnormal closure - connection lost, may be timeout or backend issue')
+          } else if (event.code === 1009) {
+            console.log('[RealtimeAudio] Message too large')
+          } else if (event.code === 1011) {
+            console.log('[RealtimeAudio] Server error')
+          }
+          
+          // Clear keep-alive
+          if (keepAliveIntervalRef.current) {
+            clearInterval(keepAliveIntervalRef.current)
+            keepAliveIntervalRef.current = null
+          }
+          
           if (!connected && reconnectAttemptsRef.current < maxReconnectAttempts) {
             reconnectAttemptsRef.current++
             console.log(`[RealtimeAudio] Attempting reconnect ${reconnectAttemptsRef.current}/${maxReconnectAttempts}...`)
@@ -914,6 +950,12 @@ ${JSON.stringify(skillsPayload, null, 2)}
 
   const disconnect = useCallback(async () => {
     console.log('[RealtimeAudio] 🛑 HARD DISCONNECT - Closing all connections NOW')
+
+    // Clear keep-alive immediately
+    if (keepAliveIntervalRef.current) {
+      clearInterval(keepAliveIntervalRef.current)
+      keepAliveIntervalRef.current = null
+    }
 
     // IMMEDIATELY close WebSocket - don't wait for anything
     if (wsRef.current) {
