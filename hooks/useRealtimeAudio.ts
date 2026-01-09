@@ -46,6 +46,13 @@ export function useRealtimeAudio(): UseRealtimeAudioReturn {
     // Generate instructions from guardrails configuration with custom system prompt
     const instructions = generateInterviewerInstructions(skills, systemPrompt)
     
+    if (systemPrompt) {
+      console.log('[RealtimeAudio] ✅ Custom system prompt provided (length: ' + systemPrompt.length + ')')
+      console.log('[RealtimeAudio] System prompt preview:', systemPrompt.substring(0, 200))
+    } else {
+      console.warn('[RealtimeAudio] ⚠️ No custom system prompt provided, using base guardrails')
+    }
+    
     if (skills && skills.length > 0) {
       console.log('[RealtimeAudio] Skills provided:', skills)
     }
