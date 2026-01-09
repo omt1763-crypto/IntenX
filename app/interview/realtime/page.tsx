@@ -28,11 +28,26 @@ function generateSystemPromptWithJobDetails(
   jobTitle: string,
   jobDescription: string,
   skills: Array<{ name: string; reason: string }>,
-  company: string
+  company: string,
+  candidateName?: string,
+  candidatePosition?: string,
+  resumeText?: string,
+  candidateEmail?: string,
+  candidatePhone?: string
 ): string {
   const skillsList = skills
     .map(s => `• ${s.name}`)
     .join('\n')
+
+  // Create comprehensive candidate profile JSON for AI
+  const candidateProfile = {
+    name: candidateName || 'Not provided',
+    email: candidateEmail || 'Not provided',
+    phone: candidatePhone || 'Not provided',
+    appliedPosition: candidatePosition || 'Not provided',
+    resume: resumeText || 'No resume provided',
+    profileComplete: !!(candidateName && candidateEmail && candidatePhone && candidatePosition)
+  }
 
   return `You are a professional technical job interviewer conducting a formal interview in English.
 
@@ -46,6 +61,20 @@ POSITION DETAILS:
 - Company: ${company}
 - Job Description:
 ${jobDescription}
+
+=== CANDIDATE PROFILE (JSON FORMAT) ===
+${JSON.stringify(candidateProfile, null, 2)}
+=== END CANDIDATE PROFILE ===
+
+CANDIDATE MATCHING STRATEGY:
+1. Review candidate's background from the profile above
+2. Match their resume/experience against required skills and job description
+3. Ask targeted questions that probe:
+   - Specific experience with required technologies/skills
+   - How their background aligns with this specific role
+   - Examples where their previous positions relate to this job
+   - Gaps between their experience and job requirements
+4. Acknowledge what they've shared from their profile during conversation
 
 CRITICAL - FIRST RESPONSE PROTOCOL:
 🎯 YOUR FIRST RESPONSE MUST BE:
@@ -170,7 +199,8 @@ function RealtimeInterviewPageContent() {
     email: '',
     phone: '',
     position: '',
-    resumeFile: null as File | null
+    resumeFile: null as File | null,
+    resumeText: '' // Extracted resume content for AI
   })
   const [formLoading, setFormLoading] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -296,6 +326,29 @@ function RealtimeInterviewPageContent() {
     }
   }
 
+  // Extract text from resume file
+  const extractResumeText = async (file: File): Promise<string> => {
+    try {
+      // For PDF files
+      if (file.type === 'application/pdf') {
+        // Note: In production, you'd use a library like pdf-parse or pdfjs-dist
+        // For now, we'll just extract filename and note that it's a PDF
+        return `Resume file: ${file.name} (PDF format uploaded)`
+      }
+      
+      // For text-based files (.txt, .doc as text)
+      if (file.type === 'text/plain' || file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
+        const text = await file.text()
+        return text.substring(0, 2000) // First 2000 chars to avoid token overflow
+      }
+      
+      return `Resume file uploaded: ${file.name}`
+    } catch (error) {
+      console.warn('[Interview Form] Could not extract resume text:', error)
+      return `Resume file uploaded: ${file.name}`
+    }
+  }
+
   // Handle candidate form submission
   const handleCandidateFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -317,6 +370,12 @@ function RealtimeInterviewPageContent() {
         throw new Error('Position applying for is required')
       }
 
+      // Extract resume text if file is provided
+      let resumeText = ''
+      if (candidateInfo.resumeFile) {
+        resumeText = await extractResumeText(candidateInfo.resumeFile)
+      }
+
       console.log('[Interview Form] 📋 Form validation passed')
       console.log('[Interview Form] Candidate info:', {
         name: candidateInfo.name,
@@ -324,8 +383,25 @@ function RealtimeInterviewPageContent() {
         phone: candidateInfo.phone,
         position: candidateInfo.position,
         jobId: jobId,
-        hasResume: !!candidateInfo.resumeFile
+        hasResume: !!candidateInfo.resumeFile,
+        resumeTextLength: resumeText.length
       })
+
+      // Create comprehensive candidate profile as JSON
+      const candidateProfile = {
+        name: candidateInfo.name,
+        email: candidateInfo.email,
+        phone: candidateInfo.phone,
+        appliedPosition: candidateInfo.position,
+        resume: resumeText || 'No resume provided',
+        submittedAt: new Date().toISOString()
+      }
+
+      // Update candidate info with resume text for later use
+      setCandidateInfo(prev => ({
+        ...prev,
+        resumeText
+      }))
 
       // Prepare form data
       const formData = new FormData()
@@ -334,10 +410,12 @@ function RealtimeInterviewPageContent() {
       formData.append('phone', candidateInfo.phone)
       formData.append('position', candidateInfo.position)
       formData.append('jobId', jobId || '')
+      formData.append('candidateProfile', JSON.stringify(candidateProfile))
       if (candidateInfo.resumeFile) {
         formData.append('resume', candidateInfo.resumeFile)
       }
 
+      console.log('[Interview Form] 📋 Candidate Profile JSON:', candidateProfile)
       console.log('[Interview Form] 🚀 Submitting to /api/candidate-intake...')
 
       // Save candidate info to backend
@@ -405,12 +483,17 @@ function RealtimeInterviewPageContent() {
           description: job.description || '',
           jobDescription: job.description || '',
           skills: skillsArray,
-          // Generate system prompt that includes job details
+          // Generate system prompt that includes job details and comprehensive candidate profile
           systemPrompt: generateSystemPromptWithJobDetails(
             job.title,
             job.description,
             skillsArray,
-            job.company
+            job.company,
+            candidateInfo.name,
+            candidateInfo.position,
+            candidateInfo.resumeText,
+            candidateInfo.email,
+            candidateInfo.phone
           )
         })
       } else {
