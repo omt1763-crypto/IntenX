@@ -86,13 +86,16 @@ export function useRealtimeAudio(): UseRealtimeAudioReturn {
 CONTEXT DATA (JSON):
 ${JSON.stringify(contextData, null, 2)}`
           
-          // Send session configuration with all required parameters
-          // NOTE: Only 'instructions' can be updated in session.update()
-          // Other parameters like temperature, voice, turn_detection are set during initial backend connection
+          // Send INITIAL session configuration with type='realtime' 
+          // This MUST be sent first to initialize the session
+          console.log('[RealtimeAudio] 📤 Sending initial session configuration with type=realtime...')
           ws.send(JSON.stringify({
             type: 'session.update',
             session: {
-              instructions: fullInstructions
+              type: 'realtime',
+              instructions: fullInstructions,
+              modalities: ['text', 'audio'],
+              voice: 'alloy'
             }
           }))
           
@@ -114,6 +117,11 @@ ${JSON.stringify(contextData, null, 2)}`
         ws.onmessage = async (event) => {
           try {
             const msg = JSON.parse(event.data)
+            
+            // Log all incoming messages for debugging
+            if (msg.type !== 'response.audio.delta' && msg.type !== 'response.audio.transcript.delta') {
+              console.log('[RealtimeAudio] 📨 Message from OpenAI:', msg.type, msg)
+            }
             
             // Handle session events
             if (msg.type === 'session.created' || msg.type === 'session.updated') {
@@ -231,7 +239,11 @@ ${JSON.stringify(contextData, null, 2)}`
             
             // Handle errors
             if (msg.type === 'error') {
-              console.error('[RealtimeAudio] Error from OpenAI:', msg.error)
+              console.error('[RealtimeAudio] ❌ ERROR FROM OPENAI:', msg.error)
+              console.error('[RealtimeAudio] Error type:', msg.error?.type)
+              console.error('[RealtimeAudio] Error code:', msg.error?.code)
+              console.error('[RealtimeAudio] Error message:', msg.error?.message)
+              console.error('[RealtimeAudio] Error param:', msg.error?.param)
               setError(msg.error?.message || 'OpenAI error')
             }
             
