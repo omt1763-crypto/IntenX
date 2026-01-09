@@ -48,6 +48,7 @@ export function useRealtimeAudio(): UseRealtimeAudioReturn {
   const languageSwitchRequestedRef = useRef<boolean>(false)
   const userSpeechDetectedRef = useRef<boolean>(false) // NEW: Track if user is currently speaking
   const lastUserSpeechTimeRef = useRef<number>(0) // NEW: Track when user last spoke
+  const audioChunksSentSinceLastCommitRef = useRef<number>(0) // Track if any audio was actually sent
 
   const connect = useCallback(async (onConversation?: (msg: ConversationMessage) => void, skills?: Array<{name: string; reason?: string}>, systemPrompt?: string) => {
     if (onConversation) {
@@ -548,22 +549,24 @@ ${JSON.stringify(skillsPayload, null, 2)}
               console.log('[RealtimeAudio] 🎤 CANDIDATE SPEAKING STARTED')
             }
             if (msg.type === 'input_audio_buffer.speech_stopped') {
-              console.log('[RealtimeAudio] 🤐 CANDIDATE SPEAKING STOPPED - committing audio buffer and requesting response')
+              console.log('[RealtimeAudio] 🤐 CANDIDATE SPEAKING STOPPED')
               
-              // CRITICAL: Commit the audio buffer to trigger transcription and response
-              ws.send(JSON.stringify({
-                type: 'input_audio_buffer.commit'
-              }))
-              console.log('[RealtimeAudio] 📤 Sent input_audio_buffer.commit to process user input')
-              
-              // Request AI to generate a response based on user input
-              ws.send(JSON.stringify({
-                type: 'response.create'
-              }))
-              console.log('[RealtimeAudio] ⏳ Sent response.create to generate AI response')
+              // Only commit if we actually have audio chunks
+              if (audioChunksSentSinceLastCommitRef.current > 0) {
+                console.log(`[RealtimeAudio] 📤 Committing ${audioChunksSentSinceLastCommitRef.current} audio chunks`)
+                
+                ws.send(JSON.stringify({
+                  type: 'input_audio_buffer.commit'
+                }))
+                console.log('[RealtimeAudio] 📤 Sent input_audio_buffer.commit to process user input')
+                audioChunksSentSinceLastCommitRef.current = 0 // Reset counter after commit
+              } else {
+                console.log('[RealtimeAudio] ⏭️ Skipping commit - no audio chunks were sent (user spoke while AI was speaking)')
+              }
             }
             if (msg.type === 'input_audio_buffer.committed') {
               console.log('[RealtimeAudio] ✅ AUDIO BUFFER COMMITTED - transcript should follow')
+              audioChunksSentSinceLastCommitRef.current = 0 // Reset counter
             }
             
             // Handle errors
@@ -868,6 +871,7 @@ ${JSON.stringify(skillsPayload, null, 2)}
               type: 'input_audio_buffer.append',
               audio: audioB64
             }))
+            audioChunksSentSinceLastCommitRef.current++ // Track that we sent audio
           } else {
             // Log that we're blocking user audio (only occasionally to avoid spam)
             if (Date.now() % 5000 < 50) {
