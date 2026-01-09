@@ -11,6 +11,13 @@ export async function GET(req) {
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - days)
 
+    // Get user registrations for the period
+    const { data: newUsers, error: usersError } = await supabaseAdmin
+      .from('users')
+      .select('id, created_at, role')
+      .gte('created_at', startDate.toISOString())
+      .order('created_at', { ascending: true })
+
     // Get all analytics events for the period, excluding admin pages
     const { data: allEvents, error } = await supabaseAdmin
       .from('analytics_events')
@@ -40,7 +47,11 @@ export async function GET(req) {
       uniqueCountries: new Set(events?.map(e => e.country)).size || 0,
       avgVisitDuration: events?.length > 0 
         ? Math.round(events.reduce((sum, e) => sum + (e.duration_seconds || 0), 0) / events.length)
-        : 0
+        : 0,
+      newUsersRegistered: newUsers?.length || 0,
+      newCandidates: newUsers?.filter(u => u.role === 'candidate').length || 0,
+      newRecruiters: newUsers?.filter(u => u.role === 'recruiter').length || 0,
+      newBusinesses: newUsers?.filter(u => u.role === 'business' || u.role === 'company').length || 0
     }
 
     // Visits by country
@@ -88,8 +99,10 @@ export async function GET(req) {
       .sort((a, b) => b.views - a.views)
       .slice(0, 10)
 
-    // Visits over time (daily)
+    // Visits over time (daily) - with user registrations
     const visitsOverTime = {}
+    const registrationsOverTime = {}
+    
     events?.forEach(e => {
       const date = new Date(e.created_at).toLocaleDateString('en-US', { 
         year: 'numeric', 
@@ -98,8 +111,25 @@ export async function GET(req) {
       })
       visitsOverTime[date] = (visitsOverTime[date] || 0) + 1
     })
-    const timelineData = Object.entries(visitsOverTime)
-      .map(([date, visits]) => ({ date, visits }))
+    
+    newUsers?.forEach(u => {
+      const date = new Date(u.created_at).toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      })
+      registrationsOverTime[date] = (registrationsOverTime[date] || 0) + 1
+    })
+    
+    // Merge both timelines
+    const allDates = new Set([...Object.keys(visitsOverTime), ...Object.keys(registrationsOverTime)])
+    const timelineData = Array.from(allDates)
+      .map(date => ({ 
+        date, 
+        visits: visitsOverTime[date] || 0,
+        registrations: registrationsOverTime[date] || 0
+      }))
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
 
     // Top cities
     const cityCounts = {}

@@ -1425,7 +1425,7 @@ export default function AdminDebugPage() {
             ) : analyticsData ? (
               <>
                 {/* Key Metrics */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
                   <DashboardCard gradient="blue" hover>
                     <div className="flex items-start justify-between mb-4">
                       <p className="text-gray-700 text-sm font-semibold">Total Visits</p>
@@ -1433,6 +1433,15 @@ export default function AdminDebugPage() {
                     </div>
                     <p className="text-4xl font-bold text-gray-900">{analyticsData.stats?.totalVisits || 0}</p>
                     <p className="text-xs text-gray-600 mt-2">Page views</p>
+                  </DashboardCard>
+
+                  <DashboardCard gradient="green" hover>
+                    <div className="flex items-start justify-between mb-4">
+                      <p className="text-gray-700 text-sm font-semibold">New Registrations</p>
+                      <Users2 size={24} className="text-green-600" />
+                    </div>
+                    <p className="text-4xl font-bold text-gray-900">{analyticsData.stats?.newUsersRegistered || 0}</p>
+                    <p className="text-xs text-gray-600 mt-2">New users</p>
                   </DashboardCard>
 
                   <DashboardCard gradient="purple" hover>
@@ -1444,10 +1453,10 @@ export default function AdminDebugPage() {
                     <p className="text-xs text-gray-600 mt-2">Unique sessions</p>
                   </DashboardCard>
 
-                  <DashboardCard gradient="purple" hover>
+                  <DashboardCard gradient="indigo" hover>
                     <div className="flex items-start justify-between mb-4">
                       <p className="text-gray-700 text-sm font-semibold">Countries</p>
-                      <Globe size={24} className="text-purple-600" />
+                      <Globe size={24} className="text-indigo-600" />
                     </div>
                     <p className="text-4xl font-bold text-gray-900">{analyticsData.stats?.uniqueCountries || 0}</p>
                     <p className="text-xs text-gray-600 mt-2">Countries reached</p>
@@ -1465,9 +1474,9 @@ export default function AdminDebugPage() {
 
                 {/* Charts */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Visits Timeline */}
+                  {/* Visits & Registrations Timeline */}
                   <DashboardCard hover>
-                    <h3 className="text-xl font-bold text-gray-900 mb-6">Visits Over Time</h3>
+                    <h3 className="text-xl font-bold text-gray-900 mb-6">Activity Over Time</h3>
                     <ResponsiveContainer width="100%" height={400}>
                       <LineChart data={analyticsData.timelineData || []}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -1477,7 +1486,9 @@ export default function AdminDebugPage() {
                           contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                           cursor={{ stroke: '#e5e7eb' }}
                         />
-                        <Line type="monotone" dataKey="visits" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', r: 5 }} />
+                        <Legend />
+                        <Line type="monotone" dataKey="visits" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', r: 4 }} name="Page Visits" />
+                        <Line type="monotone" dataKey="registrations" stroke="#10b981" strokeWidth={3} dot={{ fill: '#10b981', r: 4 }} name="New Registrations" />
                       </LineChart>
                     </ResponsiveContainer>
                   </DashboardCard>

@@ -1,6 +1,9 @@
 import { useCallback, useRef, useState } from 'react'
 import { generateInterviewerInstructions, formatInterviewContext, validateGuardrails } from '@/config/interviewer-guardrails'
 import { AdvancedAudioProcessor, detectVoiceActivity, normalizeAudio, highPassFilter } from '@/lib/advancedAudioProcessing'
+import { BackgroundNoiseSuppressionLayer } from '@/lib/backgroundNoiseSuppressionLayer'
+import { ConversationFlowManager } from '@/lib/conversationFlowManager'
+import { VoiceActivityDetector } from '@/lib/voiceActivityDetector'
 
 export interface ConversationMessage {
   role: 'ai' | 'user'
@@ -34,12 +37,17 @@ export function useRealtimeAudio(): UseRealtimeAudioReturn {
   const pendingInstructionsRef = useRef<string>('')
   const hasActiveResponseRef = useRef<boolean>(false)
   const audioProcessorRef = useRef<AdvancedAudioProcessor | null>(null)
+  const backgroundNoiseSuppressionRef = useRef<BackgroundNoiseSuppressionLayer | null>(null) // NEW: Background noise suppression
+  const conversationFlowRef = useRef<ConversationFlowManager>(new ConversationFlowManager()) // NEW: Conversation flow management
+  const voiceActivityDetectorRef = useRef<VoiceActivityDetector>(new VoiceActivityDetector()) // NEW: Voice activity detection
   const noiseProfileSetRef = useRef<boolean>(false)
   const aiIsSpeakingRef = useRef<boolean>(false) // Track if AI is currently speaking
   const messageQueueRef = useRef<ConversationMessage[]>([]) // Queue messages to send in order
   const isProcessingResponseRef = useRef<boolean>(false) // Track if we're in the middle of an AI response
   const maxReconnectAttempts = 3
   const languageSwitchRequestedRef = useRef<boolean>(false)
+  const userSpeechDetectedRef = useRef<boolean>(false) // NEW: Track if user is currently speaking
+  const lastUserSpeechTimeRef = useRef<number>(0) // NEW: Track when user last spoke
 
   const connect = useCallback(async (onConversation?: (msg: ConversationMessage) => void, skills?: Array<{name: string; reason?: string}>, systemPrompt?: string) => {
     if (onConversation) {
@@ -201,11 +209,19 @@ ${JSON.stringify(skillsPayload, null, 2)}
             if (msg.type === 'response.created') {
               console.log('[RealtimeAudio] ✅ Response created, AI will speak soon')
               console.log('[RealtimeAudio] 🔴 BLOCKING USER INPUT - AI is speaking')
+              
+              // Signal to conversation flow manager
+              conversationFlowRef.current.signalAISpeakingStart()
+              
               aiIsSpeakingRef.current = true // AI is now speaking
               isProcessingResponseRef.current = true // Mark that we're processing AI response
               hasActiveResponseRef.current = true
               setIsListening(true)
               aiTranscriptRef.current = '' // Reset transcript for this response
+              
+              // CRITICAL: Flush any queued user audio to ensure we get a clean response
+              // The backend will handle the buffer
+              console.log('[RealtimeAudio] 📤 AI starting to speak - User input will be blocked until response.done')
             }
             
             if (msg.type === 'response.text.delta') {
@@ -246,86 +262,96 @@ ${JSON.stringify(skillsPayload, null, 2)}
             if (msg.type === 'response.done') {
               console.log('[RealtimeAudio] ===== RESPONSE.DONE EVENT =====')
               console.log('[RealtimeAudio] Full response.done message:', JSON.stringify(msg, null, 2))
-              console.log('[RealtimeAudio] 🟢 AI FINISHED SPEAKING - User can now speak')
-              aiIsSpeakingRef.current = false // AI finished speaking, allow user to speak
-              isProcessingResponseRef.current = false // Mark that we finished processing AI response
-              hasActiveResponseRef.current = false
-              setIsListening(false)
               
-              // Process accumulated AI message ONCE when response is done
-              if (aiTranscriptRef.current.trim() && onConversationRef.current) {
-                console.log('[RealtimeAudio] ✅ CALLING callback with COMPLETE AI message:', aiTranscriptRef.current.substring(0, 100))
-                onConversationRef.current({
-                  role: 'ai',
-                  content: aiTranscriptRef.current,
-                  timestamp: new Date()
-                })
-                console.log('[RealtimeAudio] ✅ Callback invoked from response.done with complete message')
-                aiTranscriptRef.current = '' // Clear transcript after sending
-              }
+              // Signal to conversation flow manager
+              conversationFlowRef.current.signalAISpeakingEnd()
               
-              // Check if we have additional text from response.output
-              if (msg.response && msg.response.output) {
-                console.log('[RealtimeAudio] ✅ Response has output array with', msg.response.output.length, 'items')
-                for (let i = 0; i < msg.response.output.length; i++) {
-                  const item = msg.response.output[i]
-                  console.log(`[RealtimeAudio] Output item ${i}:`, JSON.stringify(item, null, 2))
-                  
-                  // Handle message items with content
-                  if (item.type === 'message' && item.content) {
-                    const messageRole = item.role === 'assistant' ? 'ai' : item.role // Convert 'assistant' to 'ai'
+              // ⏳ CRITICAL TIMING: Wait for AI audio to finish playing
+              // This ensures user audio captured during AI audio playback isn't included
+              const finishDelay = 1200 // Wait 1.2 seconds to ensure audio finished
+              
+              setTimeout(() => {
+                console.log('[RealtimeAudio] 🟢 AI FINISHED SPEAKING - User can now speak')
+                aiIsSpeakingRef.current = false // AI finished speaking, allow user to speak
+                isProcessingResponseRef.current = false // Mark that we finished processing AI response
+                hasActiveResponseRef.current = false
+                setIsListening(false)
+                
+                // Process accumulated AI message ONCE when response is done
+                if (aiTranscriptRef.current.trim() && onConversationRef.current) {
+                  console.log('[RealtimeAudio] ✅ CALLING callback with COMPLETE AI message:', aiTranscriptRef.current.substring(0, 100))
+                  onConversationRef.current({
+                    role: 'ai',
+                    content: aiTranscriptRef.current,
+                    timestamp: new Date()
+                  })
+                  console.log('[RealtimeAudio] ✅ Callback invoked from response.done with complete message')
+                  aiTranscriptRef.current = '' // Clear transcript after sending
+                }
+                
+                // Check if we have additional text from response.output
+                if (msg.response && msg.response.output) {
+                  console.log('[RealtimeAudio] ✅ Response has output array with', msg.response.output.length, 'items')
+                  for (let i = 0; i < msg.response.output.length; i++) {
+                    const item = msg.response.output[i]
+                    console.log(`[RealtimeAudio] Output item ${i}:`, JSON.stringify(item, null, 2))
                     
-                    for (const contentItem of item.content) {
-                      // Extract text from output_audio (has transcript field)
-                      if (contentItem.type === 'output_audio' && contentItem.transcript) {
-                        console.log('[RealtimeAudio] 📝 Found transcript in output_audio:', contentItem.transcript, 'from role:', messageRole)
-                        // Only call callback if we haven't already sent the message via aiTranscriptRef
-                        if (messageRole === 'user' && onConversationRef.current) {
-                          onConversationRef.current({
-                            role: messageRole,
-                            content: contentItem.transcript,
-                            timestamp: new Date()
-                          })
+                    // Handle message items with content
+                    if (item.type === 'message' && item.content) {
+                      const messageRole = item.role === 'assistant' ? 'ai' : item.role // Convert 'assistant' to 'ai'
+                      
+                      for (const contentItem of item.content) {
+                        // Extract text from output_audio (has transcript field)
+                        if (contentItem.type === 'output_audio' && contentItem.transcript) {
+                          console.log('[RealtimeAudio] 📝 Found transcript in output_audio:', contentItem.transcript, 'from role:', messageRole)
+                          // Only call callback if we haven't already sent the message via aiTranscriptRef
+                          if (messageRole === 'user' && onConversationRef.current) {
+                            onConversationRef.current({
+                              role: messageRole,
+                              content: contentItem.transcript,
+                              timestamp: new Date()
+                            })
+                          }
                         }
-                      }
-                      // Handle input_audio transcript (user's spoken words)
-                      else if (contentItem.type === 'input_audio' && contentItem.transcript) {
-                        console.log('[RealtimeAudio] 📝 Found transcript in input_audio:', contentItem.transcript)
-                        if (onConversationRef.current) {
-                          onConversationRef.current({
-                            role: 'user',
-                            content: contentItem.transcript,
-                            timestamp: new Date()
-                          })
+                        // Handle input_audio transcript (user's spoken words)
+                        else if (contentItem.type === 'input_audio' && contentItem.transcript) {
+                          console.log('[RealtimeAudio] 📝 Found transcript in input_audio:', contentItem.transcript)
+                          if (onConversationRef.current) {
+                            onConversationRef.current({
+                              role: 'user',
+                              content: contentItem.transcript,
+                              timestamp: new Date()
+                            })
+                          }
                         }
-                      }
-                      // Handle input_text (user typed text)
-                      else if (contentItem.type === 'input_text' && contentItem.text) {
-                        console.log('[RealtimeAudio] 📝 Found input_text:', contentItem.text)
-                        if (onConversationRef.current) {
-                          onConversationRef.current({
-                            role: 'user',
-                            content: contentItem.text,
-                            timestamp: new Date()
-                          })
+                        // Handle input_text (user typed text)
+                        else if (contentItem.type === 'input_text' && contentItem.text) {
+                          console.log('[RealtimeAudio] 📝 Found input_text:', contentItem.text)
+                          if (onConversationRef.current) {
+                            onConversationRef.current({
+                              role: 'user',
+                              content: contentItem.text,
+                              timestamp: new Date()
+                            })
+                          }
                         }
-                      }
-                      // Also handle regular text content
-                      else if (contentItem.type === 'text' && contentItem.text) {
-                        console.log('[RealtimeAudio] 📝 Found text in response output:', contentItem.text)
-                        // Only call if role is user (to avoid duplicate AI messages)
-                        if (item.role !== 'assistant' && onConversationRef.current) {
-                          onConversationRef.current({
-                            role: messageRole,
-                            content: contentItem.text,
-                            timestamp: new Date()
-                          })
+                        // Also handle regular text content
+                        else if (contentItem.type === 'text' && contentItem.text) {
+                          console.log('[RealtimeAudio] 📝 Found text in response output:', contentItem.text)
+                          // Only call if role is user (to avoid duplicate AI messages)
+                          if (item.role !== 'assistant' && onConversationRef.current) {
+                            onConversationRef.current({
+                              role: messageRole,
+                              content: contentItem.text,
+                              timestamp: new Date()
+                            })
+                          }
                         }
                       }
                     }
                   }
                 }
-              }
+              }, finishDelay)
             }
             
             // Handle audio output
@@ -752,7 +778,43 @@ ${JSON.stringify(skillsPayload, null, 2)}
           
           let audioData = event.data.audio // Float32Array
           
-          // Apply advanced noise suppression if processor is ready
+          // STEP 1: Apply background noise suppression
+          if (!backgroundNoiseSuppressionRef.current) {
+            backgroundNoiseSuppressionRef.current = new BackgroundNoiseSuppressionLayer({
+              aggressiveness: 2,
+              enableBandpassFilter: true,
+              enableSpectralSubtraction: true,
+              enableAdaptiveNoise: true
+            })
+            console.log('[RealtimeAudio] ✅ Background noise suppression layer initialized')
+          }
+
+          // Calibrate noise suppression from initial frames
+          if (!noiseProfileSetRef.current) {
+            backgroundNoiseSuppressionRef.current.calibrateFromSilence(audioData)
+            const status = backgroundNoiseSuppressionRef.current.getCalibrationStatus()
+            if (status.isCalibrated) {
+              noiseProfileSetRef.current = true
+              console.log('[RealtimeAudio] ✅ Noise profile calibration complete')
+            }
+          }
+
+          // Apply background noise suppression
+          const { audio: suppressedAudio, metrics: noiseMetrics } = backgroundNoiseSuppressionRef.current.processAudio(audioData)
+          audioData = suppressedAudio
+
+          // Track voice activity
+          userSpeechDetectedRef.current = noiseMetrics.isVoiceDetected
+          if (noiseMetrics.isVoiceDetected) {
+            lastUserSpeechTimeRef.current = Date.now()
+          }
+
+          // Log noise suppression metrics periodically
+          if (Date.now() % 1000 < 50 && noiseMetrics.isVoiceDetected) {
+            console.log('[RealtimeAudio] 🎙️ Voice detected - SNR:', noiseMetrics.snr.toFixed(1), 'dB, Noise reduction:', noiseMetrics.noiseReductionDb.toFixed(1), 'dB')
+          }
+          
+          // STEP 2: Apply advanced noise suppression if available
           if (audioProcessorRef.current) {
             const { audio, metrics } = audioProcessorRef.current.processAudio(audioData)
             audioData = audio
