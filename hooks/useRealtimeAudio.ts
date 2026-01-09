@@ -87,25 +87,12 @@ CONTEXT DATA (JSON):
 ${JSON.stringify(contextData, null, 2)}`
           
           // Send session configuration with all required parameters
-          // NOTE: input_audio_format and output_audio_format are NOT valid in session.update()
-          // These are only set during initial connection with the backend
+          // NOTE: Only 'instructions' can be updated in session.update()
+          // Other parameters like temperature, voice, turn_detection are set during initial backend connection
           ws.send(JSON.stringify({
             type: 'session.update',
             session: {
-              type: 'realtime',
-              instructions: fullInstructions,
-              temperature: 0.3,
-              max_response_output_tokens: 300,
-              voice: 'alloy',
-              turn_detection: {
-                type: 'server_vad',
-                threshold: 0.5,
-                prefix_padding_ms: 300,
-                silence_duration_ms: 500
-              },
-              input_audio_transcription: {
-                model: 'whisper-1'
-              }
+              instructions: fullInstructions
             }
           }))
           
