@@ -649,7 +649,7 @@ ${JSON.stringify(skillsPayload, null, 2)}
           }
         }
       })
-      
+
       // Setup audio after WebSocket is connected
       await setupAudio(ws)
       
