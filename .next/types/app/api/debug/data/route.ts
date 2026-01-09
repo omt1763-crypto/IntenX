@@ -1,4 +1,4 @@
-// File: C:\Users\omt91\Downloads\main\interviewverse_frontend\app\api\debug\data\route.js
+// File: C:\Users\omt91\Downloads\main\interviewverse_frontend\app\api\debug\data\route.ts
 import * as entry from '../../../../../../app/api/debug/data/route.js'
 import type { NextRequest } from 'next/server.js'
 

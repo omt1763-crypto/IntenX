@@ -15,7 +15,11 @@ export async function GET(request: NextRequest) {
     // Fetch all data without limit to get complete dataset
     const [usersRes, interviewsRes, jobsRes] = await Promise.all([
       supabaseAdmin.from('users').select('*').order('created_at', { ascending: false }),
-      supabaseAdmin.from('interviews').select('*').order('created_at', { ascending: false }),
+      supabaseAdmin.from('interviews').select(`
+        *,
+        job:jobs(title, company),
+        candidate:users!interviews_user_id_fkey(full_name, email)
+      `).order('created_at', { ascending: false }),
       supabaseAdmin.from('jobs').select('*').order('created_at', { ascending: false })
     ])
 

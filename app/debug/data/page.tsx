@@ -1032,8 +1032,12 @@ export default function AdminDebugPage() {
                 <tbody>
                   {interviews.slice(0, 50).map(interview => (
                     <tr key={interview.id} className="border-b border-gray-200 hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 text-gray-900 font-medium">{interview.candidate_name || 'N/A'}</td>
-                      <td className="px-6 py-4 text-gray-700">{interview.position || 'N/A'}</td>
+                      <td className="px-6 py-4 text-gray-900 font-medium">
+                        {interview.candidate?.full_name || interview.candidate_name || 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 text-gray-700">
+                        {interview.job?.title || interview.position || 'N/A'}
+                      </td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded text-xs font-semibold ${
                           interview.status === 'completed' ? 'bg-green-100 text-green-800' :
@@ -1435,7 +1439,7 @@ export default function AdminDebugPage() {
                     <p className="text-xs text-gray-600 mt-2">Page views</p>
                   </DashboardCard>
 
-                  <DashboardCard gradient="green" hover>
+                  <DashboardCard gradient="pink" hover>
                     <div className="flex items-start justify-between mb-4">
                       <p className="text-gray-700 text-sm font-semibold">New Registrations</p>
                       <Users2 size={24} className="text-green-600" />
@@ -1453,10 +1457,10 @@ export default function AdminDebugPage() {
                     <p className="text-xs text-gray-600 mt-2">Unique sessions</p>
                   </DashboardCard>
 
-                  <DashboardCard gradient="indigo" hover>
+                  <DashboardCard gradient="purple" hover>
                     <div className="flex items-start justify-between mb-4">
                       <p className="text-gray-700 text-sm font-semibold">Countries</p>
-                      <Globe size={24} className="text-indigo-600" />
+                      <Globe size={24} className="text-purple-600" />
                     </div>
                     <p className="text-4xl font-bold text-gray-900">{analyticsData.stats?.uniqueCountries || 0}</p>
                     <p className="text-xs text-gray-600 mt-2">Countries reached</p>
