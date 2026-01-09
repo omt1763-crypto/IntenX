@@ -83,6 +83,7 @@ ${JSON.stringify(contextData, null, 2)}`
           ws.send(JSON.stringify({
             type: 'session.update',
             session: {
+              type: 'realtime',
               instructions: fullInstructions,
               input_audio_format: 'pcm16',
               output_audio_format: 'pcm16',
