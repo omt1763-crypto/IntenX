@@ -50,7 +50,6 @@ export function useRealtimeAudio(): UseRealtimeAudioReturn {
   const lastUserSpeechTimeRef = useRef<number>(0) // NEW: Track when user last spoke
   const audioChunksSentSinceLastCommitRef = useRef<number>(0) // Track if any audio was actually sent
   const accumulatedAudioDurationMsRef = useRef<number>(0) // Track total audio duration sent
-  const keepAliveIntervalRef = useRef<NodeJS.Timeout | null>(null) // Keep-alive heartbeat
   const userHasCommittedAudioRef = useRef<boolean>(false) // Track if user has actually committed audio (prevents false responses)
 
   const connect = useCallback(async (onConversation?: (msg: ConversationMessage) => void, skills?: Array<{name: string; reason?: string}>, systemPrompt?: string) => {
@@ -166,18 +165,8 @@ ${JSON.stringify(skillsPayload, null, 2)}
           if (keepAliveIntervalRef.current) {
             clearInterval(keepAliveIntervalRef.current)
           }
-          keepAliveIntervalRef.current = setInterval(() => {
-            if (ws.readyState === WebSocket.OPEN) {
-              // Send an empty message to keep connection alive
-              try {
-                ws.send(JSON.stringify({ type: 'session.ping' }))
-              } catch (e) {
-                // Silent fail - connection may be closing
-              }
-            }
-          }, 15000) // Every 15 seconds
           
-          console.log('[RealtimeAudio] 💓 Keep-alive heartbeat started')
+          console.log('[RealtimeAudio] ✅ WebSocket session established')
           
           resolve()
         }
@@ -548,39 +537,30 @@ ${JSON.stringify(skillsPayload, null, 2)}
                     }
                   }
                 }
-              }
-            }
             
             // Handle response.content_part events - ONLY for tracking, NOT for user messages
             if (msg.type === 'response.content_part.added') {
-              console.log('[RealtimeAudio] 🔍 DEBUG: response.content_part.added (AI output):', JSON.stringify(msg, null, 2))
+              // Audio output being streamed
             }
             
             if (msg.type === 'response.content_part.done') {
-              console.log('[RealtimeAudio] 🔍 DEBUG: response.content_part.done (AI output) - DO NOT USE FOR USER MESSAGES')
-              // NOTE: This is AI audio output, NOT user input
-              // DO NOT treat this as a user message - it's the AI speaking!
+              // Audio output complete
             }
             
             // Capture input_audio_transcript events (these contain user speech-to-text)
             if (msg.type === 'input_audio_transcript.delta') {
-              console.log('[RealtimeAudio] 🔍 DEBUG: input_audio_transcript.delta:', JSON.stringify(msg, null, 2))
-              if (msg.delta) {
-                console.log('[RealtimeAudio] 🎤 USER TRANSCRIPT DELTA:', msg.delta)
-              }
+              // User speaking
             }
             
             if (msg.type === 'input_audio_transcript.done') {
-              console.log('[RealtimeAudio] 🔍 DEBUG: input_audio_transcript.done:', JSON.stringify(msg, null, 2))
               if (msg.transcript && msg.transcript.trim()) {
-                console.log('[RealtimeAudio] 🎤 USER TRANSCRIPT (FINAL):', msg.transcript)
+                console.log('[RealtimeAudio] 🎤 User:', msg.transcript)
                 if (onConversationRef.current) {
                   onConversationRef.current({
                     role: 'user',
                     content: msg.transcript,
                     timestamp: new Date()
                   })
-                  console.log('[RealtimeAudio] ✅ User message callback invoked from input_audio_transcript')
                 }
               }
             }
@@ -652,17 +632,11 @@ ${JSON.stringify(skillsPayload, null, 2)}
           if (event.code === 1000) {
             console.log('[RealtimeAudio] Normal closure')
           } else if (event.code === 1006) {
-            console.log('[RealtimeAudio] Abnormal closure - connection lost, may be timeout or backend issue')
+            console.log('[RealtimeAudio] Abnormal closure - connection lost')
           } else if (event.code === 1009) {
             console.log('[RealtimeAudio] Message too large')
           } else if (event.code === 1011) {
             console.log('[RealtimeAudio] Server error')
-          }
-          
-          // Clear keep-alive
-          if (keepAliveIntervalRef.current) {
-            clearInterval(keepAliveIntervalRef.current)
-            keepAliveIntervalRef.current = null
           }
           
           if (!connected && reconnectAttemptsRef.current < maxReconnectAttempts) {
