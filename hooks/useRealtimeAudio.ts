@@ -86,16 +86,14 @@ export function useRealtimeAudio(): UseRealtimeAudioReturn {
 CONTEXT DATA (JSON):
 ${JSON.stringify(contextData, null, 2)}`
           
-          // Send INITIAL session configuration with type='realtime' 
-          // This MUST be sent first to initialize the session
-          console.log('[RealtimeAudio] 📤 Sending initial session configuration with type=realtime...')
+          // Send INITIAL session configuration with instructions ONLY
+          // session.update() only accepts 'instructions' parameter
+          // type, voice, and other settings are configured at backend connection level
+          console.log('[RealtimeAudio] 📤 Sending session update with instructions...')
           ws.send(JSON.stringify({
             type: 'session.update',
             session: {
-              type: 'realtime',
-              instructions: fullInstructions,
-              modalities: ['text', 'audio'],
-              voice: 'alloy'
+              instructions: fullInstructions
             }
           }))
           
