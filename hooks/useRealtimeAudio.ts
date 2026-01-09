@@ -48,7 +48,7 @@ export function useRealtimeAudio(): UseRealtimeAudioReturn {
   const languageSwitchRequestedRef = useRef<boolean>(false)
   const userSpeechDetectedRef = useRef<boolean>(false) // NEW: Track if user is currently speaking
   const lastUserSpeechTimeRef = useRef<number>(0) // NEW: Track when user last spoke
-  const audioChunksSentSinceLastCommitRef = useRef<number>(0) // Track if any audio was actually sent
+  const accumulatedAudioDurationMsRef = useRef<number>(0) // Track total audio duration sent
 
   const connect = useCallback(async (onConversation?: (msg: ConversationMessage) => void, skills?: Array<{name: string; reason?: string}>, systemPrompt?: string) => {
     if (onConversation) {
@@ -551,22 +551,28 @@ ${JSON.stringify(skillsPayload, null, 2)}
             if (msg.type === 'input_audio_buffer.speech_stopped') {
               console.log('[RealtimeAudio] 🤐 CANDIDATE SPEAKING STOPPED')
               
-              // Only commit if we actually have audio chunks
-              if (audioChunksSentSinceLastCommitRef.current > 0) {
-                console.log(`[RealtimeAudio] 📤 Committing ${audioChunksSentSinceLastCommitRef.current} audio chunks`)
+              // Only commit if we have sufficient audio (100ms minimum)
+              const audioMs = accumulatedAudioDurationMsRef.current
+              if (audioMs >= 100 && audioChunksSentSinceLastCommitRef.current > 0) {
+                console.log(`[RealtimeAudio] 📤 Committing ${audioChunksSentSinceLastCommitRef.current} chunks (${audioMs.toFixed(0)}ms of audio)`)
                 
                 ws.send(JSON.stringify({
                   type: 'input_audio_buffer.commit'
                 }))
-                console.log('[RealtimeAudio] 📤 Sent input_audio_buffer.commit to process user input')
-                audioChunksSentSinceLastCommitRef.current = 0 // Reset counter after commit
+                console.log('[RealtimeAudio] 📤 Audio buffer committed - AI will process and respond automatically')
+                
+                // Reset counters
+                audioChunksSentSinceLastCommitRef.current = 0
+                accumulatedAudioDurationMsRef.current = 0
               } else {
-                console.log('[RealtimeAudio] ⏭️ Skipping commit - no audio chunks were sent (user spoke while AI was speaking)')
+                console.log(`[RealtimeAudio] ⏭️ Skipping commit - insufficient audio (${audioMs.toFixed(0)}ms, need 100ms+)`)
+                accumulatedAudioDurationMsRef.current = 0 // Reset anyway
               }
             }
             if (msg.type === 'input_audio_buffer.committed') {
-              console.log('[RealtimeAudio] ✅ AUDIO BUFFER COMMITTED - transcript should follow')
-              audioChunksSentSinceLastCommitRef.current = 0 // Reset counter
+              console.log('[RealtimeAudio] ✅ AUDIO BUFFER COMMITTED - waiting for AI response')
+              audioChunksSentSinceLastCommitRef.current = 0
+              accumulatedAudioDurationMsRef.current = 0
             }
             
             // Handle errors
@@ -864,20 +870,25 @@ ${JSON.stringify(skillsPayload, null, 2)}
           }
           const audioB64 = btoa(binary)
 
-          // CRITICAL: Only send audio if AI is NOT currently speaking
-          // This prevents user audio from interfering with AI audio playback
-          if (!aiIsSpeakingRef.current) {
+          // CRITICAL: Only send audio if:
+          // 1. AI is NOT currently speaking (prevents overlap)
+          // 2. We have actual voice activity detected (prevents silence/noise)
+          if (!aiIsSpeakingRef.current && noiseMetrics.isVoiceDetected) {
             ws.send(JSON.stringify({
               type: 'input_audio_buffer.append',
               audio: audioB64
             }))
-            audioChunksSentSinceLastCommitRef.current++ // Track that we sent audio
-          } else {
-            // Log that we're blocking user audio (only occasionally to avoid spam)
+            audioChunksSentSinceLastCommitRef.current++
+            // Estimate duration: 16-bit audio at 24kHz = 2 bytes per sample
+            const durationMs = (audioData.length / 24000) * 1000
+            accumulatedAudioDurationMsRef.current += durationMs
+          } else if (aiIsSpeakingRef.current) {
+            // Silently drop audio while AI is speaking
             if (Date.now() % 5000 < 50) {
               console.log('[RealtimeAudio] 🔇 BLOCKING user audio - AI is currently speaking')
             }
           }
+          // If no voice activity detected, silently drop (don't log to avoid spam)
         }
       }
 
