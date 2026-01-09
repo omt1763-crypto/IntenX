@@ -149,10 +149,12 @@ export async function PATCH(req) {
     const { applicantId, status } = await req.json()
 
     if (!applicantId || !status) {
+      console.error('[UpdateApplicant API] Missing required fields:', { applicantId, status })
       return NextResponse.json({ error: 'applicantId and status are required' }, { status: 400 })
     }
 
-    console.log('[UpdateApplicant API] Updating applicant:', { applicantId, status })
+    console.log('═'.repeat(80))
+    console.log('[UpdateApplicant API] 📝 Updating applicant:', { applicantId, status })
 
     const { data, error } = await supabaseAdmin
       .from('job_applicants')
@@ -162,15 +164,24 @@ export async function PATCH(req) {
       .single()
 
     if (error) {
-      console.error('[UpdateApplicant API] Database error:', error)
+      console.error('[UpdateApplicant API] ❌ Database error:', error)
+      console.error('[UpdateApplicant API] Error details:', {
+        code: error.code,
+        message: error.message,
+        details: error.details
+      })
+      console.log('═'.repeat(80))
       return NextResponse.json({ error: error.message || 'Failed to update applicant' }, { status: 500 })
     }
 
-    console.log('[UpdateApplicant API] Applicant updated:', data?.id)
+    console.log('[UpdateApplicant API] ✅ Applicant updated successfully:', data?.id)
+    console.log('[UpdateApplicant API] Updated data:', data)
+    console.log('═'.repeat(80))
 
     return NextResponse.json({ success: true, applicant: data }, { status: 200 })
   } catch (error) {
-    console.error('[UpdateApplicant API] Unexpected error:', error)
+    console.error('[UpdateApplicant API] ❌ Unexpected error:', error)
+    console.log('═'.repeat(80))
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }
 }

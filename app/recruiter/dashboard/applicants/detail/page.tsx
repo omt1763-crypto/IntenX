@@ -254,24 +254,31 @@ function ApplicantDetailPageContent() {
   }
 
   const updateApplicantStatus = async (status: string) => {
-    if (!applicantId) return
+    if (!applicantId) {
+      console.error('[ApplicantDetail] No applicantId available')
+      return
+    }
     try {
       setLoading(true)
+      console.log('[ApplicantDetail] Updating applicant status:', { applicantId, status })
       const res = await fetch('/api/applicants', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ applicantId, status })
       })
       const json = await res.json()
+      console.log('[ApplicantDetail] API response:', { status: res.status, body: json })
       if (res.ok) {
-        console.log('[ApplicantDetail] Status updated to', status, json.applicant)
+        console.log('[ApplicantDetail] Status updated successfully to', status, json.applicant)
         // Refresh interview/applicant data
         await loadInterviewData()
       } else {
-        console.error('[ApplicantDetail] Failed to update status', json)
+        console.error('[ApplicantDetail] Failed to update status', { status: res.status, error: json })
+        alert(`Failed to update status: ${json.error || 'Unknown error'}`)
       }
     } catch (err) {
       console.error('[ApplicantDetail] Error updating status:', err)
+      alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`)
     } finally {
       setLoading(false)
     }
