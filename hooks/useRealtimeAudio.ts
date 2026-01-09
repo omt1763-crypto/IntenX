@@ -861,11 +861,19 @@ ${JSON.stringify(skillsPayload, null, 2)}
           }
           const audioB64 = btoa(binary)
 
-          // Send to OpenAI
-          ws.send(JSON.stringify({
-            type: 'input_audio_buffer.append',
-            audio: audioB64
-          }))
+          // CRITICAL: Only send audio if AI is NOT currently speaking
+          // This prevents user audio from interfering with AI audio playback
+          if (!aiIsSpeakingRef.current) {
+            ws.send(JSON.stringify({
+              type: 'input_audio_buffer.append',
+              audio: audioB64
+            }))
+          } else {
+            // Log that we're blocking user audio (only occasionally to avoid spam)
+            if (Date.now() % 5000 < 50) {
+              console.log('[RealtimeAudio] 🔇 BLOCKING user audio - AI is currently speaking')
+            }
+          }
         }
       }
 
