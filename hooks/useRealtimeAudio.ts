@@ -11,7 +11,7 @@ export interface UseRealtimeAudioReturn {
   connected: boolean
   isListening: boolean
   error: string | null
-  connect: (onConversation?: (msg: ConversationMessage) => void, skills?: Array<{name: string; reason?: string}>) => Promise<void>
+  connect: (onConversation?: (msg: ConversationMessage) => void, skills?: Array<{name: string; reason?: string}>, systemPrompt?: string) => Promise<void>
   disconnect: () => Promise<void>
 }
 
@@ -33,7 +33,7 @@ export function useRealtimeAudio(): UseRealtimeAudioReturn {
   const maxReconnectAttempts = 3
   const languageSwitchRequestedRef = useRef<boolean>(false)
 
-  const connect = useCallback(async (onConversation?: (msg: ConversationMessage) => void, skills?: Array<{name: string; reason?: string}>) => {
+  const connect = useCallback(async (onConversation?: (msg: ConversationMessage) => void, skills?: Array<{name: string; reason?: string}>, systemPrompt?: string) => {
     if (onConversation) {
       onConversationRef.current = onConversation
       console.log('[RealtimeAudio] ✅ Conversation callback set')
@@ -43,8 +43,8 @@ export function useRealtimeAudio(): UseRealtimeAudioReturn {
     aiTranscriptRef.current = ''
     reconnectAttemptsRef.current = 0
     
-    // Generate instructions from guardrails configuration
-    const instructions = generateInterviewerInstructions(skills)
+    // Generate instructions from guardrails configuration with custom system prompt
+    const instructions = generateInterviewerInstructions(skills, systemPrompt)
     
     if (skills && skills.length > 0) {
       console.log('[RealtimeAudio] Skills provided:', skills)
