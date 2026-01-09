@@ -48,6 +48,7 @@ export function useRealtimeAudio(): UseRealtimeAudioReturn {
   const languageSwitchRequestedRef = useRef<boolean>(false)
   const userSpeechDetectedRef = useRef<boolean>(false) // NEW: Track if user is currently speaking
   const lastUserSpeechTimeRef = useRef<number>(0) // NEW: Track when user last spoke
+  const audioChunksSentSinceLastCommitRef = useRef<number>(0) // Track if any audio was actually sent
   const accumulatedAudioDurationMsRef = useRef<number>(0) // Track total audio duration sent
 
   const connect = useCallback(async (onConversation?: (msg: ConversationMessage) => void, skills?: Array<{name: string; reason?: string}>, systemPrompt?: string) => {
