@@ -161,11 +161,6 @@ ${JSON.stringify(skillsPayload, null, 2)}
           // No longer need to store and send instructions separately
           pendingInstructionsRef.current = ''
           
-          // Start keep-alive heartbeat to prevent idle timeout
-          if (keepAliveIntervalRef.current) {
-            clearInterval(keepAliveIntervalRef.current)
-          }
-          
           console.log('[RealtimeAudio] ✅ WebSocket session established')
           
           resolve()
@@ -537,6 +532,8 @@ ${JSON.stringify(skillsPayload, null, 2)}
                     }
                   }
                 }
+              }
+            }
             
             // Handle response.content_part events - ONLY for tracking, NOT for user messages
             if (msg.type === 'response.content_part.added') {
@@ -652,7 +649,7 @@ ${JSON.stringify(skillsPayload, null, 2)}
           }
         }
       })
-
+      
       // Setup audio after WebSocket is connected
       await setupAudio(ws)
       
@@ -954,12 +951,6 @@ ${JSON.stringify(skillsPayload, null, 2)}
 
   const disconnect = useCallback(async () => {
     console.log('[RealtimeAudio] 🛑 HARD DISCONNECT - Closing all connections NOW')
-
-    // Clear keep-alive immediately
-    if (keepAliveIntervalRef.current) {
-      clearInterval(keepAliveIntervalRef.current)
-      keepAliveIntervalRef.current = null
-    }
 
     // IMMEDIATELY close WebSocket - don't wait for anything
     if (wsRef.current) {
