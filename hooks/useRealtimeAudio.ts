@@ -80,13 +80,13 @@ CONTEXT DATA (JSON):
 ${JSON.stringify(contextData, null, 2)}`
           
           // Send session configuration with all required parameters
+          // NOTE: input_audio_format and output_audio_format are NOT valid in session.update()
+          // These are only set during initial connection with the backend
           ws.send(JSON.stringify({
             type: 'session.update',
             session: {
               type: 'realtime',
               instructions: fullInstructions,
-              input_audio_format: 'pcm16',
-              output_audio_format: 'pcm16',
               temperature: 0.3,
               max_response_output_tokens: 300,
               voice: 'alloy',
@@ -104,7 +104,9 @@ ${JSON.stringify(contextData, null, 2)}`
           
           console.log('[RealtimeAudio] Session configuration sent')
           console.log('[RealtimeAudio] Context data:', contextData)
-          console.log('[RealtimeAudio] Instructions:', fullInstructions.substring(0, 150) + '...')
+          console.log('[RealtimeAudio] Full instructions being sent:')
+          console.log(fullInstructions)
+          console.log('[RealtimeAudio] Instructions length:', fullInstructions.length)
           resolve()
         }
 
