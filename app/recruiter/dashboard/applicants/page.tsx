@@ -84,7 +84,12 @@ function ApplicantsPageContent() {
 
       console.log('[ApplicantsPage] Loading applicants for recruiter:', userId)
       console.log('[ApplicantsPage] Current filterJobId:', filterJobId)
-      const response = await fetch(`/api/get-applicants?recruiterId=${userId}`)
+      let apiUrl = `/api/get-applicants?recruiterId=${userId}`
+      if (filterJobId) {
+        apiUrl += `&jobId=${filterJobId}`
+        console.log('[ApplicantsPage] Adding jobId to API call:', filterJobId)
+      }
+      const response = await fetch(apiUrl)
       const result = await response.json()
 
       console.log('[ApplicantsPage] API response:', result)
@@ -115,10 +120,29 @@ function ApplicantsPageContent() {
   }
 
   const groupApplicantsByJob = (data: Applicant[]) => {
+    // Debug: Log each applicant's job_id
+    console.log('[ApplicantsPage] DEBUG groupApplicantsByJob:')
+    data.forEach((app, idx) => {
+      console.log(`  Applicant ${idx}:`, {
+        id: app.id,
+        name: app.name,
+        job_id: app.job_id,
+        jobs_id: app.jobs?.id,
+        filterJobId,
+        matches: app.job_id === filterJobId
+      })
+    })
+
     // Filter by jobId if provided
     let filteredData = data
     if (filterJobId) {
-      filteredData = data.filter(a => a.job_id === filterJobId)
+      console.log('[ApplicantsPage] Filtering by filterJobId:', filterJobId)
+      filteredData = data.filter(a => {
+        const matches = a.job_id === filterJobId
+        console.log(`  Checking ${a.id}: job_id="${a.job_id}" === filterJobId="${filterJobId}"? ${matches}`)
+        return matches
+      })
+      console.log('[ApplicantsPage] After filtering:', filteredData.length, 'applicants')
     }
 
     const groups: { [jobId: string]: JobGroup } = {}
@@ -144,6 +168,7 @@ function ApplicantsPageContent() {
       return a.job.title.localeCompare(b.job.title)
     })
 
+    console.log('[ApplicantsPage] Grouped result:', groupsArray.length, 'groups')
     return groupsArray
   }
 

@@ -82,14 +82,14 @@ export async function GET(req) {
 
     console.log('[GetApplicants API] ✅ Applicants fetched:', data?.length || 0)
     if (data && data.length > 0) {
-      console.log('[GetApplicants API] Applicant details:', data.map(a => ({
-        id: a.id,
-        name: a.name,
-        email: a.email,
-        job_id: a.job_id,
-        job_title: a.jobs?.title,
-        status: a.status
-      })))
+      console.log('[GetApplicants API] Applicant details:')
+      data.forEach((a, idx) => {
+        console.log(`  ${idx}: id=${a.id}, name=${a.name}, job_id=${a.job_id}, jobs=${JSON.stringify({
+          id: a.jobs?.id,
+          title: a.jobs?.title,
+          company: a.jobs?.company
+        })}, status=${a.status}`)
+      })
     }
     console.log('═'.repeat(80))
     return NextResponse.json({
