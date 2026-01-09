@@ -545,17 +545,21 @@ ${JSON.stringify(skillsPayload, null, 2)}
               }
             }
             
-            // Handle input_audio_buffer.speech_started/stopped to help debug timing
+            // Handle input_audio_buffer events for debugging
             if (msg.type === 'input_audio_buffer.speech_started') {
-              console.log('[RealtimeAudio] 🎤 CANDIDATE SPEAKING STARTED')
+              console.log('[RealtimeAudio] 🎤 CANDIDATE SPEAKING STARTED - listening for audio')
             }
             if (msg.type === 'input_audio_buffer.speech_stopped') {
               console.log('[RealtimeAudio] 🤐 CANDIDATE SPEAKING STOPPED')
               
-              // Only commit if we have sufficient audio (100ms minimum)
+              // Log what we have
               const audioMs = accumulatedAudioDurationMsRef.current
-              if (audioMs >= 100 && audioChunksSentSinceLastCommitRef.current > 0) {
-                console.log(`[RealtimeAudio] 📤 Committing ${audioChunksSentSinceLastCommitRef.current} chunks (${audioMs.toFixed(0)}ms of audio)`)
+              const chunks = audioChunksSentSinceLastCommitRef.current
+              console.log(`[RealtimeAudio] 📊 Audio stats: ${chunks} chunks, ${audioMs.toFixed(0)}ms`)
+              
+              // Only commit if we have sufficient audio (100ms minimum)
+              if (audioMs >= 100 && chunks > 0) {
+                console.log(`[RealtimeAudio] ✅ Committing ${chunks} chunks (${audioMs.toFixed(0)}ms of audio)`)
                 
                 ws.send(JSON.stringify({
                   type: 'input_audio_buffer.commit'
@@ -566,7 +570,7 @@ ${JSON.stringify(skillsPayload, null, 2)}
                 audioChunksSentSinceLastCommitRef.current = 0
                 accumulatedAudioDurationMsRef.current = 0
               } else {
-                console.log(`[RealtimeAudio] ⏭️ Skipping commit - insufficient audio (${audioMs.toFixed(0)}ms, need 100ms+)`)
+                console.log(`[RealtimeAudio] ⏭️ Insufficient audio (${audioMs.toFixed(0)}ms, need 100ms+) or no chunks sent`)
                 accumulatedAudioDurationMsRef.current = 0 // Reset anyway
               }
             }
@@ -871,10 +875,9 @@ ${JSON.stringify(skillsPayload, null, 2)}
           }
           const audioB64 = btoa(binary)
 
-          // CRITICAL: Only send audio if:
-          // 1. AI is NOT currently speaking (prevents overlap)
-          // 2. We have actual voice activity detected (prevents silence/noise)
-          if (!aiIsSpeakingRef.current && noiseMetrics.isVoiceDetected) {
+          // CRITICAL: Only send audio if AI is NOT currently speaking
+          // Remove strict voice activity requirement - let OpenAI handle silence detection
+          if (!aiIsSpeakingRef.current) {
             ws.send(JSON.stringify({
               type: 'input_audio_buffer.append',
               audio: audioB64
@@ -883,13 +886,12 @@ ${JSON.stringify(skillsPayload, null, 2)}
             // Estimate duration: 16-bit audio at 24kHz = 2 bytes per sample
             const durationMs = (audioData.length / 24000) * 1000
             accumulatedAudioDurationMsRef.current += durationMs
-          } else if (aiIsSpeakingRef.current) {
-            // Silently drop audio while AI is speaking
+          } else {
+            // Log when blocking (only occasionally)
             if (Date.now() % 5000 < 50) {
               console.log('[RealtimeAudio] 🔇 BLOCKING user audio - AI is currently speaking')
             }
           }
-          // If no voice activity detected, silently drop (don't log to avoid spam)
         }
       }
 
