@@ -648,6 +648,7 @@ ${JSON.stringify(skillsPayload, null, 2)}
             reject(new Error(`Failed to connect after ${maxReconnectAttempts} attempts`))
           }
         }
+
       })
 
       // Setup audio after WebSocket is connected
