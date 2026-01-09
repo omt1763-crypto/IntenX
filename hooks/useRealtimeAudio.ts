@@ -86,13 +86,16 @@ export function useRealtimeAudio(): UseRealtimeAudioReturn {
 CONTEXT DATA (JSON):
 ${JSON.stringify(contextData, null, 2)}`
           
-          // Send INITIAL session configuration with instructions ONLY
-          // session.update() only accepts 'instructions' parameter
-          // type, voice, and other settings are configured at backend connection level
-          console.log('[RealtimeAudio] 📤 Sending session update with instructions...')
+          // Send INITIAL session configuration
+          // MUST include: type='realtime' and instructions (guardrails)
+          // Only these two parameters are valid in OpenAI Realtime API
+          console.log('[RealtimeAudio] 📤 Sending session.update with type=realtime and instructions...')
+          console.log('[RealtimeAudio] Instructions length:', fullInstructions.length)
+          
           ws.send(JSON.stringify({
             type: 'session.update',
             session: {
+              type: 'realtime',
               instructions: fullInstructions
             }
           }))
