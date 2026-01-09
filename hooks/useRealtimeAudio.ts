@@ -98,9 +98,16 @@ ${JSON.stringify(contextData, null, 2)}`
           
           console.log('[RealtimeAudio] Session configuration sent')
           console.log('[RealtimeAudio] Context data:', contextData)
-          console.log('[RealtimeAudio] Full instructions being sent:')
+          console.log('[RealtimeAudio] ========================================')
+          console.log('[RealtimeAudio] 🚨 GUARDRAILS BEING SENT TO OPENAI:')
+          console.log('[RealtimeAudio] ========================================')
           console.log(fullInstructions)
-          console.log('[RealtimeAudio] Instructions length:', fullInstructions.length)
+          console.log('[RealtimeAudio] ========================================')
+          console.log('[RealtimeAudio] ✅ GUARDRAILS TRANSMISSION COMPLETE')
+          console.log('[RealtimeAudio] Total instruction length:', fullInstructions.length, 'characters')
+          console.log('[RealtimeAudio] Includes CRITICAL GUARDRAILS:', fullInstructions.includes('ABSOLUTE CRITICAL GUARDRAILS') ? '✅ YES' : '❌ NO')
+          console.log('[RealtimeAudio] Includes OFF-TOPIC REDIRECTION:', fullInstructions.includes('OFF-TOPIC REDIRECTION') ? '✅ YES' : '❌ NO')
+          console.log('[RealtimeAudio] ========================================')
           resolve()
         }
 
