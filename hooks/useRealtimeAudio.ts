@@ -548,7 +548,19 @@ ${JSON.stringify(skillsPayload, null, 2)}
               console.log('[RealtimeAudio] 🎤 CANDIDATE SPEAKING STARTED')
             }
             if (msg.type === 'input_audio_buffer.speech_stopped') {
-              console.log('[RealtimeAudio] 🤐 CANDIDATE SPEAKING STOPPED - expecting transcript soon')
+              console.log('[RealtimeAudio] 🤐 CANDIDATE SPEAKING STOPPED - committing audio buffer and requesting response')
+              
+              // CRITICAL: Commit the audio buffer to trigger transcription and response
+              ws.send(JSON.stringify({
+                type: 'input_audio_buffer.commit'
+              }))
+              console.log('[RealtimeAudio] 📤 Sent input_audio_buffer.commit to process user input')
+              
+              // Request AI to generate a response based on user input
+              ws.send(JSON.stringify({
+                type: 'response.create'
+              }))
+              console.log('[RealtimeAudio] ⏳ Sent response.create to generate AI response')
             }
             if (msg.type === 'input_audio_buffer.committed') {
               console.log('[RealtimeAudio] ✅ AUDIO BUFFER COMMITTED - transcript should follow')
