@@ -87,7 +87,7 @@ ${JSON.stringify(contextData, null, 2)}`
               instructions: fullInstructions,
               input_audio_format: 'pcm16',
               output_audio_format: 'pcm16',
-              temperature: 0.7,
+              temperature: 0.3,
               max_response_output_tokens: 300,
               voice: 'alloy',
               turn_detection: {
