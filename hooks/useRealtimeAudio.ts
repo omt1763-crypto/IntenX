@@ -51,6 +51,7 @@ export function useRealtimeAudio(): UseRealtimeAudioReturn {
   const audioChunksSentSinceLastCommitRef = useRef<number>(0) // Track if any audio was actually sent
   const accumulatedAudioDurationMsRef = useRef<number>(0) // Track total audio duration sent
   const keepAliveIntervalRef = useRef<NodeJS.Timeout | null>(null) // Keep-alive heartbeat
+  const userHasCommittedAudioRef = useRef<boolean>(false) // Track if user has actually committed audio (prevents false responses)
 
   const connect = useCallback(async (onConversation?: (msg: ConversationMessage) => void, skills?: Array<{name: string; reason?: string}>, systemPrompt?: string) => {
     if (onConversation) {
@@ -283,6 +284,14 @@ ${JSON.stringify(skillsPayload, null, 2)}
               console.log('[RealtimeAudio] ===== RESPONSE.DONE EVENT =====')
               console.log('[RealtimeAudio] Full response.done message:', JSON.stringify(msg, null, 2))
               
+              // SAFETY CHECK: Did user actually commit audio before this response?
+              if (!userHasCommittedAudioRef.current) {
+                console.log('[RealtimeAudio] ⚠️ WARNING: AI response received but userHasCommittedAudioRef is FALSE!')
+                console.log('[RealtimeAudio] ⚠️ This indicates AI responded without user input - investigate OpenAI behavior')
+              } else {
+                console.log('[RealtimeAudio] ✅ AI response expected - userHasCommittedAudioRef=TRUE')
+              }
+              
               // Signal to conversation flow manager
               conversationFlowRef.current.signalAISpeakingEnd()
               
@@ -296,6 +305,10 @@ ${JSON.stringify(skillsPayload, null, 2)}
                 isProcessingResponseRef.current = false // Mark that we finished processing AI response
                 hasActiveResponseRef.current = false
                 setIsListening(false)
+                
+                // Reset user commit flag - ready for next user input
+                userHasCommittedAudioRef.current = false
+                console.log('[RealtimeAudio] 🔄 Reset user commit flag - ready for next user input')
                 
                 // Process accumulated AI message ONCE when response is done
                 if (aiTranscriptRef.current.trim() && onConversationRef.current) {
@@ -508,6 +521,15 @@ ${JSON.stringify(skillsPayload, null, 2)}
               // Check if item is in the response
               if (msg.item && msg.item.role === 'user') {
                 console.log('[RealtimeAudio] 🎤 USER ITEM FOUND in conversation.item.done')
+                
+                // SAFETY CHECK: Did user actually commit audio?
+                if (!userHasCommittedAudioRef.current) {
+                  console.log('[RealtimeAudio] ⚠️ WARNING: User message received but userHasCommittedAudioRef is FALSE!')
+                  console.log('[RealtimeAudio] ⚠️ This indicates a false speech detection - ignoring this message')
+                } else {
+                  console.log('[RealtimeAudio] ✅ User message received and userHasCommittedAudioRef=TRUE (expected)')
+                }
+                
                 console.log('[RealtimeAudio] Item content:', JSON.stringify(msg.item.content, null, 2))
                 
                 // Extract transcript from input_audio
@@ -573,23 +595,31 @@ ${JSON.stringify(skillsPayload, null, 2)}
               // Log what we have
               const audioMs = accumulatedAudioDurationMsRef.current
               const chunks = audioChunksSentSinceLastCommitRef.current
-              console.log(`[RealtimeAudio] 📊 Audio stats: ${chunks} chunks, ${audioMs.toFixed(0)}ms`)
+              console.log(`[RealtimeAudio] 📊 Audio stats: ${chunks} chunks, ${audioMs.toFixed(0)}ms of audio`)
               
-              // Only commit if we have sufficient audio (100ms minimum)
+              // ONLY commit if we have BOTH:
+              // 1. At least 100ms of accumulated audio
+              // 2. At least 1 audio chunk was sent
               if (audioMs >= 100 && chunks > 0) {
-                console.log(`[RealtimeAudio] ✅ Committing ${chunks} chunks (${audioMs.toFixed(0)}ms of audio)`)
+                console.log(`[RealtimeAudio] ✅ COMMITTING: ${chunks} chunks, ${audioMs.toFixed(0)}ms`)
                 
                 ws.send(JSON.stringify({
                   type: 'input_audio_buffer.commit'
                 }))
-                console.log('[RealtimeAudio] 📤 Audio buffer committed - AI will process and respond automatically')
+                console.log('[RealtimeAudio] 📤 Buffer committed - AI processing')
                 
-                // Reset counters
+                // Mark that user has committed real audio
+                userHasCommittedAudioRef.current = true
+                console.log('[RealtimeAudio] 🚩 User has committed audio - expecting AI response')
+                
+                // IMPORTANT: Reset immediately to prevent duplicate commits
                 audioChunksSentSinceLastCommitRef.current = 0
                 accumulatedAudioDurationMsRef.current = 0
               } else {
-                console.log(`[RealtimeAudio] ⏭️ Insufficient audio (${audioMs.toFixed(0)}ms, need 100ms+) or no chunks sent`)
-                accumulatedAudioDurationMsRef.current = 0 // Reset anyway
+                console.log(`[RealtimeAudio] ❌ SKIP COMMIT: ${chunks} chunks (need >0), ${audioMs.toFixed(0)}ms (need 100ms+)`)
+                // Reset counters even if not committing
+                audioChunksSentSinceLastCommitRef.current = 0
+                accumulatedAudioDurationMsRef.current = 0
               }
             }
             if (msg.type === 'input_audio_buffer.committed') {
