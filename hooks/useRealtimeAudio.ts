@@ -610,7 +610,7 @@ ${JSON.stringify(skillsPayload, null, 2)}
               console.error('[RealtimeAudio] Error from OpenAI:', msg.error)
               setError(msg.error?.message || 'OpenAI error')
             }
-            
+
           } catch (e) {
             console.error('[RealtimeAudio] Failed to parse message:', e)
           }
