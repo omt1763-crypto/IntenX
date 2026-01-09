@@ -70,7 +70,7 @@ export function useRealtimeAudio(): UseRealtimeAudioReturn {
       console.log('[RealtimeAudio] Starting connection...')
 
       // Connect to backend WebSocket proxy
-      const wsUrl = `wss://backend-v9kv.onrender.com/ws/realtime`
+      const wsUrl = `wss://backend.railway.internal/ws/realtime`
       console.log('[RealtimeAudio] Connecting to backend WebSocket proxy:', wsUrl)
       
       const ws = new WebSocket(wsUrl)
