@@ -26,6 +26,48 @@ export async function POST(req) {
       )
     }
 
+    // Check job creation limit (3 free jobs)
+    const { data: jobsData, error: jobsError } = await supabaseAdmin
+      .from('jobs')
+      .select('id', { count: 'exact', head: true })
+      .eq('recruiter_id', userId)
+      .eq('status', 'open')
+
+    if (jobsError) {
+      console.error('[CreateJob API] Error checking job count:', jobsError)
+      return NextResponse.json(
+        { error: 'Failed to check job limit' },
+        { status: 500 }
+      )
+    }
+
+    const currentJobCount = jobsData?.length || 0
+    const jobLimit = 3
+    const maxJobsReached = currentJobCount >= jobLimit
+
+    // If limit reached, check for active subscription
+    if (maxJobsReached) {
+      const { data: subscriptionData, error: subError } = await supabaseAdmin
+        .from('subscriptions')
+        .select('status')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .single()
+
+      if (!subscriptionData) {
+        return NextResponse.json(
+          {
+            error: 'Job creation limit reached',
+            message: `You've reached the free limit of ${jobLimit} job postings. Please upgrade your subscription to create more jobs.`,
+            limitReached: true,
+            currentJobs: currentJobCount,
+            jobLimit: jobLimit,
+          },
+          { status: 403 }
+        )
+      }
+    }
+
     // Ensure recruiter_id matches the authenticated user
     const jobToInsert = {
       id: jobData.id,
@@ -65,6 +107,8 @@ export async function POST(req) {
       success: true,
       job: data,
       message: 'Job created successfully',
+      jobsCreated: currentJobCount + 1,
+      jobLimit: jobLimit,
     }, { status: 201 })
   } catch (error) {
     console.error('[CreateJob API] Unexpected error:', error)

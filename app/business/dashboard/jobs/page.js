@@ -100,10 +100,32 @@ export default function BusinessJobsPage() {
                 <h1 className="text-3xl font-bold text-white">Job Postings</h1>
                 <p className="text-sm text-[#d1f2eb] mt-1">Manage your job listings and applications</p>
               </div>
-              <button onClick={() => router.push('/business/dashboard/jobs/new')} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#007a78] to-[#00a89a] text-white hover:shadow-lg hover:shadow-teal-400/30 transition-all font-semibold">
-                <Plus className="w-4 h-4" />
-                New Job
-              </button>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <div className="text-sm text-[#d1f2eb] mb-1">
+                    {jobs.length} / 3 free jobs
+                  </div>
+                  <div className="w-32 h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-[#11cd68] transition-all duration-300"
+                      style={{ width: `${(jobs.length / 3) * 100}%` }}
+                    />
+                  </div>
+                </div>
+                <button 
+                  onClick={() => router.push('/business/dashboard/jobs/new')} 
+                  disabled={jobs.length >= 3}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${
+                    jobs.length >= 3
+                      ? 'bg-slate-400 text-white cursor-not-allowed opacity-50'
+                      : 'bg-gradient-to-r from-[#007a78] to-[#00a89a] text-white hover:shadow-lg hover:shadow-teal-400/30'
+                  }`}
+                  title={jobs.length >= 3 ? 'Upgrade subscription to create more jobs' : 'Create a new job posting'}
+                >
+                  <Plus className="w-4 h-4" />
+                  New Job
+                </button>
+              </div>
             </div>
           </div>
         </motion.div>

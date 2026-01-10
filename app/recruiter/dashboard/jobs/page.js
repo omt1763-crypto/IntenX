@@ -128,7 +128,7 @@ export default function RecruiterJobsPage() {
       setCopiedJob(job.id)
       setTimeout(() => setCopiedJob(null), 3000)
     } catch (e) {
-      console.warn('Copy failed', e)
+      console.warn('[RecruiterJobsList] Copy to clipboard failed for job', job.id, ':', e.message || e)
     }
   }
 
@@ -159,9 +159,31 @@ export default function RecruiterJobsPage() {
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">Job Postings</h1>
                 <p className="text-sm text-slate-600 mt-1">Manage your job listings and applications</p>
               </div>
-              <button onClick={() => router.push('/recruiter/dashboard/jobs/new')} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 transition-all font-semibold shadow-md hover:shadow-lg">
-                <Plus className="w-4 h-4" /> Post a Job
-              </button>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <div className="text-sm text-slate-700 mb-1 font-medium">
+                    {jobs.length} / 3 free jobs
+                  </div>
+                  <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-blue-600 transition-all duration-300"
+                      style={{ width: `${(jobs.length / 3) * 100}%` }}
+                    />
+                  </div>
+                </div>
+                <button 
+                  onClick={() => router.push('/recruiter/dashboard/jobs/new')} 
+                  disabled={jobs.length >= 3}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${
+                    jobs.length >= 3
+                      ? 'bg-slate-400 text-white cursor-not-allowed opacity-50'
+                      : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-md hover:shadow-lg'
+                  }`}
+                  title={jobs.length >= 3 ? 'Upgrade subscription to create more jobs' : 'Create a new job posting'}
+                >
+                  <Plus className="w-4 h-4" /> Post a Job
+                </button>
+              </div>
             </div>
           </div>
         </motion.div>

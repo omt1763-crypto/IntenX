@@ -116,7 +116,7 @@ export default function NewJobPage() {
       setCopied(true)
       setTimeout(() => setCopied(false), 3000)
     } catch (e) {
-      console.warn('Copy failed', e)
+      console.warn('[RecruiterNewJob] Copy to clipboard failed:', e.message || e)
     }
   }
 
@@ -164,6 +164,12 @@ export default function NewJobPage() {
 
       if (!response.ok) {
         const errorData = await response.json()
+        
+        // Check if limit reached
+        if (response.status === 403 && errorData.limitReached) {
+          throw new Error(`You've reached the limit of 3 free job postings. Upgrade your subscription to create more jobs.`)
+        }
+        
         throw new Error(errorData.error || 'Failed to create job')
       }
 
