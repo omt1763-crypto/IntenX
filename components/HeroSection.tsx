@@ -51,7 +51,11 @@ const HeroSection = () => {
 
         {/* CTA Button */}
         <div className="flex justify-center gap-4 mb-16 animate-fade-up" style={{ animationDelay: "0.4s" }}>
-          <Button variant="hero" size="lg">
+          <Button 
+            variant="hero" 
+            size="lg"
+            onClick={() => window.location.href = 'https://www.aiinterviewx.com/auth/signup'}
+          >
             Start Interview
           </Button>
           <Button variant="outline" size="lg" className="hidden sm:inline-flex">
