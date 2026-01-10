@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Trash2, RefreshCw, CheckSquare, Square, BarChart3, Users2, Briefcase, MessageSquare, CreditCard, Lock, Menu, X, Home, Settings, LogOut, Plus, TrendingUp, Activity, Globe, Smartphone, Monitor } from 'lucide-react'
 import DashboardCard from '@/components/dashboard/DashboardCard'
+import WorldVisitorMap from '@/components/WorldVisitorMap'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts'
 
 interface UserData {
@@ -1523,21 +1524,9 @@ export default function AdminDebugPage() {
                     </ResponsiveContainer>
                   </DashboardCard>
 
-                  {/* Top Countries */}
-                  <DashboardCard hover>
-                    <h3 className="text-xl font-bold text-gray-900 mb-6">Top Visitors by Country</h3>
-                    <ResponsiveContainer width="100%" height={400}>
-                      <BarChart data={analyticsData.countryData?.slice(0, 10) || []}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                        <XAxis dataKey="country" stroke="#6b7280" />
-                        <YAxis stroke="#6b7280" />
-                        <Tooltip 
-                          contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                          cursor={{ fill: '#f3f4f6' }}
-                        />
-                        <Bar dataKey="visitors" fill="#10b981" radius={[8, 8, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                  {/* Top Countries - NEW MAP VIEW */}
+                  <DashboardCard hover className="lg:col-span-2">
+                    <WorldVisitorMap countryData={analyticsData.countryData || []} />
                   </DashboardCard>
 
                   {/* Top Pages */}
