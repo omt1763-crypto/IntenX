@@ -7,6 +7,7 @@ interface CountryData {
   country: string
   visitors: number
   country_code?: string
+  isUnknown?: boolean
 }
 
 interface WorldVisitorMapProps {
