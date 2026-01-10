@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
+export const dynamic = 'force-dynamic' // Disable caching, always fetch fresh data
+
 export async function GET(request: NextRequest) {
   try {
     if (!supabaseAdmin) {
@@ -29,12 +31,20 @@ export async function GET(request: NextRequest) {
       jobsError: jobsRes.error
     })
 
-    return NextResponse.json({
+    // Set response headers to prevent caching
+    const response = NextResponse.json({
       users: usersRes.data || [],
       interviews: interviewsRes.data || [],
       jobs: jobsRes.data || [],
-      error: null
+      error: null,
+      timestamp: new Date().toISOString()
     })
+    
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+    
+    return response
   } catch (error: any) {
     console.error('[Admin] Error loading data:', error)
     return NextResponse.json({
