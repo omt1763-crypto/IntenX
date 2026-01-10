@@ -9,8 +9,9 @@ export default function AnalyticsTracker() {
   useEffect(() => {
     const trackPageView = async () => {
       try {
-        // Skip tracking for certain paths
-        if (pathname?.startsWith('/api/') || pathname?.includes('_next')) {
+        // Skip tracking for certain paths (auth, debug, api, admin pages, and Next.js internals)
+        const skipPaths = ['/api/', '/auth/', '/login', '/signup', '/register', '/debug/', '/admin/', '_next']
+        if (skipPaths.some(path => pathname?.startsWith(path) || pathname?.includes(path))) {
           return
         }
 

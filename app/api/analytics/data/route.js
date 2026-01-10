@@ -29,8 +29,8 @@ export async function GET(req) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
-    // Filter out admin pages from visitor analytics
-    const adminPages = ['/debug/data', '/debug', '/api/debug', '/api/analytics']
+    // Filter out admin pages and auth-related paths from visitor analytics
+    const adminPages = ['/debug/data', '/debug', '/api/debug', '/api/analytics', '/auth/', '/login', '/signup', '/register']
     const events = allEvents?.filter(e => {
       const pagePath = e.page_path || ''
       return !adminPages.some(adminPage => pagePath.includes(adminPage))
@@ -56,15 +56,29 @@ export async function GET(req) {
 
     // Visits by country
     const visitorsByCountry = {}
+    const unknownCountryEvents = []
+    
     events?.forEach(e => {
-      if (e.country) {
+      if (e.country && e.country !== 'Unknown') {
         visitorsByCountry[e.country] = (visitorsByCountry[e.country] || 0) + 1
+      } else if (e.country === 'Unknown') {
+        unknownCountryEvents.push(e)
       }
     })
+    
     const countryData = Object.entries(visitorsByCountry)
       .map(([country, count]) => ({ country, visitors: count }))
       .sort((a, b) => b.visitors - a.visitors)
       .slice(0, 10) // Top 10 countries
+    
+    // Add unknown count if it exists (showing separately)
+    if (unknownCountryEvents.length > 0) {
+      countryData.push({ 
+        country: `Unknown (${unknownCountryEvents.length} entries to resolve)`, 
+        visitors: unknownCountryEvents.length,
+        isUnknown: true 
+      })
+    }
 
     // Visits by device type
     const visitorsByDevice = {}
@@ -133,16 +147,30 @@ export async function GET(req) {
 
     // Top cities
     const cityCounts = {}
+    const unknownCities = []
+    
     events?.forEach(e => {
-      if (e.city && e.country) {
+      if (e.city && e.city !== 'Unknown' && e.country_code && e.country_code !== 'XX') {
         const cityKey = `${e.city}, ${e.country_code}`
         cityCounts[cityKey] = (cityCounts[cityKey] || 0) + 1
+      } else if (e.city === 'Unknown' || !e.city) {
+        unknownCities.push(e)
       }
     })
+    
     const topCities = Object.entries(cityCounts)
       .map(([city, count]) => ({ city, visitors: count }))
       .sort((a, b) => b.visitors - a.visitors)
       .slice(0, 10)
+    
+    // Add unknown cities if any
+    if (unknownCities.length > 0) {
+      topCities.push({ 
+        city: `Unknown Location (${unknownCities.length} entries)`, 
+        visitors: unknownCities.length,
+        isUnknown: true 
+      })
+    }
 
     // Recent visitors
     const recentVisitors = events

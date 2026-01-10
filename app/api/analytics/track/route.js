@@ -3,28 +3,82 @@ import { supabaseAdmin } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
-// Get geolocation from IP using free API
+// Get geolocation from IP using multiple providers for better accuracy
 async function getGeoLocation(ip) {
   try {
-    // Using ip-api.com (free tier: 45 requests/minute)
-    const response = await fetch(`https://ip-api.com/json/${ip}?fields=country,countryCode,city,isp`, {
-      next: { revalidate: 3600 } // Cache for 1 hour
-    })
-    
-    if (!response.ok) {
-      console.warn('[Analytics] IP-API returned non-ok status:', response.status)
+    // Skip private/local IPs
+    if (ip === '0.0.0.0' || ip === 'localhost' || ip === '127.0.0.1' || ip?.startsWith('192.168') || ip?.startsWith('10.')) {
       return null
     }
-    
-    const data = await response.json()
-    
-    if (data.status === 'success' && data.country) {
-      return {
-        country: data.country,
-        country_code: data.countryCode || '',
-        city: data.city || 'Unknown'
+
+    // Try ip-api.com first (free tier: 45 requests/minute, good accuracy)
+    try {
+      const response = await fetch(`https://ip-api.com/json/${ip}?fields=country,countryCode,city,isp`, {
+        next: { revalidate: 3600 },
+        timeout: 5000
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        
+        if (data.status === 'success' && data.country && data.country !== 'Unknown') {
+          return {
+            country: data.country,
+            country_code: data.countryCode || '',
+            city: data.city || 'Unknown'
+          }
+        }
       }
+    } catch (e) {
+      console.warn('[Analytics] ip-api.com failed:', e.message)
+      // Continue to fallback
     }
+
+    // Fallback to ipwho.is (more reliable for international visitors)
+    try {
+      const response = await fetch(`https://ipwho.is/${ip}`, {
+        next: { revalidate: 3600 },
+        timeout: 5000
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        
+        if (data.success && data.country) {
+          return {
+            country: data.country,
+            country_code: data.country_code?.toUpperCase() || '',
+            city: data.city || 'Unknown'
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[Analytics] ipwho.is failed:', e.message)
+      // Continue to next fallback
+    }
+
+    // Final fallback to ip-geo-block.com
+    try {
+      const response = await fetch(`https://ip-geo-block.com/json/check?ip=${ip}`, {
+        next: { revalidate: 3600 },
+        timeout: 5000
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        
+        if (data.countryCode && data.countryCode !== 'XX') {
+          return {
+            country: data.countryName || 'Unknown',
+            country_code: data.countryCode || '',
+            city: data.city || 'Unknown'
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[Analytics] ip-geo-block.com failed:', e.message)
+    }
+
     return null
   } catch (error) {
     console.error('[Analytics] Geolocation error:', error)

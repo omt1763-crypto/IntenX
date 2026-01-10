@@ -7,6 +7,12 @@ export function useAnalyticsTracking() {
   useEffect(() => {
     const trackPageView = async () => {
       try {
+        // Skip tracking for auth, debug, admin, and API routes
+        const skipPaths = ['/api/', '/auth/', '/login', '/signup', '/register', '/debug/', '/admin/']
+        if (skipPaths.some(path => pathname?.startsWith(path))) {
+          return
+        }
+
         // Generate or retrieve session ID
         let sessionId = localStorage.getItem('analytics_session_id')
         if (!sessionId) {
