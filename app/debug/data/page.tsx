@@ -222,14 +222,6 @@ export default function AdminDebugPage() {
     if (authenticated) {
       loadData()
       loadAnalyticsData()
-      
-      // Auto-refresh data every 10 seconds to show real-time user signups
-      const interval = setInterval(() => {
-        loadData()
-        loadAnalyticsData()
-      }, 10000)
-      
-      return () => clearInterval(interval)
     }
   }, [authenticated])
 
