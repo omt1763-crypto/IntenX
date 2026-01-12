@@ -38,7 +38,7 @@ const Navbar = () => {
           <Button variant="ghost" size="sm" className="hidden sm:inline-flex">
             Login
           </Button>
-          <button style={{ backgroundColor: '#8241FF' }} className="px-6 py-2 text-white hover:opacity-90 rounded-full font-semibold text-sm transition-all">
+          <button onClick={() => window.location.href = 'https://www.aiinterviewx.com/auth/signup'} style={{ backgroundColor: '#8241FF' }} className="px-6 py-2 text-white hover:opacity-90 rounded-full font-semibold text-sm transition-all">
             Sign Up
           </button>
         </div>

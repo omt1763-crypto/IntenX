@@ -50,10 +50,10 @@ const Hero = () => {
 
         {/* CTA Button */}
         <div className="flex justify-center gap-4 mb-16 animate-fade-up flex-wrap" style={{ animationDelay: "0.4s" }}>
-          <button style={{ backgroundColor: '#8241FF' }} className="px-8 py-3 text-white hover:opacity-90 rounded-full font-semibold text-base transition-all shadow-lg">
+          <button onClick={() => window.location.href = 'https://www.aiinterviewx.com/auth/signup'} style={{ backgroundColor: '#8241FF' }} className="px-8 py-3 text-white hover:opacity-90 rounded-full font-semibold text-base transition-all shadow-lg">
             Start Interview
           </button>
-          <button className="px-8 py-3 bg-white text-foreground hover:bg-white/90 border-2 border-foreground rounded-full font-semibold text-base transition-all hover:shadow-lg hover:scale-105">
+          <button onClick={() => window.location.href = 'https://www.aiinterviewx.com/auth/signup'} className="px-8 py-3 bg-white text-foreground hover:bg-white/90 border-2 border-foreground rounded-full font-semibold text-base transition-all hover:shadow-lg hover:scale-105">
             Watch Demo
           </button>
         </div>
