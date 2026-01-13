@@ -12,7 +12,7 @@
  * - ICE candidate aggregation
  */
 
-import io, { Socket } from 'socket.io-client'
+const ioClient = require('socket.io-client')
 
 export interface SignalingConfig {
   url: string
@@ -43,7 +43,7 @@ export interface SignalingEvents {
  * SignalingClient - Manages WebRTC signaling via Socket.io
  */
 export class SignalingClient {
-  private socket: Socket | null = null
+  private socket: any = null
   private config: SignalingConfig
   private listeners: Map<string, Function[]> = new Map()
 
@@ -57,7 +57,7 @@ export class SignalingClient {
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
-        this.socket = io(this.config.url, {
+        this.socket = ioClient.io(this.config.url, {
           auth: {
             token: this.config.token,
             roomId: this.config.roomId,
