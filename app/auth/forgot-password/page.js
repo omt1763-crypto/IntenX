@@ -33,7 +33,7 @@ export default function ForgotPassword() {
     try {
       console.log('[ForgotPassword] Sending reset email to:', email)
       
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.aiinterviewx.com'
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${appUrl}/auth/reset-password`,
       })
