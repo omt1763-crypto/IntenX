@@ -305,8 +305,9 @@ export default function AdminDebugPage() {
     alert(message)
     console.log('[Debug] Deletion complete:', { deleted, failed, total: userIds.length })
     
-    // Wait a moment for Supabase to replicate deletion, then refresh
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // Wait longer for Supabase to replicate deletion across all nodes, then refresh
+    console.log('[Debug] Waiting for Supabase replication...')
+    await new Promise(resolve => setTimeout(resolve, 1500))
     await loadData()
     setLoading(false)
   }

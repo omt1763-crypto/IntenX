@@ -34,6 +34,13 @@ export async function DELETE(
       .delete()
       .eq('id', userId)
 
+    console.log('[Debug API] Delete result:', { 
+      count, 
+      error: deleteError?.message,
+      code: deleteError?.code,
+      userId 
+    })
+
     if (deleteError) {
       console.error('[Debug API] Error deleting user from users table:', {
         userId,
@@ -47,6 +54,19 @@ export async function DELETE(
           details: deleteError
         },
         { status: 500 }
+      )
+    }
+
+    // Check if row was actually deleted
+    if (count === 0) {
+      console.warn('[Debug API] No rows deleted - user may not exist or RLS prevented deletion:', userId)
+      return NextResponse.json(
+        { 
+          error: 'User not found or deletion not allowed',
+          deleted: false,
+          count: 0
+        },
+        { status: 404 }
       )
     }
 
