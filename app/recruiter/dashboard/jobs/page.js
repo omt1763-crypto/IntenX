@@ -31,9 +31,24 @@ export default function RecruiterJobsPage() {
 
       const res = await fetch(`/api/recruiter/jobs-summary?recruiterId=${userId}`)
       const json = await res.json()
+      
+      if (!res.ok) {
+        console.error('[Jobs] API error response:', {
+          status: res.status,
+          statusText: res.statusText,
+          error: json?.error,
+          fullResponse: json,
+        })
+      }
+      
       if (json && json.success) {
         const jobsList = json.jobs || []
-        console.log('[Jobs] Loaded jobs from API:', jobsList)
+        console.log('[Jobs] Successfully loaded jobs from API:', {
+          jobCount: jobsList.length,
+          maxJobs: 3,
+          limitReached: jobsList.length >= 3,
+          jobs: jobsList.map(j => ({ id: j.id, title: j.title, created_at: j.created_at }))
+        })
         setJobs(jobsList)
         setJobsWithCounts(jobsList)
 
@@ -45,9 +60,17 @@ export default function RecruiterJobsPage() {
         })
         setJobTimers(initialTimers)
       } else {
-        console.warn('[Jobs] Jobs summary failed; falling back to client fetch')
+        console.warn('[Jobs] Jobs summary API not successful; falling back to client fetch', {
+          success: json?.success,
+          error: json?.error,
+          fullResponse: json,
+        })
         const { data: jobsData } = await supabase.from('jobs').select('*').eq('recruiter_id', userId).limit(50)
-        console.log('[Jobs] Loaded jobs from Supabase:', jobsData)
+        console.log('[Jobs] Loaded jobs from Supabase (fallback):', {
+          jobCount: jobsData?.length || 0,
+          maxJobs: 3,
+          limitReached: (jobsData?.length || 0) >= 3,
+        })
         setJobs(jobsData || [])
         setJobsWithCounts(jobsData || [])
         const initialTimers = {}
@@ -60,9 +83,17 @@ export default function RecruiterJobsPage() {
       }
       setLoading(false)
     } catch (error) {
-      console.error('[Jobs] Error loading jobs summary:', error)
+      console.error('[Jobs] Error loading jobs summary:', {
+        errorName: error?.name,
+        errorMessage: error?.message,
+        errorStack: error?.stack,
+        fullError: error,
+        userId,
+        timestamp: new Date().toISOString(),
+      })
       setLoading(false)
     }
+  }
   }
 
   const LINK_TTL_SECONDS = 15 * 60 // 15 minutes
@@ -123,12 +154,24 @@ export default function RecruiterJobsPage() {
 
   const copyLink = async (job) => {
     const link = getInterviewLink(job)
+    console.log('[RecruiterJobsList] Copying link for job:', job.id, 'Link:', link)
     try {
       await navigator.clipboard.writeText(link)
+      console.log('[RecruiterJobsList] Successfully copied link to clipboard for job:', job.id)
       setCopiedJob(job.id)
       setTimeout(() => setCopiedJob(null), 3000)
-    } catch (e) {
-      console.warn('[RecruiterJobsList] Copy to clipboard failed for job', job.id, ':', e.message || e)
+    } catch (error) {
+      console.error('[RecruiterJobsList] Copy to clipboard error details:', {
+        jobId: job.id,
+        errorName: error?.name,
+        errorMessage: error?.message,
+        errorCode: error?.code,
+        fullError: error,
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+        timestamp: new Date().toISOString(),
+      })
+      // Show user-friendly error message
+      alert(`Failed to copy job link: ${error?.message || 'Unknown error occurred'}. Please try again.`)
     }
   }
 
@@ -172,14 +215,24 @@ export default function RecruiterJobsPage() {
                   </div>
                 </div>
                 <button 
-                  onClick={() => router.push('/recruiter/dashboard/jobs/new')} 
+                  onClick={() => {
+                    if (jobs.length >= 3) {
+                      console.warn('[RecruiterJobsList] Job creation blocked - limit reached', {
+                        currentJobs: jobs.length,
+                        jobLimit: 3,
+                        userId,
+                      })
+                      return
+                    }
+                    router.push('/recruiter/dashboard/jobs/new')
+                  }}
                   disabled={jobs.length >= 3}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${
                     jobs.length >= 3
                       ? 'bg-slate-400 text-white cursor-not-allowed opacity-50'
                       : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-md hover:shadow-lg'
                   }`}
-                  title={jobs.length >= 3 ? 'Upgrade subscription to create more jobs' : 'Create a new job posting'}
+                  title={jobs.length >= 3 ? `Job posting limit reached (${jobs.length}/3). Free accounts can post up to 3 jobs. Please upgrade your subscription to create more.` : `Create a new job posting (${jobs.length}/3 used)`}
                 >
                   <Plus className="w-4 h-4" /> Post a Job
                 </button>

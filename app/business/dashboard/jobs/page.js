@@ -58,16 +58,47 @@ export default function BusinessJobsPage() {
       console.log('[BusinessJobs] Loading jobs for userId:', userId)
       const res = await fetch(`/api/recruiter/jobs-summary?recruiterId=${userId}`)
       const json = await res.json()
-      console.log('[BusinessJobs] Jobs API response:', json)
+      
+      if (!res.ok) {
+        console.error('[BusinessJobs] API error response:', {
+          status: res.status,
+          statusText: res.statusText,
+          error: json?.error,
+          fullResponse: json,
+        })
+      }
+      
+      console.log('[BusinessJobs] Jobs API response:', {
+        success: json?.success,
+        jobCount: json?.jobs?.length || 0,
+        maxJobs: 3,
+        limitReached: (json?.jobs?.length || 0) >= 3,
+        jobs: json?.jobs?.map(j => ({ id: j.id, title: j.title, created_at: j.created_at })) || []
+      })
       if (json && json.success && json.jobs) {
-        console.log('[BusinessJobs] Found', json.jobs.length, 'jobs')
+        console.log('[BusinessJobs] Successfully loaded', json.jobs.length, 'jobs with limit status:', {
+          currentJobs: json.jobs.length,
+          maxJobs: 3,
+          upgradeRequired: json.jobs.length >= 3
+        })
         setJobs(json.jobs)
       } else {
-        console.warn('[BusinessJobs] No jobs found in response')
+        console.warn('[BusinessJobs] No jobs found in response', {
+          success: json?.success,
+          error: json?.error,
+          fullResponse: json,
+        })
         setJobs([])
       }
     } catch (error) {
-      console.error('[BusinessJobs] Error loading jobs:', error)
+      console.error('[BusinessJobs] Error loading jobs:', {
+        errorName: error?.name,
+        errorMessage: error?.message,
+        errorStack: error?.stack,
+        fullError: error,
+        userId,
+        timestamp: new Date().toISOString(),
+      })
       setJobs([])
     } finally {
       setLoading(false)
@@ -113,14 +144,24 @@ export default function BusinessJobsPage() {
                   </div>
                 </div>
                 <button 
-                  onClick={() => router.push('/business/dashboard/jobs/new')} 
+                  onClick={() => {
+                    if (jobs.length >= 3) {
+                      console.warn('[BusinessJobsList] Job creation blocked - limit reached', {
+                        currentJobs: jobs.length,
+                        jobLimit: 3,
+                        userId,
+                      })
+                      return
+                    }
+                    router.push('/business/dashboard/jobs/new')
+                  }}
                   disabled={jobs.length >= 3}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${
                     jobs.length >= 3
                       ? 'bg-slate-400 text-white cursor-not-allowed opacity-50'
                       : 'bg-gradient-to-r from-[#007a78] to-[#00a89a] text-white hover:shadow-lg hover:shadow-teal-400/30'
                   }`}
-                  title={jobs.length >= 3 ? 'Upgrade subscription to create more jobs' : 'Create a new job posting'}
+                  title={jobs.length >= 3 ? `Job posting limit reached (${jobs.length}/3). Free accounts can post up to 3 jobs. Please upgrade your subscription to create more.` : `Create a new job posting (${jobs.length}/3 used)`}
                 >
                   <Plus className="w-4 h-4" />
                   New Job
