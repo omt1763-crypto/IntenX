@@ -282,12 +282,13 @@ export default function AdminDebugPage() {
           data: responseData
         })
         
-        if (res.ok && responseData.deleted) {
+        if ((res.ok || res.status === 200) && (responseData.deleted || responseData.success)) {
           deleted++
-          console.log(`[Debug] Successfully deleted user ${userId}`)
+          console.log(`[Debug] Successfully deleted user ${userId}`, responseData)
         } else {
           failed++
-          console.error(`[Debug] Failed to delete user ${userId}:`, responseData.error)
+          const errorMsg = responseData.error || responseData.message || 'Unknown error'
+          console.error(`[Debug] Failed to delete user ${userId}:`, errorMsg)
         }
       } catch (err) {
         failed++
