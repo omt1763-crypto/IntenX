@@ -298,13 +298,13 @@ export default function AdminDebugPage() {
     
     setSelectedUsers(new Set())
     setSelectAll(false)
-    setLoading(false)
     
     const message = `Deleted ${deleted} users` + (failed > 0 ? ` (${failed} failed)` : '')
     alert(message)
     console.log('[Debug] Deletion complete:', { deleted, failed, total: userIds.length })
     
     await loadData()
+    setLoading(false)
   }
 
   const handleClearAllData = async () => {
