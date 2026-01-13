@@ -47,22 +47,33 @@ export default function ResetPassword() {
         }
 
         // Try to set the session with the recovery token
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: params.get('refresh_token'),
-        })
+        try {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: params.get('refresh_token'),
+          })
 
-        if (sessionError) {
-          setStatus('expired')
-          setError('Reset link has expired. Please request a new one.')
-          return
+          if (sessionError) {
+            setStatus('expired')
+            setError('Reset link has expired. Please request a new one.')
+            return
+          }
+
+          setStatus('ready')
+        } catch (err) {
+          // Only log if it's not an abort error
+          if (err?.name !== 'AbortError') {
+            console.error('[ResetPassword] Session error:', err)
+            setStatus('expired')
+            setError('Invalid reset link. Please request a new one.')
+          }
         }
-
-        setStatus('ready')
       } catch (err) {
-        console.error('[ResetPassword] Error checking link:', err)
-        setStatus('expired')
-        setError('Invalid reset link. Please request a new one.')
+        if (err?.name !== 'AbortError') {
+          console.error('[ResetPassword] Error checking link:', err)
+          setStatus('expired')
+          setError('Invalid reset link. Please request a new one.')
+        }
       }
     }
 
