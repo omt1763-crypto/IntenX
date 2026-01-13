@@ -92,9 +92,11 @@ export default function AdminDebugPage() {
     setLoading(true)
     try {
       // Use API endpoint for data fetching (handles admin access properly)
+      // Add timestamp to force cache bust
+      const timestamp = Date.now()
       const [mainResponse, appResponse] = await Promise.all([
-        fetch('/api/debug/data', { method: 'GET', cache: 'no-store' }),
-        fetch('/api/debug/applications', { method: 'GET', cache: 'no-store' })
+        fetch(`/api/debug/data?t=${timestamp}`, { method: 'GET', cache: 'no-store' }),
+        fetch(`/api/debug/applications?t=${timestamp}`, { method: 'GET', cache: 'no-store' })
       ])
       
       const data = await mainResponse.json()
@@ -303,6 +305,8 @@ export default function AdminDebugPage() {
     alert(message)
     console.log('[Debug] Deletion complete:', { deleted, failed, total: userIds.length })
     
+    // Wait a moment for Supabase to replicate deletion, then refresh
+    await new Promise(resolve => setTimeout(resolve, 500))
     await loadData()
     setLoading(false)
   }
