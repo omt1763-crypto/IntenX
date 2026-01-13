@@ -75,6 +75,33 @@ export async function DELETE(
       rowsDeleted: count,
     })
 
+    // Verify the deletion actually worked by trying to fetch the user
+    const { data: verifyData, error: verifyError } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('id', userId)
+      .single()
+
+    if (verifyError && verifyError.code === 'PGRST116') {
+      // PGRST116 means no rows found - deletion was successful
+      console.log('[Debug API] Deletion verified - user no longer exists in database')
+    } else if (verifyData) {
+      // User still exists - deletion may have been blocked by RLS
+      console.warn('[Debug API] ⚠️ DELETION VERIFICATION FAILED - User still exists in database:', {
+        userId,
+        userData: verifyData
+      })
+      return NextResponse.json(
+        { 
+          error: 'Deletion failed - user still exists. This may be due to Row Level Security policies.',
+          deleted: false,
+          rowsDeleted: count,
+          verified: false
+        },
+        { status: 500 }
+      )
+    }
+
     // Also try to delete from auth.users (if user is linked to auth)
     try {
       const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId)
