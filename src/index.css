@@ -1,0 +1,231 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Flow Mind Color Palette */
+    --background: 240 33% 96%;
+    --foreground: 228 11% 13%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 228 11% 13%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 228 11% 13%;
+
+    /* Primary - Blueviolet #8241FF */
+    --primary: 258 100% 63%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Cornflowerblue #7092F3 */
+    --secondary: 223 84% 70%;
+    --secondary-foreground: 228 11% 13%;
+
+    --muted: 240 20% 92%;
+    --muted-foreground: 228 11% 45%;
+
+    /* Accent - Khaki yellow #F6E86F */
+    --accent: 54 89% 70%;
+    --accent-foreground: 228 11% 13%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 20% 90%;
+    --input: 240 20% 90%;
+    --ring: 258 100% 63%;
+
+    --radius: 0.75rem;
+
+    /* Custom Flow Mind colors */
+    --flow-lavender: 240 33% 96%;
+    --flow-purple: 258 100% 63%;
+    --flow-blue: 223 84% 70%;
+    --flow-yellow: 54 89% 70%;
+    --flow-dark: 228 11% 13%;
+    --flow-pink: 330 80% 95%;
+
+    /* Gradient */
+    --gradient-hero: linear-gradient(135deg, hsl(240 40% 97%) 0%, hsl(280 30% 96%) 30%, hsl(330 40% 97%) 60%, hsl(240 40% 97%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(240 33% 99%) 100%);
+    
+    /* Shadows */
+    --shadow-soft: 0 4px 20px -4px hsl(258 100% 63% / 0.1);
+    --shadow-card: 0 8px 40px -12px hsl(228 11% 13% / 0.1);
+    --shadow-glow: 0 0 60px hsl(258 100% 63% / 0.15);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 228 15% 8%;
+    --foreground: 0 0% 95%;
+
+    --card: 228 15% 12%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 228 15% 12%;
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 258 100% 68%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 223 60% 55%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 228 15% 18%;
+    --muted-foreground: 228 10% 60%;
+
+    --accent: 54 70% 55%;
+    --accent-foreground: 228 11% 13%;
+
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 228 15% 20%;
+    --input: 228 15% 20%;
+    --ring: 258 100% 68%;
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+@layer components {
+  .hero-gradient {
+    background: var(--gradient-hero);
+  }
+
+  .card-gradient {
+    background: var(--gradient-card);
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, hsl(var(--flow-purple)) 0%, hsl(var(--flow-blue)) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glow-purple {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .glass-effect {
+    background: hsl(0 0% 100% / 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--border) / 0.5);
+  }
+
+  .nav-glass {
+    background: hsl(0 0% 100% / 0.8);
+    backdrop-filter: blur(20px);
+    border: 1px solid hsl(var(--border) / 0.6);
+  }
+
+  /* Grid background with hover effect */
+  .grid-background {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .grid-background::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: 
+      linear-gradient(to right, hsl(var(--border) / 0.4) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.4) 1px, transparent 1px);
+    background-size: 80px 80px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .grid-cell {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    transition: background-color 0.3s ease;
+    z-index: 2;
+  }
+
+  .grid-cell:hover {
+    background-color: hsl(var(--primary) / 0.08);
+  }
+}
+
+@layer utilities {
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-fade-up {
+    animation: fade-up 0.8s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.5s ease-out forwards;
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
+  }
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+}
