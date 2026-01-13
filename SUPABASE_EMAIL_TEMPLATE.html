@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Confirm Your InterX Account</title>
+  <title>Reset Your Password - IntenX</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
       line-height: 1.6;
       color: #333;
-      background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+      background-color: #f9fafb;
       padding: 20px;
       margin: 0;
     }
@@ -22,16 +22,15 @@
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
     }
     .header {
-      background: linear-gradient(135deg, #007a78 0%, #00a89a 100%);
+      background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%);
       color: white;
       padding: 40px 20px;
       text-align: center;
     }
     .header h1 {
       margin: 0;
-      font-size: 32px;
+      font-size: 28px;
       font-weight: 700;
-      letter-spacing: -0.5px;
     }
     .header p {
       margin: 10px 0 0 0;
@@ -42,10 +41,9 @@
       padding: 40px 30px;
     }
     .greeting {
-      font-size: 18px;
+      font-size: 16px;
       margin-bottom: 20px;
       color: #333;
-      font-weight: 600;
     }
     .message {
       font-size: 15px;
@@ -55,11 +53,11 @@
     }
     .button-container {
       text-align: center;
-      margin: 30px 0;
+      margin: 35px 0;
     }
     .button {
       display: inline-block;
-      background: linear-gradient(135deg, #007a78 0%, #00a89a 100%);
+      background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%);
       color: white;
       padding: 14px 40px;
       border-radius: 6px;
@@ -73,58 +71,64 @@
       text-decoration: none;
       transform: translateY(-2px);
     }
+    .fallback-section {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+    }
+    .fallback-label {
+      font-size: 13px;
+      color: #9ca3af;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
     .link-fallback {
-      background: #f5f5f5;
-      border: 1px solid #ddd;
-      padding: 15px;
-      margin: 20px 0;
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      padding: 12px;
       border-radius: 4px;
       font-family: 'Courier New', monospace;
-      font-size: 12px;
-      color: #333;
+      font-size: 11px;
+      color: #374151;
       word-break: break-all;
-      line-height: 1.4;
+      line-height: 1.5;
     }
     .security-notice {
-      background: #fff3cd;
-      border-left: 4px solid #ffc107;
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
       padding: 15px;
-      margin: 20px 0;
+      margin: 25px 0;
       border-radius: 4px;
     }
     .security-notice .warning {
-      color: #d32f2f;
+      color: #92400e;
       font-weight: 600;
-      font-size: 13px;
-      margin: 0 0 5px 0;
+      font-size: 14px;
+      margin: 0 0 8px 0;
     }
     .security-notice p {
       margin: 5px 0;
       font-size: 13px;
-      color: #666;
+      color: #b45309;
+      line-height: 1.6;
     }
     .footer {
-      background: #f5f5f5;
-      padding: 20px 30px;
+      background: #f9fafb;
+      padding: 30px;
       font-size: 12px;
-      color: #999;
-      border-top: 1px solid #eee;
+      color: #9ca3af;
+      border-top: 1px solid #e5e7eb;
       text-align: center;
     }
     .footer p {
       margin: 5px 0;
     }
     .footer a {
-      color: #007a78;
+      color: #7c3aed;
       text-decoration: none;
     }
     .footer a:hover {
       text-decoration: underline;
-    }
-    .expiry {
-      color: #d32f2f;
-      font-weight: 600;
-      margin-top: 15px;
     }
   </style>
 </head>
@@ -132,57 +136,54 @@
   <div class="container">
     <!-- Header -->
     <div class="header">
-      <h1>🎯 InterX</h1>
-      <p>Email Verification</p>
+      <h1>🎯 IntenX</h1>
+      <p>Reset Your Password</p>
     </div>
 
     <!-- Content -->
     <div class="content">
       <div class="greeting">
-        Welcome to InterX! 👋
+        Hello!
       </div>
 
       <div class="message">
-        <p>Thank you for signing up with <strong>InterX</strong>. We're excited to have you as part of our platform!</p>
-        <p>To complete your account setup and start using InterX, please confirm your email address by clicking the button below:</p>
+        <p>We received a request to reset your password for your IntenX account.</p>
+        <p>Click the button below to create a new password:</p>
       </div>
 
       <!-- CTA Button -->
       <div class="button-container">
-        <a href="{{ .ConfirmationURL }}" class="button">Confirm Email Address</a>
+        <a href="{{ .ConfirmationURL }}" class="button">Reset Password</a>
       </div>
 
-      <!-- Expiry Notice -->
-      <div class="expiry">
-        ⏰ This link expires in 24 hours
+      <!-- Fallback Link -->
+      <div class="fallback-section">
+        <div class="fallback-label">Button not working? Copy and paste this link into your browser:</div>
+        <div class="link-fallback">{{ .ConfirmationURL }}</div>
       </div>
 
       <!-- Security Notice -->
       <div class="security-notice">
-        <p class="warning">⚠️ Security Notice</p>
-        <p>If you didn't create this account, please ignore this email or contact our support team immediately.</p>
-        <p>Never share this link with anyone else.</p>
+        <p class="warning">⏰ Security Notice</p>
+        <p>This link will expire in 1 hour for your security.</p>
+        <p>If you didn't request a password reset, please ignore this email and contact our support team if you have concerns about your account security.</p>
       </div>
 
       <div class="message">
-        <p>Need help? Visit our <a href="https://interx.example.com/support" style="color: #007a78; text-decoration: none; font-weight: 600;">support page</a> or reply to this email.</p>
-        <p style="margin-top: 20px;">
-          Best regards,<br>
-          <strong>The InterX Team</strong> 🚀
-        </p>
+        <p>Best regards,<br><strong>The IntenX Team</strong></p>
       </div>
     </div>
 
     <!-- Footer -->
     <div class="footer">
-      <p><strong>InterX - Interview Experience Platform</strong></p>
-      <p>This is an automated message. Please do not reply directly to this email.</p>
-      <p>© 2025 InterX. All rights reserved.</p>
+      <p><strong>IntenX - AI Interview Experience Platform</strong></p>
+      <p>© 2026 IntenX. All rights reserved.</p>
       <p>
-        <a href="https://interx.example.com">Visit Website</a> | 
-        <a href="https://interx.example.com/privacy">Privacy Policy</a> | 
-        <a href="https://interx.example.com/terms">Terms of Service</a>
+        <a href="https://www.aiinterviewx.com">Visit Website</a> | 
+        <a href="https://www.aiinterviewx.com/privacy">Privacy Policy</a> | 
+        <a href="https://www.aiinterviewx.com/terms">Terms of Service</a>
       </p>
+      <p style="margin-top: 15px; font-size: 11px;">This is an automated message. Please do not reply directly to this email.</p>
     </div>
   </div>
 </body>
