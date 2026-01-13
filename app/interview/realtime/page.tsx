@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/lib/supabase'
 import SubscriptionPaywall from '@/components/SubscriptionPaywall'
 import { ConversationDisplay } from '@/components/ConversationDisplay'
+import { useInterviewIntegrity } from '@/hooks/useInterviewIntegrity'
 
 interface InterviewData {
   title?: string
@@ -311,6 +312,15 @@ function RealtimeInterviewPageContent() {
   const wsRef = useRef<WebSocket | null>(null)
   const { messages, addMessage, saveToDatabase } = useConversationManager()
   const { connected, isListening, error, connect, disconnect } = useRealtimeAudio()
+  const {
+    initializeMonitoring,
+    stopMonitoring,
+    shouldCancelInterview,
+    cancellationReason,
+    violations,
+    getViolationReport
+  } = useInterviewIntegrity()
+  const [integrityError, setIntegrityError] = useState<string | null>(null)
 
   // Wait for auth to load, then initialize interview page
   useEffect(() => {
@@ -821,11 +831,52 @@ function RealtimeInterviewPageContent() {
       setInterviewStarted(true)
       setTimer(0)
       
+      // Initialize interview integrity monitoring
+      if (videoRef.current && localStream) {
+        try {
+          await initializeMonitoring(videoRef.current, localStream)
+          console.log('[Page] ✅ Interview integrity monitoring initialized')
+        } catch (monitoringError) {
+          console.warn('[Page] ⚠️ Could not initialize integrity monitoring:', monitoringError)
+          setIntegrityError('Security monitoring could not be fully enabled. Interview will continue with limited security checks.')
+        }
+      }
+      
       // Track if waiting for user answer
       let waitingForUser = false
 
       await connect((msg) => {
         console.log('[Page] 🎯 Received conversation message:', msg.role, msg.content)
+        
+        // Check for interview integrity violations
+        if (shouldCancelInterview && cancellationReason) {
+          console.log('[Page] 🚨 INTEGRITY VIOLATION DETECTED - Cancelling interview:', cancellationReason)
+          
+          // Stop the interview immediately
+          setInterviewStarted(false)
+          setIntegrityError(cancellationReason)
+          
+          // Save violation report
+          const report = getViolationReport()
+          console.log('[Page] Violation Report:', report)
+          
+          // Log to API
+          fetch('/api/interview-violations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              interviewId: `interview-${Date.now()}`,
+              applicantId,
+              jobId,
+              cancellationReason,
+              violations: violations,
+              report
+            })
+          }).catch(err => console.error('[Page] Error logging violations:', err))
+          
+          // Return early to prevent further messages
+          return
+        }
         
         // Update AI speaking state ONLY when receiving AI messages
         if (msg.role === 'ai') {
@@ -862,6 +913,13 @@ function RealtimeInterviewPageContent() {
     try {
       console.log('[Page] Ending interview...')
       setInterviewStarted(false)
+      
+      // Stop integrity monitoring
+      stopMonitoring()
+      
+      // Get final violation report before stopping
+      const finalReport = getViolationReport()
+      console.log('[Page] Final Integrity Report:', finalReport)
       
       // Save conversation to database first
       if (messages && messages.length > 0) {
