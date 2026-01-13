@@ -260,18 +260,49 @@ export default function AdminDebugPage() {
 
     setLoading(true)
     let deleted = 0
+    let failed = 0
     const userIds = Array.from(selectedUsers)
+    
+    console.log('[Debug] Starting user deletion for:', userIds)
+
     for (const userId of userIds) {
       try {
-        const res = await fetch(`/api/debug/user/${userId}`, { method: 'DELETE' })
-        if (res.ok) deleted++
+        console.log(`[Debug] Deleting user: ${userId}`)
+        const res = await fetch(`/api/debug/user/${userId}`, { 
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        })
+        
+        const responseData = await res.json()
+        console.log(`[Debug] Delete response for ${userId}:`, {
+          status: res.status,
+          ok: res.ok,
+          data: responseData
+        })
+        
+        if (res.ok && responseData.deleted) {
+          deleted++
+          console.log(`[Debug] Successfully deleted user ${userId}`)
+        } else {
+          failed++
+          console.error(`[Debug] Failed to delete user ${userId}:`, responseData.error)
+        }
       } catch (err) {
-        console.error(`Failed to delete user ${userId}:`, err)
+        failed++
+        console.error(`[Debug] Exception deleting user ${userId}:`, err)
       }
     }
+    
     setSelectedUsers(new Set())
     setSelectAll(false)
-    alert(`Deleted ${deleted} users`)
+    setLoading(false)
+    
+    const message = `Deleted ${deleted} users` + (failed > 0 ? ` (${failed} failed)` : '')
+    alert(message)
+    console.log('[Debug] Deletion complete:', { deleted, failed, total: userIds.length })
+    
     await loadData()
   }
 
