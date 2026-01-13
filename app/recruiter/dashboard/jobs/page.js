@@ -94,7 +94,6 @@ export default function RecruiterJobsPage() {
       setLoading(false)
     }
   }
-  }
 
   const LINK_TTL_SECONDS = 15 * 60 // 15 minutes
 
