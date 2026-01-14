@@ -113,11 +113,6 @@ async function sendSmsWithTwilio(phoneNumber: string, otp: string) {
 
   return message
 }
-
-// Helper function to send SMS via Twilio (implement as needed)
-// async function sendSmsOtp(phoneNumber: string, otp: string) {
-//   const twilio = require('twilio')
-//   const client = twilio(
 //     process.env.TWILIO_ACCOUNT_SID,
 //     process.env.TWILIO_AUTH_TOKEN
 //   )

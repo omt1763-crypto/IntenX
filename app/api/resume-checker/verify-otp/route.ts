@@ -125,23 +125,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-
-    console.log(`[Resume Checker] Phone verified: ${phoneNumber}`)
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: 'Phone number verified successfully',
-        phoneNumber,
-        verifiedAt: new Date().toISOString(),
-      },
-      { status: 200 }
-    )
-  } catch (error) {
-    console.error('[Resume Checker] Verify OTP error:', error)
-    return NextResponse.json(
-      { error: 'Failed to verify OTP' },
-      { status: 500 }
-    )
-  }
-}
