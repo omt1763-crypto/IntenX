@@ -102,27 +102,35 @@ export async function POST(request: NextRequest) {
 
 // Send SMS via Twilio
 async function sendSmsWithTwilio(phoneNumber: string, otp: string) {
-  const twilio = require('twilio')
-  const client = twilio(
-    process.env.TWILIO_ACCOUNT_SID,
-    process.env.TWILIO_AUTH_TOKEN
-  )
+  try {
+    const twilio = require('twilio')
+    const client = twilio(
+      process.env.TWILIO_ACCOUNT_SID,
+      process.env.TWILIO_AUTH_TOKEN
+    )
 
-  const message = await client.messages.create({
-    body: `Your IntenX Scanner verification code is: ${otp}. Valid for 10 minutes.`,
-    from: process.env.TWILIO_PHONE_NUMBER,
-    to: `+${phoneNumber}`,
-  })
+    // Ensure phone number is in E.164 format: +<country_code><number>
+    let formattedPhone = phoneNumber
+    if (!formattedPhone.startsWith('+')) {
+      formattedPhone = `+${formattedPhone}`
+    }
 
-  return message
+    console.log(`[Twilio] Sending SMS to: ${formattedPhone}`)
+    console.log(`[Twilio] From: ${process.env.TWILIO_PHONE_NUMBER}`)
+
+    const message = await client.messages.create({
+      body: `Your IntenX Scanner verification code is: ${otp}. Valid for 10 minutes.`,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: formattedPhone,
+    })
+
+    console.log(`[Twilio] SMS sent successfully! SID: ${message.sid}`)
+    return message
+  } catch (error: any) {
+    console.error(`[Twilio] Error sending SMS:`, error.message)
+    console.error(`[Twilio] Error code:`, error.code)
+    throw error
+  }
 }
-//     process.env.TWILIO_ACCOUNT_SID,
-//     process.env.TWILIO_AUTH_TOKEN
-//   )
-//
-//   await client.messages.create({
-//     body: `Your AI Resume Checker verification code is: ${otp}. Valid for 10 minutes.`,
-//     from: process.env.TWILIO_PHONE_NUMBER,
-//     to: `+${phoneNumber}`,
 //   })
 // }
