@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FileUp, Zap, X } from 'lucide-react'
+import { FileUp, Zap, X, CheckCircle2, BarChart3, Sparkles, ArrowRight } from 'lucide-react'
 import { PhoneVerification, ResumeUpload, ResumeAnalysis } from '@/components/resume-checker'
 
 type Step = 'upload' | 'analyzing' | 'results'
@@ -12,6 +12,7 @@ export default function ResumeChecker() {
   const [phoneNumber, setPhoneNumber] = useState('')
   const [isVerified, setIsVerified] = useState(false)
   const [showPhoneModal, setShowPhoneModal] = useState(false)
+  const [showUploadModal, setShowUploadModal] = useState(false)
   const [analysisResults, setAnalysisResults] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
