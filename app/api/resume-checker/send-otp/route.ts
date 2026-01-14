@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
-// This is a placeholder - in production, integrate with Twilio or your SMS provider
-// For now, we'll generate a test OTP and log it
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-const otpStore = new Map<string, { otp: string; timestamp: number; attempts: number }>()
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('Missing Supabase environment variables')
+}
+
+const supabase = createClient(supabaseUrl || '', supabaseServiceKey || '')
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,38 +22,63 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check rate limiting (max 3 requests per hour)
-    const existing = otpStore.get(phoneNumber)
-    if (existing && Date.now() - existing.timestamp < 3600000 && existing.attempts >= 3) {
-      return NextResponse.json(
-        { error: 'Too many OTP requests. Please try again later.' },
-        { status: 429 }
-      )
-    }
-
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString()
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes
 
-    // Store OTP (expires in 10 minutes)
-    otpStore.set(phoneNumber, {
-      otp,
-      timestamp: Date.now(),
-      attempts: (existing?.attempts || 0) + 1,
-    })
+    // Store OTP in Supabase
+    const { data, error } = await supabase
+      .from('phone_otps')
+      .insert([
+        {
+          phone_number: phoneNumber,
+          otp: otp,
+          expires_at: expiresAt,
+          attempts: 0,
+          verified: false,
+          created_at: new Date().toISOString(),
+        },
+      ])
+      .select()
 
-    console.log(`[Resume Checker] OTP for ${phoneNumber}: ${otp}`)
+    if (error) {
+      console.error('[Resume Checker] Supabase insert error:', error)
+      // If table doesn't exist, return test OTP
+      if (error.code === 'PGRST116' || error.message.includes('not found')) {
+        console.log(`[Resume Checker] OTP for ${phoneNumber}: ${otp} (table not found)`)
+        if (process.env.NODE_ENV === 'development') {
+          return NextResponse.json(
+            {
+              success: true,
+              message: 'OTP sent successfully (dev mode)',
+              testOtp: otp,
+            },
+            { status: 200 }
+          )
+        }
+      }
+      throw error
+    }
 
-    // In production, send OTP via Twilio or similar
-    // await sendSmsOtp(phoneNumber, otp)
+    console.log(`[Resume Checker] OTP stored for ${phoneNumber}: ${otp}`)
 
-    // For development/testing, return the OTP (remove in production)
+    // Send OTP via Twilio SMS
+    try {
+      await sendSmsWithTwilio(phoneNumber, otp)
+      console.log(`[Resume Checker] SMS sent to ${phoneNumber}`)
+    } catch (smsError) {
+      console.error('[Resume Checker] Twilio SMS error:', smsError)
+      // Don't fail the request if SMS fails, but log the error
+      // In production, you might want to handle this differently
+    }
+
+    // For development, also return test OTP for debugging
     if (process.env.NODE_ENV === 'development') {
       return NextResponse.json(
         {
           success: true,
           message: 'OTP sent successfully',
-          // Only for development - remove in production
-          testOtp: otp,
+          testOtp: otp, // For development only
         },
         { status: 200 }
       )
@@ -65,6 +95,23 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// Send SMS via Twilio
+async function sendSmsWithTwilio(phoneNumber: string, otp: string) {
+  const twilio = require('twilio')
+  const client = twilio(
+    process.env.TWILIO_ACCOUNT_SID,
+    process.env.TWILIO_AUTH_TOKEN
+  )
+
+  const message = await client.messages.create({
+    body: `Your IntenX Scanner verification code is: ${otp}. Valid for 10 minutes.`,
+    from: process.env.TWILIO_PHONE_NUMBER,
+    to: `+${phoneNumber}`,
+  })
+
+  return message
 }
 
 // Helper function to send SMS via Twilio (implement as needed)
