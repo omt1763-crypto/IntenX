@@ -21,7 +21,7 @@ export default function VerifyEmail() {
     if (!mounted) return
 
     let isMounted = true
-    let timeoutId: any = null
+    let timeoutId = null
 
     const verifyEmail = async () => {
       try {

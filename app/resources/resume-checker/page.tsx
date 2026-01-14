@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { FileUp, CheckCircle, AlertCircle, Zap, Shield } from 'lucide-react'
-import PhoneVerification from '@/components/resume-checker/PhoneVerification'
-import ResumeUpload from '@/components/resume-checker/ResumeUpload'
-import ResumeAnalysis from '@/components/resume-checker/ResumeAnalysis'
+import dynamic from 'next/dynamic'
+
+const PhoneVerification = dynamic(() => import('@/components/resume-checker/PhoneVerification'), { ssr: false })
+const ResumeUpload = dynamic(() => import('@/components/resume-checker/ResumeUpload'), { ssr: false })
+const ResumeAnalysis = dynamic(() => import('@/components/resume-checker/ResumeAnalysis'), { ssr: false })
 
 type Step = 'phone' | 'upload' | 'analyzing' | 'results'
 
