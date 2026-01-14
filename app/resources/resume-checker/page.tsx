@@ -97,35 +97,6 @@ export default function ResumeChecker() {
             AI-powered resume analysis with 16 crucial checks to ensure your resume is ready to land you interview callbacks
           </p>
         </motion.div>
-          {(['phone', 'upload', 'results'] as const).map((step, idx) => (
-            <div key={step} className="flex items-center">
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
-                  currentStep === step || (currentStep === 'analyzing' && step === 'upload')
-                    ? 'bg-gradient-to-br from-flow-purple to-flow-blue text-white ring-2 ring-flow-purple/50'
-                    : isVerified && step === 'upload'
-                    ? 'bg-green-600 text-white'
-                    : currentStep === 'results' && (step === 'phone' || step === 'upload')
-                    ? 'bg-green-600 text-white'
-                    : 'bg-border text-muted-foreground'
-                }`}
-              >
-                {step === 'phone' && '1'}
-                {step === 'upload' && '2'}
-                {step === 'results' && '3'}
-              </div>
-              {idx < 2 && (
-                <div
-                  className={`w-8 h-1 mx-2 rounded-full transition-all ${
-                    isVerified || (currentStep === 'results' && step === 'phone')
-                      ? 'bg-green-600'
-                      : 'bg-border'
-                  }`}
-                ></div>
-              )}
-            </div>
-          ))}
-        </motion.div>
 
         {/* Main Content */}
         <div className="grid md:grid-cols-3 gap-8">
