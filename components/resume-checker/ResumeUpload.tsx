@@ -152,104 +152,101 @@ export default function ResumeUpload({ onResumeSelected, phoneNumber, isVerified
                     {(selectedFile.size / 1024).toFixed(2)} KB
                   </p>
                 </motion.div>
-          ) : (
-            <>
-              <motion.div
-                animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className="mb-4"
-              >
-                <FileUp className="w-16 h-16 text-flow-purple mx-auto" />
-              </motion.div>
-              <h3 className="text-2xl font-bold text-foreground mb-2">Drop your resume here</h3>
-              <p className="text-muted-foreground mb-6">or choose a file to upload</p>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-flow-purple to-flow-blue hover:shadow-lg text-white font-semibold py-3 px-8 rounded-lg transition"
-              >
-                <Upload className="w-5 h-5" />
-                Choose File
-              </button>
-            </>
-          )}
-        </div>
-
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          PDF & DOCX only. Max 2MB file size.
-        </p>
-      </div>
-
-      {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex gap-3"
-        >
-          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-          <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
-        </motion.div>
-      )}
-
-      {selectedFile && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-4"
-        >
-          <div className="flex gap-2 justify-between items-center p-4 bg-card border border-border rounded-lg">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-flow-purple/20 rounded flex items-center justify-center">
-                <FileUp className="w-5 h-5 text-flow-purple" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-foreground truncate">{selectedFile.name}</p>
-                <p className="text-xs text-muted-foreground">{(selectedFile.size / 1024).toFixed(2)} KB</p>
-              </div>
+              ) : (
+                <>
+                  <motion.div
+                    animate={{ y: [0, -10, 0] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="mb-4"
+                  >
+                    <FileUp className="w-16 h-16 text-flow-purple mx-auto" />
+                  </motion.div>
+                  <h3 className="text-2xl font-bold text-foreground mb-2">Drop your resume here</h3>
+                  <p className="text-muted-foreground mb-6">or choose a file to upload</p>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-2 bg-gradient-to-r from-flow-purple to-flow-blue hover:shadow-lg text-white font-semibold py-3 px-8 rounded-lg transition"
+                  >
+                    <Upload className="w-5 h-5" />
+                    Choose File
+                  </button>
+                </>
+              )}
             </div>
-            <button
-              onClick={() => {
-                setSelectedFile(null)
-                setError('')
-              }}
-              className="text-muted-foreground hover:text-foreground text-sm font-medium transition"
+
+            <p className="text-center text-sm text-muted-foreground mt-6">
+              PDF & DOCX only. Max 2MB file size.
+            </p>
+          </div>
+
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex gap-3"
             >
-              Remove
-            </button>
-          </div>
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+            </motion.div>
+          )}
 
-          <button
-            onClick={handleAnalyze}
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-flow-purple to-flow-blue hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-lg transition flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity }}
+          {selectedFile && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-4"
+            >
+              <div className="flex gap-2 justify-between items-center p-4 bg-card border border-border rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 bg-flow-purple/20 rounded flex items-center justify-center">
+                    <FileUp className="w-5 h-5 text-flow-purple" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground truncate">{selectedFile.name}</p>
+                    <p className="text-xs text-muted-foreground">{(selectedFile.size / 1024).toFixed(2)} KB</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedFile(null)
+                    setError('')
+                  }}
+                  className="text-muted-foreground hover:text-foreground text-sm font-medium transition"
                 >
-                  <FileUp className="w-5 h-5" />
-                </motion.div>
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <FileUp className="w-5 h-5" />
-                Analyze Resume
-              </>
-            )}
-          </button>
+                  Remove
+                </button>
+              </div>
 
-          <div className="flex items-center gap-2 text-xs text-muted-foreground p-3 bg-card border border-border rounded-lg">
-            <Lock className="w-4 h-4 flex-shrink-0" />
-            Your resume data is encrypted and secure
-          </div>
-        </motion.div>
-        </>
-      )}
+              <button
+                onClick={handleAnalyze}
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-flow-purple to-flow-blue hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-lg transition flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                    >
+                      <FileUp className="w-5 h-5" />
+                    </motion.div>
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <FileUp className="w-5 h-5" />
+                    Analyze Resume
+                  </>
+                )}
+              </button>
 
-      {isVerified && (
-        <>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground p-3 bg-card border border-border rounded-lg">
+                <Lock className="w-4 h-4 flex-shrink-0" />
+                Your resume data is encrypted and secure
+              </div>
+            </motion.div>
+          )}
+
           {/* Info Cards */}
           <div className="grid sm:grid-cols-2 gap-4 mt-8">
             <motion.div
