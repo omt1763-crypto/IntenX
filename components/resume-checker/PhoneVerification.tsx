@@ -148,24 +148,61 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
                 Phone Number
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 font-semibold text-lg">
                   +
                 </span>
                 <input
                   type="tel"
                   value={phoneNumber}
                   onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '')
-                    setPhoneNumber(value)
+                    // Extract only digits
+                    const digits = e.target.value.replace(/\D/g, '')
+                    
+                    // Auto-format based on length
+                    let formatted = ''
+                    if (digits.length <= 3) {
+                      formatted = digits
+                    } else if (digits.length <= 6) {
+                      // Format: +91 XXXXX
+                      formatted = digits.slice(0, 3) + ' ' + digits.slice(3)
+                    } else if (digits.length <= 10) {
+                      // Format: +91 XXXXX XXXXX
+                      formatted = digits.slice(0, 3) + ' ' + digits.slice(3, 6) + ' ' + digits.slice(6)
+                    } else {
+                      // Format: +91 XXXXX XXXXX XXXX (up to 13 digits)
+                      formatted = digits.slice(0, 3) + ' ' + digits.slice(3, 6) + ' ' + digits.slice(6, 10) + ' ' + digits.slice(10, 13)
+                    }
+                    
+                    setPhoneNumber(formatted)
                   }}
-                  placeholder="1 (555) 123-4567"
+                  placeholder="91 98765 43210"
                   disabled={loading}
-                  className="w-full pl-12 pr-4 py-3 bg-card border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:border-flow-purple focus:ring-2 focus:ring-flow-purple/20 transition disabled:opacity-50"
+                  maxLength={17}
+                  className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-700 border-2 border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none transition disabled:opacity-50 text-base"
+                  style={{
+                    borderColor: '#d1d5db',
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = '#8241FF'
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(130, 65, 255, 0.1)'
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = '#d1d5db'
+                    e.currentTarget.style.boxShadow = 'none'
+                  }}
                 />
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Include country code if outside US (e.g., 91 for India)
-              </p>
+              <div className="mt-3 text-xs space-y-1">
+                <p className="text-slate-500 dark:text-slate-400">
+                  📱 <span className="font-medium">Examples:</span>
+                </p>
+                <p className="text-slate-600 dark:text-slate-400">
+                  • India: <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">91 98765 43210</span>
+                </p>
+                <p className="text-slate-600 dark:text-slate-400">
+                  • US: <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">1 202 555 1234</span>
+                </p>
+              </div>
             </div>
 
             {error && (
