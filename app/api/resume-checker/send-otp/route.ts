@@ -12,7 +12,10 @@ const supabase = createClient(supabaseUrl || '', supabaseServiceKey || '')
 
 export async function POST(request: NextRequest) {
   try {
-    const { phoneNumber } = await request.json()
+    let { phoneNumber } = await request.json()
+
+    // Normalize phone number - remove all non-digits
+    phoneNumber = phoneNumber.replace(/\D/g, '')
 
     // Validate phone number
     if (!phoneNumber || phoneNumber.length < 10) {

@@ -86,11 +86,12 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phoneNumber: phoneNumber.replace(/\D/g, ''),
-          otp,
+          otp: otp,
         }),
       })
 
       const data = await response.json()
+      console.log('[PhoneVerification] Verify response:', data)
 
       if (!response.ok) {
         setError(data.error || 'Invalid OTP')

@@ -12,7 +12,10 @@ const supabase = createClient(supabaseUrl || '', supabaseServiceKey || '')
 
 export async function POST(request: NextRequest) {
   try {
-    const { phoneNumber, otp } = await request.json()
+    let { phoneNumber, otp } = await request.json()
+
+    // Normalize phone number - remove all non-digits
+    phoneNumber = phoneNumber.replace(/\D/g, '')
 
     // Validate inputs
     if (!phoneNumber || !otp) {
@@ -21,6 +24,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    console.log(`[Verify OTP] Attempting verification - Phone: ${phoneNumber}, OTP: ${otp}`)
 
     // Fetch OTP from Supabase
     const { data, error: fetchError } = await supabase
@@ -34,11 +39,14 @@ export async function POST(request: NextRequest) {
 
     if (fetchError || !data) {
       console.error('[Resume Checker] OTP fetch error:', fetchError)
+      console.log('[Resume Checker] Searched phone number:', phoneNumber)
       return NextResponse.json(
         { error: 'OTP not found. Please request a new one.' },
         { status: 400 }
       )
     }
+
+    console.log(`[Verify OTP] Found OTP record - Stored OTP: ${data.otp}, Submitted OTP: ${otp}, Match: ${data.otp === otp}`)
 
     // Check if OTP is expired
     const expiresAt = new Date(data.expires_at)
