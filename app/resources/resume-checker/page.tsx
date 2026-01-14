@@ -129,35 +129,29 @@ export default function ResumeChecker() {
 
   if (!mounted) return null
 
-  // Results View
   if (currentStep === 'results' && analysisResults) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-background pt-20 pb-20">
-        <ResumeAnalysis
-          results={analysisResults}
-          phoneNumber={phoneNumber}
-          onReset={handleReset}
-        />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 dark:from-slate-950">
+        <ResumeAnalysis results={analysisResults} phoneNumber={phoneNumber} onReset={handleReset} />
       </div>
     )
   }
 
-  // Analyzing View
   if (currentStep === 'analyzing') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-background flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 dark:from-slate-950 flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="glass-effect border border-border/50 rounded-2xl p-12 text-center max-w-md"
+          className="bg-white dark:bg-slate-900 rounded-2xl p-12 text-center max-w-md shadow-lg"
         >
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
             className="w-16 h-16 border-4 border-flow-purple/30 border-t-flow-purple rounded-full mx-auto mb-6"
           ></motion.div>
-          <h3 className="text-2xl font-bold text-foreground mb-2">Analyzing Your Resume</h3>
-          <p className="text-muted-foreground">
+          <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Analyzing Your Resume</h3>
+          <p className="text-slate-600 dark:text-slate-300">
             Our AI is carefully reviewing your resume using 16 different criteria...
           </p>
         </motion.div>
@@ -165,9 +159,30 @@ export default function ResumeChecker() {
     )
   }
 
-  // Main Upload View
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-background">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 dark:from-slate-950 via-blue-50/50 dark:via-slate-900/50 to-slate-50 dark:to-slate-950">
+      {/* Header Bar */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-700/50"
+      >
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-flow-purple to-flow-blue flex items-center justify-center">
+              <FileUp className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Resume Scanner +</h3>
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition"
+          >
+            Looking for a Job?
+          </motion.button>
+        </div>
+      </motion.div>
+
       {/* Hero Section */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
@@ -176,19 +191,19 @@ export default function ResumeChecker() {
         className="pt-20 pb-16 px-4 text-center"
       >
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-5xl md:text-6xl font-bold text-foreground mb-4">
-            Make Your Resume <span className="bg-gradient-to-r from-flow-purple to-flow-blue bg-clip-text text-transparent">ATS-Ready</span> in seconds!
+          <h1 className="text-5xl md:text-6xl font-black text-slate-900 dark:text-white mb-6">
+            Make Your Resume <br />
+            <span className="bg-gradient-to-r from-flow-purple via-flow-blue to-green-500 bg-clip-text text-transparent">ATS-Ready in seconds!</span>
           </h1>
-          <p className="text-xl text-muted-foreground mb-8">
+          <p className="text-xl text-slate-600 dark:text-slate-300 mb-8 max-w-2xl mx-auto">
             Get instant, AI-powered feedback to optimize your resume for ATS systems and impress recruiters.
           </p>
 
-          {/* Upload Modal Button */}
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => window.scrollTo({ top: document.getElementById('upload-section')?.offsetTop || 0, behavior: 'smooth' })}
-            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-flow-purple to-flow-blue text-white font-semibold rounded-lg hover:shadow-lg transition"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold rounded-xl hover:shadow-2xl transition duration-300"
           >
             <FileUp className="w-5 h-5" />
             + UPLOAD RESUME <ArrowRight className="w-5 h-5" />
@@ -202,53 +217,52 @@ export default function ResumeChecker() {
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
         viewport={{ once: true }}
-        className="py-16 px-4 bg-gradient-to-r from-red-500/10 via-transparent to-transparent border-t border-border/50"
+        className="py-20 px-4 bg-gradient-to-r from-red-500/10 via-orange-500/5 to-transparent"
       >
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl font-bold text-foreground mb-4">
-            Why your Resume isn't getting seen?
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-6">
+            75% of Resumes Never Reach a Human Recruiter
           </h2>
-          <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-            75% of resumes never reach a human recruiter. Instead, companies rely on powerful Applicant Tracking Systems (ATS) to automatically filter through thousands of applications in seconds.
+          <p className="text-lg text-slate-700 dark:text-slate-300 mb-8 leading-relaxed max-w-3xl">
+            In today's competitive job market, most recruiters don't even lay eyes on the majority of resumes they receive. Instead, companies rely on powerful Applicant Tracking Systems (ATS) to automatically filter through thousands of applications in seconds. If your resume isn't properly formatted or doesn't contain the right keywords, it's silently rejected.
           </p>
           <motion.button
             whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="inline-flex items-center gap-2 px-8 py-3 bg-red-500/20 text-red-600 dark:text-red-400 font-semibold rounded-lg border border-red-500/30 hover:bg-red-500/30 transition"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg transition"
           >
             Fix Now <ArrowRight className="w-5 h-5" />
           </motion.button>
         </div>
       </motion.section>
 
-      {/* Trust Section */}
+      {/* Features Section */}
       <motion.section
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
         viewport={{ once: true }}
-        className="py-16 px-4"
+        className="py-20 px-4"
       >
-        <div className="max-w-4xl mx-auto text-center">
-          <p className="text-lg text-muted-foreground mb-4">Relax! We've got your back.....</p>
-          <h2 className="text-4xl font-bold text-foreground mb-8">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-4xl font-black text-center text-slate-900 dark:text-white mb-16">
             Let Resume Scanner+ optimize your resume for ATS success!
           </h2>
 
           {/* Features Grid */}
-          <div className="grid md:grid-cols-3 gap-6 mb-12">
+          <div className="grid md:grid-cols-3 gap-6 mb-16">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
               viewport={{ once: true }}
-              className="glass-effect border border-border/50 rounded-2xl p-8 hover:bg-card/50 transition"
+              whileHover={{ y: -10 }}
+              className="bg-gradient-to-br from-teal-400 via-teal-500 to-teal-600 rounded-2xl p-8 text-white cursor-pointer transition shadow-lg hover:shadow-2xl"
             >
-              <div className="w-12 h-12 rounded-full bg-flow-purple/20 flex items-center justify-center mb-4 mx-auto">
-                <CheckCircle2 className="w-6 h-6 text-flow-purple" />
+              <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center mb-4">
+                <CheckCircle2 className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-foreground mb-2">ATS Compatibility Check</h3>
-              <p className="text-muted-foreground">
+              <h3 className="text-2xl font-bold mb-3">ATS Compatibility Check</h3>
+              <p className="text-white/90 text-lg">
                 Detects formatting issues and ensures your resume is machine-readable
               </p>
             </motion.div>
@@ -258,14 +272,15 @@ export default function ResumeChecker() {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
               viewport={{ once: true }}
-              className="glass-effect border border-border/50 rounded-2xl p-8 hover:bg-card/50 transition"
+              whileHover={{ y: -10 }}
+              className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 rounded-2xl p-8 text-white cursor-pointer transition shadow-lg hover:shadow-2xl"
             >
-              <div className="w-12 h-12 rounded-full bg-flow-blue/20 flex items-center justify-center mb-4 mx-auto">
-                <Sparkles className="w-6 h-6 text-flow-blue" />
+              <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center mb-4">
+                <Sparkles className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-foreground mb-2">Keyword Optimization</h3>
-              <p className="text-muted-foreground">
-                Matches your resume to the job description for better rankings
+              <h3 className="text-2xl font-bold mb-3">Compare with Top Performers!</h3>
+              <p className="text-white/90 text-lg">
+                Matches your resume to job description for better ATS rankings
               </p>
             </motion.div>
 
@@ -274,47 +289,58 @@ export default function ResumeChecker() {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
               viewport={{ once: true }}
-              className="glass-effect border border-border/50 rounded-2xl p-8 hover:bg-card/50 transition"
+              whileHover={{ y: -10 }}
+              className="bg-gradient-to-br from-green-500 via-emerald-500 to-emerald-600 rounded-2xl p-8 text-white cursor-pointer transition shadow-lg hover:shadow-2xl"
             >
-              <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mb-4 mx-auto">
-                <TrendingUp className="w-6 h-6 text-green-500" />
+              <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center mb-4">
+                <TrendingUp className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-foreground mb-2">Impact Score</h3>
-              <p className="text-muted-foreground">
-                Measures clarity, action verbs, and result-driven statements
+              <h3 className="text-2xl font-bold mb-3">Customize in a click</h3>
+              <p className="text-white/90 text-lg">
+                AI-powered suggestions for personalized content and formatting
               </p>
             </motion.div>
           </div>
 
-          {/* Comparison */}
+          {/* Transformation */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
             viewport={{ once: true }}
-            className="bg-gradient-to-r from-red-500/10 to-green-500/10 border border-border/50 rounded-2xl p-12"
           >
-            <h3 className="text-2xl font-bold text-foreground mb-8">Resume Transformation</h3>
+            <h3 className="text-3xl font-black text-center text-slate-900 dark:text-white mb-12">
+              From Rejected to Shortlisted – Real Transformations
+            </h3>
             <div className="grid md:grid-cols-2 gap-8">
-              <div className="p-6 bg-red-500/20 border border-red-500/30 rounded-xl">
-                <p className="text-red-600 dark:text-red-400 font-bold mb-4">BEFORE</p>
-                <p className="text-foreground font-semibold mb-4">ATS Compatibility Score: 28/100</p>
-                <ul className="text-sm text-muted-foreground space-y-2">
-                  <li>✗ Missing 15+ relevant keywords</li>
-                  <li>✗ Poor formatting & structure</li>
-                  <li>✗ Weak action verbs & metrics</li>
-                  <li>✗ Generic, unfocused content</li>
+              <div className="bg-gradient-to-br from-red-100 to-pink-50 dark:from-red-950/40 dark:to-red-900/30 border-2 border-red-300 dark:border-red-700/60 rounded-2xl p-8 shadow-lg">
+                <div className="inline-block px-4 py-1 bg-red-500 text-white rounded-full text-sm font-bold mb-4">
+                  REJECTED
+                </div>
+                <p className="text-red-900 dark:text-red-200 font-bold text-xl mb-2">Before Optimization</p>
+                <p className="text-red-800 dark:text-red-300 font-bold mb-1">ATS Compatibility Score</p>
+                <p className="text-5xl font-black text-red-600 dark:text-red-400 mb-8">28/100</p>
+                <div className="w-full bg-red-300/50 rounded-full h-3 mb-8"></div>
+                <ul className="text-red-800 dark:text-red-300 space-y-3 text-lg">
+                  <li className="font-semibold">✗ Missing keywords</li>
+                  <li className="font-semibold">✗ Poor formatting</li>
+                  <li className="font-semibold">✗ Weak action verbs</li>
+                  <li className="font-semibold">✗ Generic content</li>
                 </ul>
               </div>
 
-              <div className="p-6 bg-green-500/20 border border-green-500/30 rounded-xl">
-                <p className="text-green-600 dark:text-green-400 font-bold mb-4">AFTER AI OPTIMIZATION</p>
-                <p className="text-foreground font-semibold mb-4">ATS Compatibility Score: 94/100</p>
-                <ul className="text-sm text-muted-foreground space-y-2">
-                  <li>✓ Perfect keyword optimization</li>
-                  <li>✓ ATS-friendly formatting</li>
-                  <li>✓ Quantified achievements</li>
-                  <li>✓ Role-specific tailoring</li>
+              <div className="bg-gradient-to-br from-green-100 to-emerald-50 dark:from-green-950/40 dark:to-emerald-900/30 border-2 border-green-400 dark:border-green-700/60 rounded-2xl p-8 shadow-lg">
+                <div className="inline-block px-4 py-1 bg-green-500 text-white rounded-full text-sm font-bold mb-4">
+                  INTERVIEW READY
+                </div>
+                <p className="text-green-900 dark:text-green-200 font-bold text-xl mb-2">After AI Optimization</p>
+                <p className="text-green-800 dark:text-green-300 font-bold mb-1">ATS Compatibility Score</p>
+                <p className="text-5xl font-black text-green-600 dark:text-green-400 mb-8">94/100</p>
+                <div className="w-full bg-green-400/60 rounded-full h-3 mb-8"></div>
+                <ul className="text-green-800 dark:text-green-300 space-y-3 text-lg">
+                  <li className="font-semibold">✓ Perfect keywords</li>
+                  <li className="font-semibold">✓ ATS-friendly</li>
+                  <li className="font-semibold">✓ Quantified achievements</li>
+                  <li className="font-semibold">✓ Role-specific</li>
                 </ul>
               </div>
             </div>
@@ -328,65 +354,38 @@ export default function ResumeChecker() {
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
         viewport={{ once: true }}
-        className="py-16 px-4 bg-gradient-to-b from-transparent to-flow-purple/5 border-t border-border/50"
+        className="py-20 px-4 bg-gradient-to-b from-transparent to-teal-500/5"
       >
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-4xl font-bold text-foreground mb-12 text-center">How It Works - Get started in 3 steps</h2>
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-4xl font-black text-center text-slate-900 dark:text-white mb-16">Get started in 3 steps</h2>
 
           <div className="grid md:grid-cols-3 gap-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              viewport={{ once: true }}
-              className="text-center"
-            >
-              <div className="w-16 h-16 rounded-full bg-flow-purple text-white flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                1
-              </div>
-              <h3 className="text-xl font-bold text-foreground mb-2">Upload Your Resume</h3>
-              <p className="text-muted-foreground">
-                Simply drag & drop or browse to select your resume in PDF or DOCX format
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              viewport={{ once: true }}
-              className="text-center"
-            >
-              <div className="w-16 h-16 rounded-full bg-flow-blue text-white flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                2
-              </div>
-              <h3 className="text-xl font-bold text-foreground mb-2">Scan and Analyse</h3>
-              <p className="text-muted-foreground">
-                AI engine evaluates your resume against ATS standards and best practices
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              viewport={{ once: true }}
-              className="text-center"
-            >
-              <div className="w-16 h-16 rounded-full bg-green-500 text-white flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                3
-              </div>
-              <h3 className="text-xl font-bold text-foreground mb-2">Get Detailed Report</h3>
-              <p className="text-muted-foreground">
-                Receive actionable insights and recommendations to improve your resume
-              </p>
-            </motion.div>
+            {[
+              { num: '1', title: 'Upload Your Resume', desc: 'Drag & drop or browse to select PDF or DOCX' },
+              { num: '2', title: 'Scan and Analyse', desc: 'AI evaluates against ATS standards' },
+              { num: '3', title: 'Get Detailed Report', desc: 'Receive actionable insights' },
+            ].map((step, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                viewport={{ once: true }}
+                className="text-center"
+              >
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-flow-purple to-flow-blue text-white flex items-center justify-center text-3xl font-black mx-auto mb-4 shadow-lg">
+                  {step.num}
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{step.title}</h3>
+                <p className="text-slate-600 dark:text-slate-300">{step.desc}</p>
+              </motion.div>
+            ))}
           </div>
         </div>
       </motion.section>
 
       {/* Upload Section */}
-      <section id="upload-section" className="py-20 px-4 bg-gradient-to-b from-flow-purple/5 to-transparent">
+      <section id="upload-section" className="py-20 px-4">
         <div className="max-w-3xl mx-auto">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -402,11 +401,11 @@ export default function ResumeChecker() {
               onDrop={handleDrop}
               className={`relative border-2 border-dashed rounded-3xl p-12 transition-all ${
                 isDragging
-                  ? 'border-flow-purple/50 bg-flow-purple/10'
+                  ? 'border-flow-purple/50 bg-purple-50 dark:bg-purple-950/20'
                   : selectedFile
-                  ? 'border-green-600/50 bg-green-500/10'
-                  : 'border-border hover:border-flow-purple/50 hover:bg-flow-purple/5'
-              }`}
+                  ? 'border-green-600/50 bg-green-50 dark:bg-green-950/20'
+                  : 'border-slate-300 dark:border-slate-600 hover:border-flow-purple/50 hover:bg-purple-50 dark:hover:bg-purple-950/10'
+              } bg-white dark:bg-slate-900`}
             >
               <input
                 type="file"
@@ -424,9 +423,9 @@ export default function ResumeChecker() {
                     transition={{ type: 'spring' }}
                   >
                     <CheckCircle2 className="w-16 h-16 text-green-600 dark:text-green-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold text-foreground mb-2">Resume Selected</h3>
-                    <p className="text-muted-foreground mb-2">{selectedFile.name}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Resume Selected</h3>
+                    <p className="text-slate-600 dark:text-slate-300 mb-2">{selectedFile.name}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
                       {(selectedFile.size / 1024).toFixed(2)} KB
                     </p>
                   </motion.div>
@@ -439,8 +438,8 @@ export default function ResumeChecker() {
                     >
                       <FileUp className="w-16 h-16 text-flow-purple mx-auto" />
                     </motion.div>
-                    <h3 className="text-2xl font-bold text-foreground mb-2">Browse file to upload your resume</h3>
-                    <p className="text-muted-foreground mb-6">Only pdf, doc and docx format available. Max file size: 10 MB</p>
+                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Browse file to upload your resume</h3>
+                    <p className="text-slate-600 dark:text-slate-300 mb-6">PDF & DOCX only. Max 10MB</p>
                     <label htmlFor="file-input" className="inline-flex items-center gap-2 bg-gradient-to-r from-flow-purple to-flow-blue hover:shadow-lg text-white font-semibold py-3 px-8 rounded-lg transition cursor-pointer">
                       <FileUp className="w-5 h-5" />
                       Browse File
@@ -450,18 +449,16 @@ export default function ResumeChecker() {
               </div>
             </div>
 
-            {/* Error Message */}
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex gap-3"
+                className="p-4 bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-700/60 rounded-lg"
               >
-                <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+                <p className="text-red-700 dark:text-red-300 text-sm font-semibold">{error}</p>
               </motion.div>
             )}
 
-            {/* Scan Button */}
             {selectedFile && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -471,7 +468,7 @@ export default function ResumeChecker() {
                 <button
                   onClick={handleAnalyze}
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-flow-purple to-flow-blue hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-lg transition flex items-center justify-center gap-2"
+                  className="w-full bg-gradient-to-r from-flow-purple to-flow-blue hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-lg transition flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <>
@@ -479,9 +476,9 @@ export default function ResumeChecker() {
                         animate={{ rotate: 360 }}
                         transition={{ duration: 1, repeat: Infinity }}
                       >
-                        <FileUp className="w-5 h-5" />
+                        <Zap className="w-5 h-5" />
                       </motion.div>
-                      Scanning My Resume...
+                      Scanning...
                     </>
                   ) : (
                     <>
@@ -493,7 +490,7 @@ export default function ResumeChecker() {
 
                 <button
                   onClick={() => setSelectedFile(null)}
-                  className="w-full text-muted-foreground hover:text-foreground text-sm font-medium transition py-2"
+                  className="w-full text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium transition py-2"
                 >
                   Change File
                 </button>
@@ -503,7 +500,7 @@ export default function ResumeChecker() {
         </div>
       </section>
 
-      {/* Phone Verification Modal */}
+      {/* Phone Modal */}
       <AnimatePresence>
         {showPhoneModal && (
           <motion.div
@@ -522,7 +519,7 @@ export default function ResumeChecker() {
             >
               <button
                 onClick={() => setShowPhoneModal(false)}
-                className="absolute -top-10 right-0 text-foreground hover:text-flow-purple transition"
+                className="absolute -top-10 right-0 text-white hover:text-slate-200 transition"
               >
                 <X className="w-6 h-6" />
               </button>
