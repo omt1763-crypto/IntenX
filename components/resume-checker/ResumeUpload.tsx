@@ -7,9 +7,11 @@ import { FileUp, Upload, AlertCircle, CheckCircle, Lock } from 'lucide-react'
 interface ResumeUploadProps {
   onResumeSelected: (file: File, resumeData: any) => void
   phoneNumber: string
+  isVerified: boolean
+  onUploadClick: () => void
 }
 
-export default function ResumeUpload({ onResumeSelected, phoneNumber }: ResumeUploadProps) {
+export default function ResumeUpload({ onResumeSelected, phoneNumber, isVerified, onUploadClick }: ResumeUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [error, setError] = useState('')
@@ -91,41 +93,65 @@ export default function ResumeUpload({ onResumeSelected, phoneNumber }: ResumeUp
       transition={{ duration: 0.5 }}
       className="space-y-6"
     >
-      {/* Upload Area */}
-      <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        className={`relative border-2 border-dashed rounded-3xl p-12 transition-all ${
-          isDragging
-            ? 'border-flow-purple/50 bg-flow-purple/10'
-            : selectedFile
-            ? 'border-green-600/50 bg-green-500/10'
-            : 'border-border hover:border-flow-purple/50 hover:bg-flow-purple/5'
-        }`}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf,.docx"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
+      {!isVerified ? (
+        <div className="glass-effect border border-border/50 rounded-2xl p-12 text-center">
+          <motion.div
+            animate={{ scale: [1, 1.1, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="w-16 h-16 bg-flow-purple/20 border border-flow-purple/50 rounded-full flex items-center justify-center mx-auto mb-6"
+          >
+            <FileUp className="w-8 h-8 text-flow-purple" />
+          </motion.div>
+          <h2 className="text-3xl font-bold text-foreground mb-2">Verify Your Phone First</h2>
+          <p className="text-muted-foreground mb-8">
+            Before uploading your resume, please verify your phone number via OTP
+          </p>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onUploadClick}
+            className="mx-auto block px-8 py-4 bg-gradient-to-r from-flow-purple to-flow-blue hover:shadow-lg text-white font-semibold rounded-xl transition"
+          >
+            Verify Phone Number
+          </motion.button>
+        </div>
+      ) : (
+        <>
+          {/* Upload Area */}
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`relative border-2 border-dashed rounded-3xl p-12 transition-all ${
+              isDragging
+                ? 'border-flow-purple/50 bg-flow-purple/10'
+                : selectedFile
+                ? 'border-green-600/50 bg-green-500/10'
+                : 'border-border hover:border-flow-purple/50 hover:bg-flow-purple/5'
+            }`}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.docx"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
 
-        <div className="text-center">
-          {selectedFile ? (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring' }}
-            >
-              <CheckCircle className="w-16 h-16 text-green-600 dark:text-green-400 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-foreground mb-2">Resume Selected</h3>
-              <p className="text-muted-foreground mb-4">{selectedFile.name}</p>
-              <p className="text-sm text-muted-foreground">
-                {(selectedFile.size / 1024).toFixed(2)} KB
-              </p>
-            </motion.div>
+            <div className="text-center">
+              {selectedFile ? (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring' }}
+                >
+                  <CheckCircle className="w-16 h-16 text-green-600 dark:text-green-400 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-foreground mb-2">Resume Selected</h3>
+                  <p className="text-muted-foreground mb-4">{selectedFile.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {(selectedFile.size / 1024).toFixed(2)} KB
+                  </p>
+                </motion.div>
           ) : (
             <>
               <motion.div
@@ -219,29 +245,34 @@ export default function ResumeUpload({ onResumeSelected, phoneNumber }: ResumeUp
             Your resume data is encrypted and secure
           </div>
         </motion.div>
+        </>
       )}
 
-      {/* Info Cards */}
-      <div className="grid sm:grid-cols-2 gap-4 mt-8">
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
-          className="p-4 bg-card border border-border rounded-lg"
-        >
-          <p className="text-sm font-medium text-foreground mb-1">Supported Formats</p>
-          <p className="text-xs text-muted-foreground">PDF, DOCX</p>
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, x: 10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
-          className="p-4 bg-card border border-border rounded-lg"
-        >
-          <p className="text-sm font-medium text-foreground mb-1">Max File Size</p>
-          <p className="text-xs text-muted-foreground">2MB</p>
-        </motion.div>
-      </div>
+      {isVerified && (
+        <>
+          {/* Info Cards */}
+          <div className="grid sm:grid-cols-2 gap-4 mt-8">
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+              className="p-4 bg-card border border-border rounded-lg"
+            >
+              <p className="text-sm font-medium text-foreground mb-1">Supported Formats</p>
+              <p className="text-xs text-muted-foreground">PDF, DOCX</p>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+              className="p-4 bg-card border border-border rounded-lg"
+            >
+              <p className="text-sm font-medium text-foreground mb-1">Max File Size</p>
+              <p className="text-xs text-muted-foreground">2MB</p>
+            </motion.div>
+          </div>
+        </>
+      )}
     </motion.div>
   )
 }

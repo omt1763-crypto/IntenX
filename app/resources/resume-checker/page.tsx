@@ -1,16 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { FileUp, CheckCircle, AlertCircle, Zap, Shield } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { FileUp, Zap, X } from 'lucide-react'
 import { PhoneVerification, ResumeUpload, ResumeAnalysis } from '@/components/resume-checker'
 
-type Step = 'phone' | 'upload' | 'analyzing' | 'results'
+type Step = 'upload' | 'analyzing' | 'results'
 
 export default function ResumeChecker() {
-  const [currentStep, setCurrentStep] = useState<Step>('phone')
+  const [currentStep, setCurrentStep] = useState<Step>('upload')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [isVerified, setIsVerified] = useState(false)
+  const [showPhoneModal, setShowPhoneModal] = useState(false)
   const [analysisResults, setAnalysisResults] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -19,10 +20,16 @@ export default function ResumeChecker() {
     setMounted(true)
   }, [])
 
+  const handleUploadClick = () => {
+    if (!isVerified) {
+      setShowPhoneModal(true)
+    }
+  }
+
   const handlePhoneVerified = (phone: string) => {
     setPhoneNumber(phone)
     setIsVerified(true)
-    setCurrentStep('upload')
+    setShowPhoneModal(false)
   }
 
   const handleResumeSelected = async (file: File, resumeData: any) => {
@@ -90,14 +97,6 @@ export default function ResumeChecker() {
             AI-powered resume analysis with 16 crucial checks to ensure your resume is ready to land you interview callbacks
           </p>
         </motion.div>
-
-        {/* Progress Indicator */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="flex justify-center gap-2 mb-12"
-        >
           {(['phone', 'upload', 'results'] as const).map((step, idx) => (
             <div key={step} className="flex items-center">
               <div
@@ -139,11 +138,11 @@ export default function ResumeChecker() {
               className="glass-effect border border-border/50 rounded-2xl p-6 hover:bg-card hover:border-flow-purple/20 transition"
             >
               <div className="flex gap-3 mb-3">
-                <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />
-                <h3 className="font-semibold text-foreground">ATS Compatible</h3>
+                <FileUp className="w-6 h-6 text-green-500 flex-shrink-0" />
+                <h3 className="font-semibold text-foreground">Upload Resume</h3>
               </div>
               <p className="text-sm text-muted-foreground">
-                Optimized for applicant tracking systems to ensure your resume passes through automated screening
+                Drag and drop or select your resume in PDF or DOCX format
               </p>
             </motion.div>
 
@@ -154,11 +153,11 @@ export default function ResumeChecker() {
               className="glass-effect border border-border/50 rounded-2xl p-6 hover:bg-card hover:border-flow-blue/20 transition"
             >
               <div className="flex gap-3 mb-3">
-                <Shield className="w-6 h-6 text-flow-blue flex-shrink-0" />
-                <h3 className="font-semibold text-foreground">Privacy Guaranteed</h3>
+                <Zap className="w-6 h-6 text-flow-blue flex-shrink-0" />
+                <h3 className="font-semibold text-foreground">Instant Analysis</h3>
               </div>
               <p className="text-sm text-muted-foreground">
-                Your resume data is encrypted and never shared with third parties
+                Get AI-powered insights in seconds with detailed recommendations
               </p>
             </motion.div>
 
@@ -187,12 +186,13 @@ export default function ResumeChecker() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              {currentStep === 'phone' && !isVerified && (
-                <PhoneVerification onPhoneVerified={handlePhoneVerified} />
-              )}
-
-              {currentStep === 'upload' && isVerified && !loading && (
-                <ResumeUpload onResumeSelected={handleResumeSelected} phoneNumber={phoneNumber} />
+              {currentStep === 'upload' && !loading && (
+                <ResumeUpload 
+                  onResumeSelected={handleResumeSelected} 
+                  phoneNumber={phoneNumber}
+                  isVerified={isVerified}
+                  onUploadClick={handleUploadClick}
+                />
               )}
 
               {currentStep === 'analyzing' && (
@@ -247,6 +247,35 @@ export default function ResumeChecker() {
           </div>
         </motion.div>
       </div>
+
+      {/* Phone Verification Modal */}
+      <AnimatePresence>
+        {showPhoneModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => setShowPhoneModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-md"
+            >
+              <button
+                onClick={() => setShowPhoneModal(false)}
+                className="absolute -top-10 right-0 text-foreground hover:text-flow-purple transition"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <PhoneVerification onPhoneVerified={handlePhoneVerified} />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
