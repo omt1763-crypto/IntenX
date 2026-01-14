@@ -2,6 +2,7 @@ import Navbar from "./Navbar";
 import Hero from "./sections/Hero";
 import TrustedBy from "./sections/TrustedBy";
 import Features from "./sections/Features";
+import ResumeScanner from "./sections/ResumeScanner";
 import HowItWorks from "./sections/HowItWorks";
 import Pricing from "./sections/Pricing";
 import FAQSection from "@/components/FAQSection";
@@ -16,6 +17,7 @@ const LandingPage = () => {
         <Hero />
         <TrustedBy />
         <Features />
+        <ResumeScanner />
         <HowItWorks />
         <Pricing />
         <FAQSection />
