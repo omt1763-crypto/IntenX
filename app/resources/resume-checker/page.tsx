@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FileUp, Zap, X, CheckCircle2, BarChart3, Sparkles, ArrowRight } from 'lucide-react'
-import { PhoneVerification, ResumeUpload, ResumeAnalysis } from '@/components/resume-checker'
+import { FileUp, Zap, X, CheckCircle2, ArrowRight, BarChart3, Sparkles, TrendingUp } from 'lucide-react'
+import { PhoneVerification, ResumeAnalysis } from '@/components/resume-checker'
 
 type Step = 'upload' | 'analyzing' | 'results'
 
@@ -12,18 +12,105 @@ export default function ResumeChecker() {
   const [phoneNumber, setPhoneNumber] = useState('')
   const [isVerified, setIsVerified] = useState(false)
   const [showPhoneModal, setShowPhoneModal] = useState(false)
-  const [showUploadModal, setShowUploadModal] = useState(false)
   const [analysisResults, setAnalysisResults] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  const handleUploadClick = () => {
+  const validateFile = (file: File): boolean => {
+    const allowedFormats = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+    const maxSize = 2 * 1024 * 1024
+
+    if (!allowedFormats.includes(file.type)) {
+      setError('Only PDF and DOCX files are allowed')
+      return false
+    }
+
+    if (file.size > maxSize) {
+      setError('File size must be less than 2MB')
+      return false
+    }
+
+    return true
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = () => {
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    setError('')
+
+    const files = e.dataTransfer.files
+    if (files.length > 0) {
+      const file = files[0]
+      if (validateFile(file)) {
+        setSelectedFile(file)
+      }
+    }
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError('')
+    const files = e.target.files
+    if (files && files.length > 0) {
+      const file = files[0]
+      if (validateFile(file)) {
+        setSelectedFile(file)
+      }
+    }
+  }
+
+  const handleAnalyze = async () => {
+    if (!selectedFile) return
     if (!isVerified) {
       setShowPhoneModal(true)
+      return
+    }
+
+    setCurrentStep('analyzing')
+    setLoading(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+      formData.append('phoneNumber', phoneNumber)
+      formData.append('resumeData', JSON.stringify({
+        fileName: selectedFile.name,
+        fileSize: selectedFile.size,
+        fileType: selectedFile.type,
+        uploadedAt: new Date().toISOString(),
+      }))
+
+      const response = await fetch('/api/resume-checker/analyze-resume', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) throw new Error('Failed to analyze resume')
+
+      const results = await response.json()
+      setAnalysisResults(results)
+      setCurrentStep('results')
+    } catch (error) {
+      console.error('Error analyzing resume:', error)
+      setCurrentStep('upload')
+      setError('Failed to analyze resume. Please try again.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -33,192 +120,388 @@ export default function ResumeChecker() {
     setShowPhoneModal(false)
   }
 
-  const handleResumeSelected = async (file: File, resumeData: any) => {
-    setCurrentStep('analyzing')
-    setLoading(true)
-
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('phoneNumber', phoneNumber)
-      formData.append('resumeData', JSON.stringify(resumeData))
-
-      const response = await fetch('/api/resume-checker/analyze-resume', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to analyze resume')
-      }
-
-      const results = await response.json()
-      setAnalysisResults(results)
-      setCurrentStep('results')
-    } catch (error) {
-      console.error('Error analyzing resume:', error)
-      setCurrentStep('upload')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleReset = () => {
     setCurrentStep('upload')
     setAnalysisResults(null)
+    setSelectedFile(null)
+    setError('')
   }
 
   if (!mounted) return null
 
-  return (
-    <div className="relative min-h-screen bg-gradient-to-br from-background to-background pt-20 pb-20 px-4">
-      {/* Animated background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-flow-purple/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-flow-blue/10 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/3 right-0 w-96 h-96 bg-flow-pink/5 rounded-full blur-3xl"></div>
+  // Results View
+  if (currentStep === 'results' && analysisResults) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-background pt-20 pb-20">
+        <ResumeAnalysis
+          results={analysisResults}
+          phoneNumber={phoneNumber}
+          onReset={handleReset}
+        />
       </div>
+    )
+  }
 
-      <div className="max-w-6xl mx-auto relative z-10">
-        {/* Header */}
+  // Analyzing View
+  if (currentStep === 'analyzing') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-background flex items-center justify-center">
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-12"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="glass-effect border border-border/50 rounded-2xl p-12 text-center max-w-md"
         >
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Zap className="w-8 h-8 text-flow-purple" />
-            <h1 className="text-4xl md:text-5xl font-bold text-foreground">Resume Checker</h1>
-          </div>
-          <p className="text-xl text-muted-foreground mb-4">
-            Is your resume good enough?
-          </p>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            AI-powered resume analysis with 16 crucial checks to ensure your resume is ready to land you interview callbacks
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+            className="w-16 h-16 border-4 border-flow-purple/30 border-t-flow-purple rounded-full mx-auto mb-6"
+          ></motion.div>
+          <h3 className="text-2xl font-bold text-foreground mb-2">Analyzing Your Resume</h3>
+          <p className="text-muted-foreground">
+            Our AI is carefully reviewing your resume using 16 different criteria...
           </p>
         </motion.div>
+      </div>
+    )
+  }
 
-        {/* Main Content */}
-        <div className="grid md:grid-cols-3 gap-8">
-          {/* Sidebar Info - Only show on desktop */}
-          <div className="hidden md:flex flex-col gap-4">
+  // Main Upload View
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-background">
+      {/* Hero Section */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+        className="pt-20 pb-16 px-4 text-center"
+      >
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-5xl md:text-6xl font-bold text-foreground mb-4">
+            Make Your Resume <span className="bg-gradient-to-r from-flow-purple to-flow-blue bg-clip-text text-transparent">ATS-Ready</span> in seconds!
+          </h1>
+          <p className="text-xl text-muted-foreground mb-8">
+            Get instant, AI-powered feedback to optimize your resume for ATS systems and impress recruiters.
+          </p>
+
+          {/* Upload Modal Button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => window.scrollTo({ top: document.getElementById('upload-section')?.offsetTop || 0, behavior: 'smooth' })}
+            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-flow-purple to-flow-blue text-white font-semibold rounded-lg hover:shadow-lg transition"
+          >
+            <FileUp className="w-5 h-5" />
+            + UPLOAD RESUME <ArrowRight className="w-5 h-5" />
+          </motion.button>
+        </div>
+      </motion.section>
+
+      {/* Problem Section */}
+      <motion.section
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        transition={{ duration: 0.8 }}
+        viewport={{ once: true }}
+        className="py-16 px-4 bg-gradient-to-r from-red-500/10 via-transparent to-transparent border-t border-border/50"
+      >
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-4xl font-bold text-foreground mb-4">
+            Why your Resume isn't getting seen?
+          </h2>
+          <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+            75% of resumes never reach a human recruiter. Instead, companies rely on powerful Applicant Tracking Systems (ATS) to automatically filter through thousands of applications in seconds.
+          </p>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="inline-flex items-center gap-2 px-8 py-3 bg-red-500/20 text-red-600 dark:text-red-400 font-semibold rounded-lg border border-red-500/30 hover:bg-red-500/30 transition"
+          >
+            Fix Now <ArrowRight className="w-5 h-5" />
+          </motion.button>
+        </div>
+      </motion.section>
+
+      {/* Trust Section */}
+      <motion.section
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        transition={{ duration: 0.8 }}
+        viewport={{ once: true }}
+        className="py-16 px-4"
+      >
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-lg text-muted-foreground mb-4">Relax! We've got your back.....</p>
+          <h2 className="text-4xl font-bold text-foreground mb-8">
+            Let Resume Scanner+ optimize your resume for ATS success!
+          </h2>
+
+          {/* Features Grid */}
+          <div className="grid md:grid-cols-3 gap-6 mb-12">
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              viewport={{ once: true }}
+              className="glass-effect border border-border/50 rounded-2xl p-8 hover:bg-card/50 transition"
+            >
+              <div className="w-12 h-12 rounded-full bg-flow-purple/20 flex items-center justify-center mb-4 mx-auto">
+                <CheckCircle2 className="w-6 h-6 text-flow-purple" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-2">ATS Compatibility Check</h3>
+              <p className="text-muted-foreground">
+                Detects formatting issues and ensures your resume is machine-readable
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              viewport={{ once: true }}
+              className="glass-effect border border-border/50 rounded-2xl p-8 hover:bg-card/50 transition"
+            >
+              <div className="w-12 h-12 rounded-full bg-flow-blue/20 flex items-center justify-center mb-4 mx-auto">
+                <Sparkles className="w-6 h-6 text-flow-blue" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-2">Keyword Optimization</h3>
+              <p className="text-muted-foreground">
+                Matches your resume to the job description for better rankings
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="glass-effect border border-border/50 rounded-2xl p-6 hover:bg-card hover:border-flow-purple/20 transition"
+              viewport={{ once: true }}
+              className="glass-effect border border-border/50 rounded-2xl p-8 hover:bg-card/50 transition"
             >
-              <div className="flex gap-3 mb-3">
-                <FileUp className="w-6 h-6 text-green-500 flex-shrink-0" />
-                <h3 className="font-semibold text-foreground">Upload Resume</h3>
+              <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mb-4 mx-auto">
+                <TrendingUp className="w-6 h-6 text-green-500" />
               </div>
-              <p className="text-sm text-muted-foreground">
-                Drag and drop or select your resume in PDF or DOCX format
+              <h3 className="text-xl font-bold text-foreground mb-2">Impact Score</h3>
+              <p className="text-muted-foreground">
+                Measures clarity, action verbs, and result-driven statements
               </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-              className="glass-effect border border-border/50 rounded-2xl p-6 hover:bg-card hover:border-flow-blue/20 transition"
-            >
-              <div className="flex gap-3 mb-3">
-                <Zap className="w-6 h-6 text-flow-blue flex-shrink-0" />
-                <h3 className="font-semibold text-foreground">Instant Analysis</h3>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Get AI-powered insights in seconds with detailed recommendations
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-gradient-to-br from-flow-purple/15 via-card to-flow-blue/10 border border-border/50 rounded-2xl p-6 hover:border-flow-purple/20 transition"
-            >
-              <h3 className="font-semibold text-foreground mb-3">16 Crucial Checks</h3>
-              <ul className="text-sm text-muted-foreground space-y-2">
-                <li>✓ ATS parse rate</li>
-                <li>✓ Grammar & spelling</li>
-                <li>✓ Quantified achievements</li>
-                <li>✓ Hard & soft skills</li>
-                <li>✓ Resume formatting</li>
-                <li>✓ And 11 more...</li>
-              </ul>
             </motion.div>
           </div>
 
-          {/* Main Content Area */}
-          <div className="md:col-span-2">
+          {/* Comparison */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            viewport={{ once: true }}
+            className="bg-gradient-to-r from-red-500/10 to-green-500/10 border border-border/50 rounded-2xl p-12"
+          >
+            <h3 className="text-2xl font-bold text-foreground mb-8">Resume Transformation</h3>
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="p-6 bg-red-500/20 border border-red-500/30 rounded-xl">
+                <p className="text-red-600 dark:text-red-400 font-bold mb-4">BEFORE</p>
+                <p className="text-foreground font-semibold mb-4">ATS Compatibility Score: 28/100</p>
+                <ul className="text-sm text-muted-foreground space-y-2">
+                  <li>✗ Missing 15+ relevant keywords</li>
+                  <li>✗ Poor formatting & structure</li>
+                  <li>✗ Weak action verbs & metrics</li>
+                  <li>✗ Generic, unfocused content</li>
+                </ul>
+              </div>
+
+              <div className="p-6 bg-green-500/20 border border-green-500/30 rounded-xl">
+                <p className="text-green-600 dark:text-green-400 font-bold mb-4">AFTER AI OPTIMIZATION</p>
+                <p className="text-foreground font-semibold mb-4">ATS Compatibility Score: 94/100</p>
+                <ul className="text-sm text-muted-foreground space-y-2">
+                  <li>✓ Perfect keyword optimization</li>
+                  <li>✓ ATS-friendly formatting</li>
+                  <li>✓ Quantified achievements</li>
+                  <li>✓ Role-specific tailoring</li>
+                </ul>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </motion.section>
+
+      {/* How It Works */}
+      <motion.section
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        transition={{ duration: 0.8 }}
+        viewport={{ once: true }}
+        className="py-16 px-4 bg-gradient-to-b from-transparent to-flow-purple/5 border-t border-border/50"
+      >
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-4xl font-bold text-foreground mb-12 text-center">How It Works - Get started in 3 steps</h2>
+
+          <div className="grid md:grid-cols-3 gap-8">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              viewport={{ once: true }}
+              className="text-center"
             >
-              {currentStep === 'upload' && !loading && (
-                <ResumeUpload 
-                  onResumeSelected={handleResumeSelected} 
-                  phoneNumber={phoneNumber}
-                  isVerified={isVerified}
-                  onUploadClick={handleUploadClick}
-                />
-              )}
+              <div className="w-16 h-16 rounded-full bg-flow-purple text-white flex items-center justify-center text-2xl font-bold mx-auto mb-4">
+                1
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-2">Upload Your Resume</h3>
+              <p className="text-muted-foreground">
+                Simply drag & drop or browse to select your resume in PDF or DOCX format
+              </p>
+            </motion.div>
 
-              {currentStep === 'analyzing' && (
-                <div className="glass-effect border border-border/50 rounded-2xl p-12 text-center">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                    className="w-16 h-16 border-4 border-flow-purple/30 border-t-flow-purple rounded-full mx-auto mb-6"
-                  ></motion.div>
-                  <h3 className="text-2xl font-bold text-foreground mb-2">Analyzing Your Resume</h3>
-                  <p className="text-muted-foreground">
-                    Our AI is carefully reviewing your resume using 16 different criteria...
-                  </p>
-                </div>
-              )}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              viewport={{ once: true }}
+              className="text-center"
+            >
+              <div className="w-16 h-16 rounded-full bg-flow-blue text-white flex items-center justify-center text-2xl font-bold mx-auto mb-4">
+                2
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-2">Scan and Analyse</h3>
+              <p className="text-muted-foreground">
+                AI engine evaluates your resume against ATS standards and best practices
+              </p>
+            </motion.div>
 
-              {currentStep === 'results' && analysisResults && (
-                <ResumeAnalysis
-                  results={analysisResults}
-                  phoneNumber={phoneNumber}
-                  onReset={handleReset}
-                />
-              )}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              viewport={{ once: true }}
+              className="text-center"
+            >
+              <div className="w-16 h-16 rounded-full bg-green-500 text-white flex items-center justify-center text-2xl font-bold mx-auto mb-4">
+                3
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-2">Get Detailed Report</h3>
+              <p className="text-muted-foreground">
+                Receive actionable insights and recommendations to improve your resume
+              </p>
             </motion.div>
           </div>
         </div>
+      </motion.section>
 
-        {/* Footer Info */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="mt-16 grid md:grid-cols-3 gap-6"
-        >
-          <div className="glass-effect border border-border/50 rounded-xl p-6">
-            <h4 className="font-semibold text-foreground mb-2">What We Check</h4>
-            <p className="text-sm text-muted-foreground">
-              Content quality, ATS compatibility, formatting, and keyword optimization
-            </p>
-          </div>
-          <div className="glass-effect border border-border/50 rounded-xl p-6">
-            <h4 className="font-semibold text-foreground mb-2">AI Powered</h4>
-            <p className="text-sm text-muted-foreground">
-              Advanced AI analysis to provide actionable insights for improvement
-            </p>
-          </div>
-          <div className="glass-effect border border-border/50 rounded-xl p-6">
-            <h4 className="font-semibold text-foreground mb-2">Instant Results</h4>
-            <p className="text-sm text-muted-foreground">
-              Get your score and detailed analysis in seconds
-            </p>
-          </div>
-        </motion.div>
-      </div>
+      {/* Upload Section */}
+      <section id="upload-section" className="py-20 px-4 bg-gradient-to-b from-flow-purple/5 to-transparent">
+        <div className="max-w-3xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className="space-y-6"
+          >
+            {/* Upload Area */}
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`relative border-2 border-dashed rounded-3xl p-12 transition-all ${
+                isDragging
+                  ? 'border-flow-purple/50 bg-flow-purple/10'
+                  : selectedFile
+                  ? 'border-green-600/50 bg-green-500/10'
+                  : 'border-border hover:border-flow-purple/50 hover:bg-flow-purple/5'
+              }`}
+            >
+              <input
+                type="file"
+                accept=".pdf,.docx"
+                onChange={handleFileSelect}
+                className="hidden"
+                id="file-input"
+              />
+
+              <div className="text-center">
+                {selectedFile ? (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring' }}
+                  >
+                    <CheckCircle2 className="w-16 h-16 text-green-600 dark:text-green-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-foreground mb-2">Resume Selected</h3>
+                    <p className="text-muted-foreground mb-2">{selectedFile.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {(selectedFile.size / 1024).toFixed(2)} KB
+                    </p>
+                  </motion.div>
+                ) : (
+                  <>
+                    <motion.div
+                      animate={{ y: [0, -10, 0] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="mb-4"
+                    >
+                      <FileUp className="w-16 h-16 text-flow-purple mx-auto" />
+                    </motion.div>
+                    <h3 className="text-2xl font-bold text-foreground mb-2">Browse file to upload your resume</h3>
+                    <p className="text-muted-foreground mb-6">Only pdf, doc and docx format available. Max file size: 10 MB</p>
+                    <label htmlFor="file-input" className="inline-flex items-center gap-2 bg-gradient-to-r from-flow-purple to-flow-blue hover:shadow-lg text-white font-semibold py-3 px-8 rounded-lg transition cursor-pointer">
+                      <FileUp className="w-5 h-5" />
+                      Browse File
+                    </label>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex gap-3"
+              >
+                <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+              </motion.div>
+            )}
+
+            {/* Scan Button */}
+            {selectedFile && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-4"
+              >
+                <button
+                  onClick={handleAnalyze}
+                  disabled={loading}
+                  className="w-full bg-gradient-to-r from-flow-purple to-flow-blue hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-lg transition flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity }}
+                      >
+                        <FileUp className="w-5 h-5" />
+                      </motion.div>
+                      Scanning My Resume...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-5 h-5" />
+                      Scan My Resume
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => setSelectedFile(null)}
+                  className="w-full text-muted-foreground hover:text-foreground text-sm font-medium transition py-2"
+                >
+                  Change File
+                </button>
+              </motion.div>
+            )}
+          </motion.div>
+        </div>
+      </section>
 
       {/* Phone Verification Modal */}
       <AnimatePresence>
