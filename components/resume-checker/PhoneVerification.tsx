@@ -120,7 +120,7 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5 }}
-      className="glass-effect border border-border/50 rounded-3xl p-8 md:p-12"
+      className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 border border-slate-200/50 dark:border-slate-700/50 rounded-3xl p-8 md:p-10 shadow-lg"
     >
       {step === 'phone' ? (
         <>
@@ -128,12 +128,15 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
             <motion.div
               animate={{ scale: [1, 1.1, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
-              className="w-16 h-16 bg-flow-purple/20 border border-flow-purple/50 rounded-full flex items-center justify-center mx-auto mb-4"
+              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+              style={{
+                background: 'linear-gradient(135deg, rgba(130, 65, 255, 0.1), rgba(59, 130, 246, 0.1))'
+              }}
             >
-              <Phone className="w-8 h-8 text-flow-purple" />
+              <Phone className="w-8 h-8" style={{ color: '#8241FF' }} />
             </motion.div>
-            <h2 className="text-3xl font-bold text-foreground mb-2">Verify Your Phone</h2>
-            <p className="text-muted-foreground">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">Verify Your Phone</h2>
+            <p className="text-slate-600 dark:text-slate-400">
               Enter your phone number to get started. We'll send you an OTP for verification.
             </p>
           </div>
@@ -189,7 +192,8 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
             <button
               type="submit"
               disabled={loading || phoneNumber.length < 10}
-              className="w-full bg-gradient-to-r from-flow-purple to-flow-blue hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#8241FF' }}
+              className="w-full hover:opacity-90 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-base"
             >
               {loading ? (
                 <>
@@ -215,13 +219,16 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
             <motion.div
               animate={{ scale: [1, 1.1, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
-              className="w-16 h-16 bg-green-600/20 border border-green-600/50 rounded-full flex items-center justify-center mx-auto mb-4"
+              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+              style={{
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(59, 130, 246, 0.1))'
+              }}
             >
-              <Shield className="w-8 h-8 text-green-600 dark:text-green-400" />
+              <Shield className="w-8 h-8" style={{ color: '#8241FF' }} />
             </motion.div>
-            <h2 className="text-3xl font-bold text-foreground mb-2">Enter OTP</h2>
-            <p className="text-muted-foreground">
-              We've sent a 6-digit code to <span className="font-semibold">{phoneNumber}</span>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">Enter OTP</h2>
+            <p className="text-slate-600 dark:text-slate-400">
+              We've sent a 6-digit code to <span className="font-semibold text-slate-900 dark:text-white">{phoneNumber}</span>
             </p>
           </div>
 
@@ -255,7 +262,8 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
             <button
               type="submit"
               disabled={loading || otp.length !== 6}
-              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#8241FF' }}
+              className="w-full hover:opacity-90 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-base"
             >
               {loading ? (
                 <>
@@ -272,11 +280,12 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
           </form>
 
           <div className="text-center mt-6">
-            <p className="text-sm text-muted-foreground mb-2">Didn't receive the code?</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">Didn't receive the code?</p>
             <button
               onClick={handleResendOtp}
               disabled={resendCountdown > 0}
-              className="text-flow-purple hover:text-flow-purple/80 font-semibold text-sm disabled:text-muted-foreground disabled:cursor-not-allowed transition"
+              style={{ color: '#8241FF' }}
+              className="hover:opacity-80 font-semibold text-sm disabled:text-slate-400 disabled:cursor-not-allowed transition"
             >
               {resendCountdown > 0
                 ? `Resend in ${resendCountdown}s`
