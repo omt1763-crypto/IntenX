@@ -3,9 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { FileUp, CheckCircle, AlertCircle, Zap, Shield } from 'lucide-react'
-import PhoneVerification from '@/components/resume-checker/PhoneVerification'
-import ResumeUpload from '@/components/resume-checker/ResumeUpload'
-import ResumeAnalysis from '@/components/resume-checker/ResumeAnalysis'
+import { PhoneVerification, ResumeUpload, ResumeAnalysis } from '@/components/resume-checker'
 
 type Step = 'phone' | 'upload' | 'analyzing' | 'results'
 
