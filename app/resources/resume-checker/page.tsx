@@ -534,25 +534,26 @@ export default function ResumeChecker() {
                 </p>
 
                 {/* Upload Area */}
-                <div
+                <input
+                  type="file"
+                  accept=".pdf,.docx"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  id="file-input"
+                />
+                <label
+                  htmlFor="file-input"
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  className={`relative border-3 border-dashed rounded-2xl p-12 transition-all ${
+                  className={`relative border-3 border-dashed rounded-2xl p-12 transition-all cursor-pointer block ${
                     isDragging
-                      ? 'border-flow-purple/70 bg-purple-50 dark:bg-purple-950/30'
+                      ? 'border-flow-purple bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-950 dark:to-purple-900 shadow-lg shadow-purple-500/20'
                       : selectedFile
-                      ? 'border-green-500/70 bg-green-50 dark:bg-green-950/30'
-                      : 'border-slate-300 dark:border-slate-600 hover:border-flow-purple/70 hover:bg-purple-50 dark:hover:bg-purple-950/20'
+                      ? 'border-green-500 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-950 dark:to-green-900 shadow-lg shadow-green-500/20'
+                      : 'border-slate-300 dark:border-slate-500 hover:border-flow-purple hover:bg-gradient-to-br hover:from-purple-100 hover:to-purple-50 dark:hover:from-purple-950 dark:hover:to-purple-900 hover:shadow-lg hover:shadow-purple-500/20'
                   }`}
                 >
-                  <input
-                    type="file"
-                    accept=".pdf,.docx"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                    id="file-input"
-                  />
 
                   <div className="text-center">
                     {selectedFile ? (
@@ -570,24 +571,21 @@ export default function ResumeChecker() {
                       </motion.div>
                     ) : (
                       <>
-                        <FileUp className="w-20 h-20 text-flow-purple mx-auto mb-4" />
+                        <FileUp className="w-20 h-20 text-flow-purple mx-auto mb-4 drop-shadow-lg" />
                         <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
                           Drag & drop your resume here
                         </h3>
-                        <p className="text-slate-600 dark:text-slate-300 mb-8 text-lg">
-                          or click to browse (PDF & DOCX only, max 10MB)
+                        <p className="text-slate-600 dark:text-slate-300 mb-6 text-lg">
+                          or click anywhere to browse (PDF & DOCX only, max 10MB)
                         </p>
-                        <label
-                          htmlFor="file-input"
-                          className="inline-flex items-center gap-2 bg-gradient-to-r from-flow-purple to-flow-blue text-white font-bold py-4 px-10 rounded-xl hover:shadow-lg transition cursor-pointer text-lg"
-                        >
-                          <FileUp className="w-6 h-6" />
+                        <span className="inline-flex items-center gap-2 bg-gradient-to-r from-flow-purple to-flow-blue text-white font-bold py-3 px-8 rounded-xl shadow-lg text-base pointer-events-none">
+                          <FileUp className="w-5 h-5" />
                           Browse File
-                        </label>
+                        </span>
                       </>
                     )}
                   </div>
-                </div>
+                </label>
 
                 {error && (
                   <motion.div
