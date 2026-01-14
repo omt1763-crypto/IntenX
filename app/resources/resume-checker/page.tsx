@@ -518,18 +518,18 @@ export default function ResumeChecker() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+              className="relative w-full max-w-2xl"
             >
               <button
                 onClick={() => setShowUploadModal(false)}
-                className="sticky top-0 float-right -mt-4 -mr-4 text-white hover:text-slate-200 transition z-10"
+                className="absolute -top-10 right-0 text-white hover:text-slate-200 transition z-10"
               >
-                <X className="w-8 h-8 bg-black/50 rounded-full p-1" />
+                <X className="w-8 h-8" />
               </button>
 
-              <div className="bg-white dark:bg-slate-900 rounded-3xl p-10 shadow-2xl">
-                <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-2">Upload Your Resume</h2>
-                <p className="text-slate-600 dark:text-slate-300 text-lg mb-10">
+              <div className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 rounded-3xl p-8 shadow-2xl border border-slate-200/50 dark:border-slate-700/50">
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-1">Upload Your Resume</h2>
+                <p className="text-slate-600 dark:text-slate-400 text-base mb-8">
                   Let's analyze and optimize your resume for ATS success
                 </p>
 
@@ -546,12 +546,12 @@ export default function ResumeChecker() {
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  className={`relative border-3 border-dashed rounded-2xl p-12 transition-all cursor-pointer block ${
+                  className={`relative border-2 border-dashed rounded-2xl p-8 transition-all cursor-pointer block ${
                     isDragging
-                      ? 'border-flow-purple bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-950 dark:to-purple-900 shadow-lg shadow-purple-500/20'
+                      ? 'border-purple-600 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50 shadow-lg shadow-purple-500/30'
                       : selectedFile
-                      ? 'border-green-500 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-950 dark:to-green-900 shadow-lg shadow-green-500/20'
-                      : 'border-slate-300 dark:border-slate-500 hover:border-flow-purple hover:bg-gradient-to-br hover:from-purple-100 hover:to-purple-50 dark:hover:from-purple-950 dark:hover:to-purple-900 hover:shadow-lg hover:shadow-purple-500/20'
+                      ? 'border-green-500 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50 shadow-lg shadow-green-500/20'
+                      : 'border-slate-300 dark:border-slate-600 hover:border-purple-600 hover:bg-gradient-to-br hover:from-purple-50 hover:to-purple-100 dark:hover:from-purple-950/50 dark:hover:to-purple-900/50 hover:shadow-lg hover:shadow-purple-500/20'
                   }`}
                 >
 
@@ -562,24 +562,26 @@ export default function ResumeChecker() {
                         animate={{ scale: 1 }}
                         transition={{ type: 'spring' }}
                       >
-                        <CheckCircle2 className="w-20 h-20 text-green-600 dark:text-green-400 mx-auto mb-4" />
-                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Ready to Scan</h3>
-                        <p className="text-slate-600 dark:text-slate-300 mb-2 text-lg">{selectedFile.name}</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                        <CheckCircle2 className="w-16 h-16 text-green-600 dark:text-green-400 mx-auto mb-3" />
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Ready to Scan</h3>
+                        <p className="text-slate-600 dark:text-slate-300 mb-1 text-sm">{selectedFile.name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           {(selectedFile.size / 1024).toFixed(2)} KB
                         </p>
                       </motion.div>
                     ) : (
                       <>
-                        <FileUp className="w-20 h-20 text-flow-purple mx-auto mb-4 drop-shadow-lg" />
-                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                        <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/50 dark:to-blue-900/50 flex items-center justify-center">
+                          <FileUp className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
                           Drag & drop your resume here
                         </h3>
-                        <p className="text-slate-600 dark:text-slate-300 mb-6 text-lg">
+                        <p className="text-slate-600 dark:text-slate-400 mb-5 text-sm">
                           or click anywhere to browse (PDF & DOCX only, max 10MB)
                         </p>
-                        <span className="inline-flex items-center gap-2 bg-gradient-to-r from-flow-purple to-flow-blue text-white font-bold py-3 px-8 rounded-xl shadow-lg text-base pointer-events-none">
-                          <FileUp className="w-5 h-5" />
+                        <span style={{ backgroundColor: '#8241FF' }} className="inline-flex items-center gap-2 text-white font-bold py-2.5 px-7 rounded-xl shadow-md text-sm pointer-events-none hover:opacity-90 hover:shadow-lg transition">
+                          <FileUp className="w-4 h-4" />
                           Browse File
                         </span>
                       </>
@@ -601,12 +603,13 @@ export default function ResumeChecker() {
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-8 space-y-4"
+                    className="mt-6 space-y-3"
                   >
                     <button
                       onClick={handleAnalyze}
                       disabled={loading}
-                      className="w-full bg-gradient-to-r from-flow-purple to-flow-blue hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-5 text-lg rounded-xl transition flex items-center justify-center gap-2"
+                      style={{ backgroundColor: '#8241FF' }}
+                      className="w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 text-base rounded-xl transition flex items-center justify-center gap-2 shadow-md"
                     >
                       {loading ? (
                         <>
@@ -614,13 +617,13 @@ export default function ResumeChecker() {
                             animate={{ rotate: 360 }}
                             transition={{ duration: 1, repeat: Infinity }}
                           >
-                            <Zap className="w-6 h-6" />
+                            <Zap className="w-5 h-5" />
                           </motion.div>
                           Scanning Resume...
                         </>
                       ) : (
                         <>
-                          <Zap className="w-6 h-6" />
+                          <Zap className="w-5 h-5" />
                           Scan My Resume Now
                         </>
                       )}
@@ -628,7 +631,7 @@ export default function ResumeChecker() {
 
                     <button
                       onClick={() => setSelectedFile(null)}
-                      className="w-full text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-bold text-lg transition py-3"
+                      className="w-full text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-semibold text-sm transition py-2"
                     >
                       Change File
                     </button>
