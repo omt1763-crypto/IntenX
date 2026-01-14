@@ -2,10 +2,37 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FileUp, Zap, X, CheckCircle2, ArrowRight, BarChart3, Sparkles, TrendingUp, Upload } from 'lucide-react'
+import { FileUp, Zap, X, CheckCircle2, ArrowRight, BarChart3, Sparkles, TrendingUp, Upload, ChevronDown } from 'lucide-react'
 import { PhoneVerification, ResumeAnalysis } from '@/components/resume-checker'
 
 type Step = 'upload' | 'analyzing' | 'results'
+
+const resumeFAQs = [
+  {
+    question: "What formats does IntenX Scanner support?",
+    answer: "We support PDF and DOCX resume formats. Simply upload your file and our AI will analyze it against ATS standards and industry best practices."
+  },
+  {
+    question: "How does the ATS score calculation work?",
+    answer: "Our AI evaluates formatting, keyword density, structure, readability, and compatibility with Applicant Tracking Systems. The score reflects how likely your resume will pass ATS filters."
+  },
+  {
+    question: "Can I get recommendations to improve my resume?",
+    answer: "Yes! IntenX Scanner provides detailed recommendations for each category—including specific keywords to add, formatting improvements, and action verbs to strengthen your impact."
+  },
+  {
+    question: "Is my resume data secure?",
+    answer: "Absolutely. Your resume is analyzed securely and encrypted. We never share your data with third parties. Your privacy is our priority."
+  },
+  {
+    question: "How long does the analysis take?",
+    answer: "Most resume analyses complete in 10-20 seconds. You'll get instant feedback and actionable insights right away."
+  },
+  {
+    question: "Can I use this for multiple resume versions?",
+    answer: "Yes! You can upload multiple versions of your resume to test different formats, content variations, and tailoring strategies."
+  }
+];
 
 export default function ResumeChecker() {
   const [currentStep, setCurrentStep] = useState<Step>('upload')
@@ -19,6 +46,7 @@ export default function ResumeChecker() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [error, setError] = useState('')
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -574,6 +602,70 @@ export default function ResumeChecker() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* FAQ Section */}
+      <motion.section
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        transition={{ duration: 0.8 }}
+        viewport={{ once: true }}
+        className="py-20 px-4 bg-gradient-to-b from-transparent to-blue-50/30 dark:to-slate-900/30"
+      >
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-5xl font-black text-slate-900 dark:text-white mb-4">Frequently Asked Questions</h2>
+            <p className="text-xl text-slate-700 dark:text-slate-300">Everything you need to know about IntenX Scanner</p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {resumeFAQs.map((faq, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.05 }}
+                viewport={{ once: true }}
+                className="faq-card bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-300 hover:border-flow-purple/30 hover:shadow-lg"
+              >
+                <button
+                  onClick={() => setExpandedFAQ(expandedFAQ === idx ? null : idx)}
+                  className="w-full px-6 py-5 flex items-start justify-between gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                >
+                  <h3 className="text-left text-lg font-semibold text-slate-900 dark:text-white leading-tight">
+                    {faq.question}
+                  </h3>
+                  <motion.div
+                    animate={{ rotate: expandedFAQ === idx ? 180 : 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex-shrink-0 mt-1"
+                  >
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 text-flow-purple font-bold text-lg">
+                      +
+                    </div>
+                  </motion.div>
+                </button>
+
+                {/* Answer - Expandable */}
+                <AnimatePresence>
+                  {expandedFAQ === idx && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="border-t border-slate-200 dark:border-slate-700"
+                    >
+                      <div className="px-6 py-5">
+                        <p className="text-slate-700 dark:text-slate-300 leading-relaxed">{faq.answer}</p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
 
       {/* Phone Verification Modal */}
       <AnimatePresence>
