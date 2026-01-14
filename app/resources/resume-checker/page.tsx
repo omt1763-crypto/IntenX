@@ -63,11 +63,12 @@ export default function ResumeChecker() {
   if (!mounted) return null
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 pt-20 pb-20 px-4">
+    <div className="relative min-h-screen bg-gradient-to-br from-background to-background pt-20 pb-20 px-4">
       {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-flow-purple/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-flow-blue/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/3 right-0 w-96 h-96 bg-flow-pink/5 rounded-full blur-3xl"></div>
       </div>
 
       <div className="max-w-6xl mx-auto relative z-10">
@@ -79,13 +80,13 @@ export default function ResumeChecker() {
           className="text-center mb-12"
         >
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Zap className="w-8 h-8 text-purple-400" />
-            <h1 className="text-4xl md:text-5xl font-bold text-white">Resume Checker</h1>
+            <Zap className="w-8 h-8 text-flow-purple" />
+            <h1 className="text-4xl md:text-5xl font-bold text-foreground">Resume Checker</h1>
           </div>
-          <p className="text-xl text-slate-300 mb-4">
+          <p className="text-xl text-muted-foreground mb-4">
             Is your resume good enough?
           </p>
-          <p className="text-slate-400 max-w-2xl mx-auto">
+          <p className="text-muted-foreground max-w-2xl mx-auto">
             AI-powered resume analysis with 16 crucial checks to ensure your resume is ready to land you interview callbacks
           </p>
         </motion.div>
@@ -102,12 +103,12 @@ export default function ResumeChecker() {
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
                   currentStep === step || (currentStep === 'analyzing' && step === 'upload')
-                    ? 'bg-purple-600 text-white ring-2 ring-purple-400'
+                    ? 'bg-gradient-to-br from-flow-purple to-flow-blue text-white ring-2 ring-flow-purple/50'
                     : isVerified && step === 'upload'
                     ? 'bg-green-600 text-white'
                     : currentStep === 'results' && (step === 'phone' || step === 'upload')
                     ? 'bg-green-600 text-white'
-                    : 'bg-slate-700 text-slate-400'
+                    : 'bg-border text-muted-foreground'
                 }`}
               >
                 {step === 'phone' && '1'}
@@ -119,7 +120,7 @@ export default function ResumeChecker() {
                   className={`w-8 h-1 mx-2 rounded-full transition-all ${
                     isVerified || (currentStep === 'results' && step === 'phone')
                       ? 'bg-green-600'
-                      : 'bg-slate-700'
+                      : 'bg-border'
                   }`}
                 ></div>
               )}
@@ -135,13 +136,13 @@ export default function ResumeChecker() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
-              className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition"
+              className="glass-effect border border-border/50 rounded-2xl p-6 hover:bg-card hover:border-flow-purple/20 transition"
             >
               <div className="flex gap-3 mb-3">
-                <CheckCircle className="w-6 h-6 text-green-400 flex-shrink-0" />
-                <h3 className="font-semibold text-white">ATS Compatible</h3>
+                <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />
+                <h3 className="font-semibold text-foreground">ATS Compatible</h3>
               </div>
-              <p className="text-sm text-slate-300">
+              <p className="text-sm text-muted-foreground">
                 Optimized for applicant tracking systems to ensure your resume passes through automated screening
               </p>
             </motion.div>
@@ -150,13 +151,13 @@ export default function ResumeChecker() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4 }}
-              className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition"
+              className="glass-effect border border-border/50 rounded-2xl p-6 hover:bg-card hover:border-flow-blue/20 transition"
             >
               <div className="flex gap-3 mb-3">
-                <Shield className="w-6 h-6 text-blue-400 flex-shrink-0" />
-                <h3 className="font-semibold text-white">Privacy Guaranteed</h3>
+                <Shield className="w-6 h-6 text-flow-blue flex-shrink-0" />
+                <h3 className="font-semibold text-foreground">Privacy Guaranteed</h3>
               </div>
-              <p className="text-sm text-slate-300">
+              <p className="text-sm text-muted-foreground">
                 Your resume data is encrypted and never shared with third parties
               </p>
             </motion.div>
@@ -165,10 +166,10 @@ export default function ResumeChecker() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.5 }}
-              className="bg-gradient-to-br from-purple-600/30 to-blue-600/30 border border-purple-400/50 rounded-2xl p-6"
+              className="bg-gradient-to-br from-flow-purple/15 via-card to-flow-blue/10 border border-border/50 rounded-2xl p-6 hover:border-flow-purple/20 transition"
             >
-              <h3 className="font-semibold text-white mb-3">16 Crucial Checks</h3>
-              <ul className="text-sm text-slate-300 space-y-2">
+              <h3 className="font-semibold text-foreground mb-3">16 Crucial Checks</h3>
+              <ul className="text-sm text-muted-foreground space-y-2">
                 <li>✓ ATS parse rate</li>
                 <li>✓ Grammar & spelling</li>
                 <li>✓ Quantified achievements</li>
@@ -195,14 +196,14 @@ export default function ResumeChecker() {
               )}
 
               {currentStep === 'analyzing' && (
-                <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-12 text-center">
+                <div className="glass-effect border border-border/50 rounded-2xl p-12 text-center">
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                    className="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full mx-auto mb-6"
+                    className="w-16 h-16 border-4 border-flow-purple/30 border-t-flow-purple rounded-full mx-auto mb-6"
                   ></motion.div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Analyzing Your Resume</h3>
-                  <p className="text-slate-300">
+                  <h3 className="text-2xl font-bold text-foreground mb-2">Analyzing Your Resume</h3>
+                  <p className="text-muted-foreground">
                     Our AI is carefully reviewing your resume using 16 different criteria...
                   </p>
                 </div>
@@ -226,21 +227,21 @@ export default function ResumeChecker() {
           transition={{ delay: 0.6 }}
           className="mt-16 grid md:grid-cols-3 gap-6"
         >
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <h4 className="font-semibold text-white mb-2">What We Check</h4>
-            <p className="text-sm text-slate-400">
+          <div className="glass-effect border border-border/50 rounded-xl p-6">
+            <h4 className="font-semibold text-foreground mb-2">What We Check</h4>
+            <p className="text-sm text-muted-foreground">
               Content quality, ATS compatibility, formatting, and keyword optimization
             </p>
           </div>
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <h4 className="font-semibold text-white mb-2">AI Powered</h4>
-            <p className="text-sm text-slate-400">
+          <div className="glass-effect border border-border/50 rounded-xl p-6">
+            <h4 className="font-semibold text-foreground mb-2">AI Powered</h4>
+            <p className="text-sm text-muted-foreground">
               Advanced AI analysis to provide actionable insights for improvement
             </p>
           </div>
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <h4 className="font-semibold text-white mb-2">Instant Results</h4>
-            <p className="text-sm text-slate-400">
+          <div className="glass-effect border border-border/50 rounded-xl p-6">
+            <h4 className="font-semibold text-foreground mb-2">Instant Results</h4>
+            <p className="text-sm text-muted-foreground">
               Get your score and detailed analysis in seconds
             </p>
           </div>

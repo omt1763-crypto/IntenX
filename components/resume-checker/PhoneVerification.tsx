@@ -120,7 +120,7 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5 }}
-      className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border border-white/20 rounded-3xl p-8 md:p-12"
+      className="glass-effect border border-border/50 rounded-3xl p-8 md:p-12"
     >
       {step === 'phone' ? (
         <>
@@ -128,23 +128,23 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
             <motion.div
               animate={{ scale: [1, 1.1, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
-              className="w-16 h-16 bg-purple-600/30 border border-purple-500/50 rounded-full flex items-center justify-center mx-auto mb-4"
+              className="w-16 h-16 bg-flow-purple/20 border border-flow-purple/50 rounded-full flex items-center justify-center mx-auto mb-4"
             >
-              <Phone className="w-8 h-8 text-purple-400" />
+              <Phone className="w-8 h-8 text-flow-purple" />
             </motion.div>
-            <h2 className="text-3xl font-bold text-white mb-2">Verify Your Phone</h2>
-            <p className="text-slate-300">
+            <h2 className="text-3xl font-bold text-foreground mb-2">Verify Your Phone</h2>
+            <p className="text-muted-foreground">
               Enter your phone number to get started. We'll send you an OTP for verification.
             </p>
           </div>
 
           <form onSubmit={handlePhoneSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-slate-200 mb-3">
+              <label className="block text-sm font-medium text-foreground mb-3">
                 Phone Number
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
                   +
                 </span>
                 <input
@@ -156,10 +156,10 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
                   }}
                   placeholder="1 (555) 123-4567"
                   disabled={loading}
-                  className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:bg-white/15 transition disabled:opacity-50"
+                  className="w-full pl-12 pr-4 py-3 bg-card border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:border-flow-purple focus:ring-2 focus:ring-flow-purple/20 transition disabled:opacity-50"
                 />
               </div>
-              <p className="text-xs text-slate-400 mt-2">
+              <p className="text-xs text-muted-foreground mt-2">
                 Include country code if outside US (e.g., 91 for India)
               </p>
             </div>
@@ -170,8 +170,8 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
                 animate={{ opacity: 1, y: 0 }}
                 className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex gap-3"
               >
-                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-red-300 text-sm">{error}</p>
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
               </motion.div>
             )}
 
@@ -181,15 +181,15 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
                 animate={{ opacity: 1, y: 0 }}
                 className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg flex gap-3"
               >
-                <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-                <p className="text-green-300 text-sm">{success}</p>
+                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                <p className="text-green-600 dark:text-green-400 text-sm">{success}</p>
               </motion.div>
             )}
 
             <button
               type="submit"
               disabled={loading || phoneNumber.length < 10}
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-flow-purple to-flow-blue hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -205,7 +205,7 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
             </button>
           </form>
 
-          <p className="text-center text-xs text-slate-400 mt-6">
+          <p className="text-center text-xs text-muted-foreground mt-6">
             We respect your privacy. Your phone number will only be used for verification.
           </p>
         </>
@@ -215,19 +215,19 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
             <motion.div
               animate={{ scale: [1, 1.1, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
-              className="w-16 h-16 bg-green-600/30 border border-green-500/50 rounded-full flex items-center justify-center mx-auto mb-4"
+              className="w-16 h-16 bg-green-600/20 border border-green-600/50 rounded-full flex items-center justify-center mx-auto mb-4"
             >
-              <Shield className="w-8 h-8 text-green-400" />
+              <Shield className="w-8 h-8 text-green-600 dark:text-green-400" />
             </motion.div>
-            <h2 className="text-3xl font-bold text-white mb-2">Enter OTP</h2>
-            <p className="text-slate-300">
+            <h2 className="text-3xl font-bold text-foreground mb-2">Enter OTP</h2>
+            <p className="text-muted-foreground">
               We've sent a 6-digit code to <span className="font-semibold">{phoneNumber}</span>
             </p>
           </div>
 
           <form onSubmit={handleOtpSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-slate-200 mb-3">
+              <label className="block text-sm font-medium text-foreground mb-3">
                 One-Time Password
               </label>
               <input
@@ -237,7 +237,7 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
                 placeholder="000000"
                 disabled={loading}
                 maxLength={6}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-green-500 focus:bg-white/15 transition disabled:opacity-50 text-center text-2xl tracking-widest font-mono"
+                className="w-full px-4 py-3 bg-card border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:border-flow-purple focus:ring-2 focus:ring-flow-purple/20 transition disabled:opacity-50 text-center text-2xl tracking-widest font-mono"
               />
             </div>
 
@@ -247,15 +247,15 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
                 animate={{ opacity: 1, y: 0 }}
                 className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex gap-3"
               >
-                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-red-300 text-sm">{error}</p>
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
               </motion.div>
             )}
 
             <button
               type="submit"
               disabled={loading || otp.length !== 6}
-              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -272,11 +272,11 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
           </form>
 
           <div className="text-center mt-6">
-            <p className="text-sm text-slate-400 mb-2">Didn't receive the code?</p>
+            <p className="text-sm text-muted-foreground mb-2">Didn't receive the code?</p>
             <button
               onClick={handleResendOtp}
               disabled={resendCountdown > 0}
-              className="text-purple-400 hover:text-purple-300 font-semibold text-sm disabled:text-slate-500 disabled:cursor-not-allowed transition"
+              className="text-flow-purple hover:text-flow-purple/80 font-semibold text-sm disabled:text-muted-foreground disabled:cursor-not-allowed transition"
             >
               {resendCountdown > 0
                 ? `Resend in ${resendCountdown}s`
@@ -284,14 +284,14 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
             </button>
           </div>
 
-          <p className="text-center text-xs text-slate-400 mt-6">
+          <p className="text-center text-xs text-muted-foreground mt-6">
             <button
               onClick={() => {
                 setStep('phone')
                 setError('')
                 setSuccess('')
               }}
-              className="text-slate-300 hover:text-white underline"
+              className="text-foreground hover:text-flow-purple underline"
             >
               Change phone number
             </button>

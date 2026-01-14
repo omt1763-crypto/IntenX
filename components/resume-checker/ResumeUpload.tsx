@@ -98,10 +98,10 @@ export default function ResumeUpload({ onResumeSelected, phoneNumber }: ResumeUp
         onDrop={handleDrop}
         className={`relative border-2 border-dashed rounded-3xl p-12 transition-all ${
           isDragging
-            ? 'border-purple-400 bg-purple-500/20'
+            ? 'border-flow-purple/50 bg-flow-purple/10'
             : selectedFile
-            ? 'border-green-500/50 bg-green-500/10'
-            : 'border-white/30 bg-white/5 hover:border-purple-400 hover:bg-purple-500/10'
+            ? 'border-green-600/50 bg-green-500/10'
+            : 'border-border hover:border-flow-purple/50 hover:bg-flow-purple/5'
         }`}
       >
         <input
@@ -119,10 +119,10 @@ export default function ResumeUpload({ onResumeSelected, phoneNumber }: ResumeUp
               animate={{ scale: 1 }}
               transition={{ type: 'spring' }}
             >
-              <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-white mb-2">Resume Selected</h3>
-              <p className="text-slate-300 mb-4">{selectedFile.name}</p>
-              <p className="text-sm text-slate-400">
+              <CheckCircle className="w-16 h-16 text-green-600 dark:text-green-400 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-foreground mb-2">Resume Selected</h3>
+              <p className="text-muted-foreground mb-4">{selectedFile.name}</p>
+              <p className="text-sm text-muted-foreground">
                 {(selectedFile.size / 1024).toFixed(2)} KB
               </p>
             </motion.div>
@@ -133,13 +133,13 @@ export default function ResumeUpload({ onResumeSelected, phoneNumber }: ResumeUp
                 transition={{ duration: 2, repeat: Infinity }}
                 className="mb-4"
               >
-                <FileUp className="w-16 h-16 text-purple-400 mx-auto" />
+                <FileUp className="w-16 h-16 text-flow-purple mx-auto" />
               </motion.div>
-              <h3 className="text-2xl font-bold text-white mb-2">Drop your resume here</h3>
-              <p className="text-slate-300 mb-6">or choose a file to upload</p>
+              <h3 className="text-2xl font-bold text-foreground mb-2">Drop your resume here</h3>
+              <p className="text-muted-foreground mb-6">or choose a file to upload</p>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-8 rounded-lg transition"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-flow-purple to-flow-blue hover:shadow-lg text-white font-semibold py-3 px-8 rounded-lg transition"
               >
                 <Upload className="w-5 h-5" />
                 Choose File
@@ -148,7 +148,7 @@ export default function ResumeUpload({ onResumeSelected, phoneNumber }: ResumeUp
           )}
         </div>
 
-        <p className="text-center text-sm text-slate-400 mt-6">
+        <p className="text-center text-sm text-muted-foreground mt-6">
           PDF & DOCX only. Max 2MB file size.
         </p>
       </div>
@@ -159,8 +159,8 @@ export default function ResumeUpload({ onResumeSelected, phoneNumber }: ResumeUp
           animate={{ opacity: 1, y: 0 }}
           className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex gap-3"
         >
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-          <p className="text-red-300 text-sm">{error}</p>
+          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
         </motion.div>
       )}
 
@@ -170,14 +170,14 @@ export default function ResumeUpload({ onResumeSelected, phoneNumber }: ResumeUp
           animate={{ opacity: 1, y: 0 }}
           className="space-y-4"
         >
-          <div className="flex gap-2 justify-between items-center p-4 bg-white/5 border border-white/10 rounded-lg">
+          <div className="flex gap-2 justify-between items-center p-4 bg-card border border-border rounded-lg">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-purple-600/30 rounded flex items-center justify-center">
-                <FileUp className="w-5 h-5 text-purple-400" />
+              <div className="w-10 h-10 bg-flow-purple/20 rounded flex items-center justify-center">
+                <FileUp className="w-5 h-5 text-flow-purple" />
               </div>
               <div>
-                <p className="text-sm font-medium text-white truncate">{selectedFile.name}</p>
-                <p className="text-xs text-slate-400">{(selectedFile.size / 1024).toFixed(2)} KB</p>
+                <p className="text-sm font-medium text-foreground truncate">{selectedFile.name}</p>
+                <p className="text-xs text-muted-foreground">{(selectedFile.size / 1024).toFixed(2)} KB</p>
               </div>
             </div>
             <button
@@ -185,7 +185,7 @@ export default function ResumeUpload({ onResumeSelected, phoneNumber }: ResumeUp
                 setSelectedFile(null)
                 setError('')
               }}
-              className="text-slate-400 hover:text-white text-sm font-medium transition"
+              className="text-muted-foreground hover:text-foreground text-sm font-medium transition"
             >
               Remove
             </button>
@@ -194,7 +194,7 @@ export default function ResumeUpload({ onResumeSelected, phoneNumber }: ResumeUp
           <button
             onClick={handleAnalyze}
             disabled={loading}
-            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-lg transition flex items-center justify-center gap-2"
+            className="w-full bg-gradient-to-r from-flow-purple to-flow-blue hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-lg transition flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
@@ -214,7 +214,7 @@ export default function ResumeUpload({ onResumeSelected, phoneNumber }: ResumeUp
             )}
           </button>
 
-          <div className="flex items-center gap-2 text-xs text-slate-400 p-3 bg-white/5 rounded-lg">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground p-3 bg-card border border-border rounded-lg">
             <Lock className="w-4 h-4 flex-shrink-0" />
             Your resume data is encrypted and secure
           </div>
@@ -227,19 +227,19 @@ export default function ResumeUpload({ onResumeSelected, phoneNumber }: ResumeUp
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1 }}
-          className="p-4 bg-white/5 border border-white/10 rounded-lg"
+          className="p-4 bg-card border border-border rounded-lg"
         >
-          <p className="text-sm font-medium text-white mb-1">Supported Formats</p>
-          <p className="text-xs text-slate-400">PDF, DOCX</p>
+          <p className="text-sm font-medium text-foreground mb-1">Supported Formats</p>
+          <p className="text-xs text-muted-foreground">PDF, DOCX</p>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, x: 10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1 }}
-          className="p-4 bg-white/5 border border-white/10 rounded-lg"
+          className="p-4 bg-card border border-border rounded-lg"
         >
-          <p className="text-sm font-medium text-white mb-1">Max File Size</p>
-          <p className="text-xs text-slate-400">2MB</p>
+          <p className="text-sm font-medium text-foreground mb-1">Max File Size</p>
+          <p className="text-xs text-muted-foreground">2MB</p>
         </motion.div>
       </div>
     </motion.div>
