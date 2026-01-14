@@ -15,6 +15,7 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [status, setStatus] = useState('checking') // checking, ready, expired, success, error
+  const [verificationTimeout, setVerificationTimeout] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -24,60 +25,121 @@ export default function ResetPassword() {
   useEffect(() => {
     if (!mounted) return
 
+    let isMounted = true
+
     const checkResetLink = async () => {
       try {
         // Get the hash from the URL (Supabase sends tokens in fragment)
         const hash = typeof window !== 'undefined' ? window.location.hash : ''
         
+        console.log('[ResetPassword] Full URL:', window.location.href)
+        console.log('[ResetPassword] Hash:', hash)
+        
         if (!hash) {
-          setStatus('expired')
-          setError('Invalid reset link. Please request a new one.')
+          console.warn('[ResetPassword] No hash found in URL')
+          if (isMounted) {
+            setStatus('expired')
+            setError('Invalid reset link. Please request a new one.')
+          }
           return
         }
 
         // Parse the hash
         const params = new URLSearchParams(hash.substring(1))
         const accessToken = params.get('access_token')
+        const refreshToken = params.get('refresh_token')
         const type = params.get('type')
+        const expiresIn = params.get('expires_in')
+
+        console.log('[ResetPassword] Parsed params - type:', type, 'expiresIn:', expiresIn, 'hasAccessToken:', !!accessToken, 'hasRefreshToken:', !!refreshToken)
 
         if (!accessToken || type !== 'recovery') {
-          setStatus('expired')
-          setError('Invalid reset link. Please request a new one.')
+          console.warn('[ResetPassword] Invalid token or type. accessToken:', !!accessToken, 'type:', type)
+          if (isMounted) {
+            setStatus('expired')
+            setError('Invalid reset link. Please request a new one.')
+          }
           return
         }
 
         // Try to set the session with the recovery token
-        try {
-          const { error: sessionError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: params.get('refresh_token'),
-          })
+        console.log('[ResetPassword] Attempting to set session with recovery token...')
+        const { error: sessionError, data } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken || '',
+        })
 
-          if (sessionError) {
+        console.log('[ResetPassword] setSession response - error:', sessionError, 'data:', !!data)
+
+        if (!isMounted) return
+
+        if (sessionError) {
+          console.error('[ResetPassword] Session error:', sessionError)
+          if (isMounted) {
             setStatus('expired')
             setError('Reset link has expired. Please request a new one.')
-            return
           }
+          return
+        }
 
-          setStatus('ready')
-        } catch (err) {
-          // Only log if it's not an abort error
-          if (err?.name !== 'AbortError') {
-            console.error('[ResetPassword] Session error:', err)
+        // Verify the session was set
+        const { data: { session }, error: getSessionError } = await supabase.auth.getSession()
+        console.log('[ResetPassword] Verified session:', !!session, 'session user:', session?.user?.email)
+
+        if (!isMounted) return
+
+        if (!session || getSessionError) {
+          console.error('[ResetPassword] Session not established:', getSessionError)
+          if (isMounted) {
             setStatus('expired')
-            setError('Invalid reset link. Please request a new one.')
+            setError('Could not establish session. Please request a new link.')
           }
+          return
+        }
+
+        console.log('[ResetPassword] Session set successfully, ready for reset')
+        if (isMounted) {
+          setStatus('ready')
         }
       } catch (err) {
-        if (err?.name !== 'AbortError') {
-          console.error('[ResetPassword] Error checking link:', err)
+        // Only update state if component is still mounted
+        if (!isMounted) return
+        
+        // Ignore abort errors - they happen when component unmounts
+        if (err?.name === 'AbortError') {
+          console.log('[ResetPassword] Request aborted (component unmounted)')
+          return
+        }
+        
+        console.error('[ResetPassword] Error checking link:', err)
+        if (isMounted) {
           setStatus('expired')
-          setError('Invalid reset link. Please request a new one.')
+          setError(err?.message || 'Invalid reset link. Please request a new one.')
         }
       }
     }
 
-    checkResetLink()
+    // Add a small delay to ensure component is fully mounted
+    const timer = setTimeout(() => {
+      if (isMounted) {
+        checkResetLink()
+      }
+    }, 100)
+
+    // Add a timeout for verification - if it takes longer than 5 seconds, show skip button
+    const timeoutTimer = setTimeout(() => {
+      if (isMounted && status === 'checking') {
+        console.warn('[ResetPassword] Verification taking too long, showing skip option')
+        setVerificationTimeout(true)
+      }
+    }, 5000)
+
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false
+      clearTimeout(timer)
+      clearTimeout(timeoutTimer)
+    }
   }, [mounted])
 
   const handleResetPassword = async (e) => {
@@ -153,6 +215,21 @@ export default function ResetPassword() {
           <div className="text-center">
             <div className="w-12 h-12 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-slate-400">Verifying reset link...</p>
+            
+            {verificationTimeout && (
+              <div className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                <p className="text-yellow-400 text-sm mb-3">Verification is taking longer than expected.</p>
+                <button
+                  onClick={() => {
+                    // Skip verification and assume link is valid
+                    setStatus('ready')
+                  }}
+                  className="text-yellow-400 hover:text-yellow-300 font-semibold underline"
+                >
+                  Click here to continue anyway
+                </button>
+              </div>
+            )}
           </div>
         ) : status === 'expired' ? (
           // Expired link

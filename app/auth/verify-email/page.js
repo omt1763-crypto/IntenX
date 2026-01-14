@@ -20,6 +20,9 @@ export default function VerifyEmail() {
   useEffect(() => {
     if (!mounted) return
 
+    let isMounted = true
+    let timeoutId: any = null
+
     const verifyEmail = async () => {
       try {
         setStatus('verifying')
@@ -44,15 +47,19 @@ export default function VerifyEmail() {
             // The session is already active from the hash redirect
             const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
+            if (!isMounted) return
+
             if (sessionError || !session) {
               console.error('[VerifyEmail] Session error:', sessionError)
               // Try to set session from the URL tokens
               if (accessToken) {
                 const { data, error } = await supabase.auth.setSession({
                   access_token: accessToken,
-                  refresh_token: params.get('refresh_token'),
+                  refresh_token: params.get('refresh_token') || '',
                 })
                 
+                if (!isMounted) return
+
                 if (error) {
                   throw error
                 }
@@ -61,6 +68,8 @@ export default function VerifyEmail() {
 
             // Get current user to confirm email is verified
             const { data: { user }, error } = await supabase.auth.getUser()
+
+            if (!isMounted) return
 
             if (error || !user) {
               console.error('[VerifyEmail] User fetch error:', error)
@@ -75,21 +84,39 @@ export default function VerifyEmail() {
             setMessage('Email verified successfully! 🎉')
             
             // Redirect to login after 2 seconds
-            setTimeout(() => {
-              router.push('/auth/login?message=Email%20verified.%20You%20can%20now%20log%20in.')
-            }, 2000)
+            if (isMounted) {
+              timeoutId = setTimeout(() => {
+                if (isMounted) {
+                  router.push('/auth/login?message=Email%20verified.%20You%20can%20now%20log%20in.')
+                }
+              }, 2000)
+            }
           } else if (!accessToken) {
-            setStatus('error')
-            setMessage('Invalid verification link. Please check your email for the correct link.')
+            if (isMounted) {
+              setStatus('error')
+              setMessage('Invalid verification link. Please check your email for the correct link.')
+            }
           } else {
-            setStatus('error')
-            setMessage('This link is for a different type of request. Please check your email.')
+            if (isMounted) {
+              setStatus('error')
+              setMessage('This link is for a different type of request. Please check your email.')
+            }
           }
         } else {
-          setStatus('error')
-          setMessage('Invalid verification link. Please check your email for the correct link.')
+          if (isMounted) {
+            setStatus('error')
+            setMessage('Invalid verification link. Please check your email for the correct link.')
+          }
         }
       } catch (error) {
+        if (!isMounted) return
+
+        // Ignore abort errors
+        if (error?.name === 'AbortError') {
+          console.log('[VerifyEmail] Request aborted (component unmounted)')
+          return
+        }
+
         console.error('[VerifyEmail] Error during verification:', error)
         setStatus('error')
         setMessage('Error verifying email: ' + error.message)
@@ -97,6 +124,14 @@ export default function VerifyEmail() {
     }
 
     verifyEmail()
+
+    // Cleanup function
+    return () => {
+      isMounted = false
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+    }
   }, [mounted, router])
 
   if (!mounted) {
