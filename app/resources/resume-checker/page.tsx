@@ -190,23 +190,24 @@ export default function ResumeChecker() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 dark:from-slate-950 via-blue-50/30 dark:via-slate-900/50 to-slate-50 dark:to-slate-950">
+    <div className="min-h-screen bg-background">
       {/* Header Bar */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-700/50"
+        className="sticky top-0 z-40 bg-card/95 backdrop-blur-md border-b border-border/50"
       >
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-full bg-gradient-to-br from-flow-purple via-flow-blue to-green-500 flex items-center justify-center shadow-lg">
               <FileUp className="w-6 h-6 text-white font-bold" />
             </div>
-            <h3 className="text-xl font-black bg-gradient-to-r from-flow-purple to-flow-blue bg-clip-text text-transparent">IntenX Scanner</h3>
+            <h3 className="font-display text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">IntenX Scanner</h3>
           </div>
           <motion.button
             whileHover={{ scale: 1.05 }}
-            className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg transition shadow-md"
+            style={{ backgroundColor: '#8241FF' }}
+            className="px-6 py-2 text-white hover:opacity-90 font-semibold rounded-lg transition shadow-md"
           >
             Looking for a Job?
           </motion.button>
@@ -222,8 +223,8 @@ export default function ResumeChecker() {
       >
         {/* Background Gradient Orbs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-10 left-20 w-72 h-72 bg-flow-purple/15 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-10 right-20 w-72 h-72 bg-flow-blue/15 rounded-full blur-3xl"></div>
+          <div className="absolute top-10 left-20 w-72 h-72 bg-flow-purple/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-10 right-20 w-72 h-72 bg-flow-blue/10 rounded-full blur-3xl"></div>
         </div>
 
         <div className="max-w-5xl mx-auto relative z-10">
@@ -232,20 +233,25 @@ export default function ResumeChecker() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
           >
-            <p className="text-flow-purple font-bold text-lg mb-4">AI-POWERED RESUME ANALYSIS</p>
-            <h1 className="text-6xl md:text-7xl font-black text-slate-900 dark:text-white mb-6 leading-tight">
+            <div className="inline-block mb-4 px-6 py-2 rounded-full bg-purple-300/25 border border-purple-300/40">
+              <p className="font-display text-lg md:text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                AI-POWERED RESUME ANALYSIS
+              </p>
+            </div>
+            <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 leading-tight">
               Make Your Resume <br />
-              <span className="bg-gradient-to-r from-flow-purple via-flow-blue to-green-500 bg-clip-text text-transparent">ATS-Ready in seconds!</span>
+              <span className="text-gradient">ATS-Ready in seconds!</span>
             </h1>
-            <p className="text-2xl text-slate-700 dark:text-slate-300 mb-10 max-w-3xl mx-auto font-semibold">
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-10">
               Get instant, AI-powered feedback to optimize your resume for ATS systems and impress recruiters.
             </p>
 
             <motion.button
-              whileHover={{ scale: 1.08 }}
+              whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowUploadModal(true)}
-              className="inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-green-500 via-teal-500 to-cyan-500 text-white font-black text-lg rounded-2xl hover:shadow-2xl transition duration-300 shadow-lg"
+              style={{ backgroundColor: '#8241FF' }}
+              className="inline-flex items-center gap-3 px-10 py-4 text-white font-semibold text-lg rounded-full hover:opacity-90 transition duration-300 shadow-lg"
             >
               <Upload className="w-6 h-6" />
               UPLOAD RESUME <ArrowRight className="w-6 h-6" />
@@ -260,19 +266,19 @@ export default function ResumeChecker() {
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
         viewport={{ once: true }}
-        className="py-20 px-4 bg-gradient-to-r from-red-500/10 via-orange-500/5 to-transparent"
+        className="py-20 px-4 bg-card"
       >
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-5xl md:text-6xl font-black text-slate-900 dark:text-white mb-6">
+          <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-6">
             75% of Resumes Never Reach a Human Recruiter
           </h2>
-          <p className="text-xl text-slate-700 dark:text-slate-300 mb-10 leading-relaxed max-w-3xl">
+          <p className="text-muted-foreground text-lg mb-10 leading-relaxed max-w-3xl">
             In today's competitive job market, companies rely on powerful Applicant Tracking Systems (ATS) to filter resumes automatically. If your resume isn't properly formatted or doesn't contain the right keywords, it's silently rejected.
           </p>
           <motion.button
             whileHover={{ scale: 1.05 }}
             onClick={() => setShowUploadModal(true)}
-            className="inline-flex items-center gap-3 px-8 py-4 bg-red-500 hover:bg-red-600 text-white font-bold text-lg rounded-lg transition shadow-lg"
+            className="inline-flex items-center gap-3 px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold text-lg rounded-lg transition shadow-lg"
           >
             Fix Now <ArrowRight className="w-5 h-5" />
           </motion.button>
@@ -285,54 +291,72 @@ export default function ResumeChecker() {
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
         viewport={{ once: true }}
-        className="py-20 px-4"
+        className="py-20 px-4 bg-card"
       >
         <div className="max-w-6xl mx-auto">
-          <p className="text-center text-flow-purple font-bold text-lg mb-4">SIMPLE PROCESS</p>
-          <h2 className="text-5xl font-black text-center text-slate-900 dark:text-white mb-16">
-            How It Works - Get started in 3 steps
-          </h2>
+          <div className="text-center mb-16 animate-fade-up">
+            <div className="inline-block mb-4 px-6 py-2 rounded-full bg-purple-300/25 border border-purple-300/40">
+              <h2 className="font-display text-lg md:text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                How It Works
+              </h2>
+            </div>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+              Simple steps to optimize your resume. Get started in minutes.
+            </p>
+          </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-6">
             {[
               {
-                num: '1',
+                number: '01',
                 icon: Upload,
                 title: 'Upload Your Resume',
                 desc: 'Drag & drop or browse to select your PDF or DOCX file'
               },
               {
-                num: '2',
+                number: '02',
                 icon: Zap,
                 title: 'Scan and Analyze',
                 desc: 'AI evaluates your resume against ATS standards'
               },
               {
-                num: '3',
+                number: '03',
                 icon: BarChart3,
                 title: 'Get Detailed Report',
                 desc: 'Receive actionable insights and recommendations'
               },
-            ].map((step, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.15 }}
-                viewport={{ once: true }}
-                whileHover={{ y: -10 }}
-                className="bg-white dark:bg-slate-900 rounded-2xl p-8 border-2 border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl transition"
-              >
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-flow-purple to-flow-blue flex items-center justify-center shadow-lg">
-                    <span className="text-white font-black text-3xl">{step.num}</span>
+            ].map((step, i) => {
+              const gradients = [
+                "from-purple-500/10 via-purple-400/5 to-blue-500/10",
+                "from-blue-500/10 via-cyan-400/5 to-teal-500/10",
+                "from-yellow-500/10 via-amber-400/5 to-orange-500/10"
+              ];
+              return (
+                <div
+                  key={i}
+                  className="group animate-fade-up"
+                  style={{ animationDelay: `${0.1 + i * 0.05}s` }}
+                >
+                  <div className={`bg-gradient-to-br ${gradients[i % 3]} rounded-2xl p-6 border border-border/50 hover:shadow-card hover:border-border/80 transition-all duration-300 h-full flex flex-col overflow-hidden relative`}>
+                    <div className="mb-6 relative z-10">
+                      <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/10 flex items-center justify-center mb-3">
+                        <p className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                          {step.number}
+                        </p>
+                      </div>
+                    </div>
+
+                    <h4 className="font-semibold text-foreground mb-3 text-sm group-hover:text-purple-600 transition-colors relative z-10">
+                      {step.title}
+                    </h4>
+
+                    <p className="text-xs text-muted-foreground leading-relaxed flex-grow relative z-10">
+                      {step.desc}
+                    </p>
                   </div>
-                  <step.icon className="w-8 h-8 text-flow-purple" />
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">{step.title}</h3>
-                <p className="text-slate-600 dark:text-slate-300 text-lg">{step.desc}</p>
-              </motion.div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </motion.section>
@@ -343,64 +367,56 @@ export default function ResumeChecker() {
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
         viewport={{ once: true }}
-        className="py-20 px-4 bg-gradient-to-b from-transparent to-flow-purple/5"
+        className="py-20 px-4 bg-card"
       >
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-5xl font-black text-center text-slate-900 dark:text-white mb-16">
-            What We Analyze
-          </h2>
+          <div className="text-center mb-16 animate-fade-up">
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
+              What We Analyze
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Comprehensive resume evaluation across 16 different criteria for ATS optimization.
+            </p>
+          </div>
 
           <div className="grid md:grid-cols-3 gap-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              viewport={{ once: true }}
-              whileHover={{ y: -12 }}
-              className="bg-gradient-to-br from-teal-400 to-teal-600 rounded-2xl p-8 text-white shadow-xl hover:shadow-2xl transition cursor-pointer"
-            >
-              <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center mb-5">
-                <CheckCircle2 className="w-8 h-8 text-white" />
+            {[
+              {
+                icon: CheckCircle2,
+                title: "ATS Compatibility",
+                desc: "Ensures your resume passes ATS systems with proper formatting and structure",
+                gradient: "from-teal-500/10 via-card to-card",
+                borderColor: "hover:border-teal-500/30"
+              },
+              {
+                icon: Sparkles,
+                title: "Keyword Optimization",
+                desc: "Matches your resume to job descriptions for better ATS rankings",
+                gradient: "from-blue-500/10 via-card to-card",
+                borderColor: "hover:border-blue-500/30"
+              },
+              {
+                icon: TrendingUp,
+                title: "Impact Score",
+                desc: "Analyzes clarity, action verbs, and result-driven statements",
+                gradient: "from-green-500/10 via-card to-card",
+                borderColor: "hover:border-green-500/30"
+              },
+            ].map((feature, i) => (
+              <div
+                key={i}
+                className={`group bg-gradient-to-br ${feature.gradient} rounded-3xl p-6 border border-border/50 ${feature.borderColor} transition-all duration-300 animate-fade-up hover:shadow-card`}
+                style={{ animationDelay: `${0.1 + i * 0.1}s` }}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/10 to-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <feature.icon className="w-5 h-5 text-flow-purple" />
+                  </div>
+                  <h3 className="font-semibold text-foreground">{feature.title}</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">{feature.desc}</p>
               </div>
-              <h3 className="text-2xl font-bold mb-3">ATS Compatibility</h3>
-              <p className="text-white/90 text-lg leading-relaxed">
-                Ensures your resume passes ATS systems with proper formatting and structure
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              viewport={{ once: true }}
-              whileHover={{ y: -12 }}
-              className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-8 text-white shadow-xl hover:shadow-2xl transition cursor-pointer"
-            >
-              <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center mb-5">
-                <Sparkles className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold mb-3">Keyword Optimization</h3>
-              <p className="text-white/90 text-lg leading-relaxed">
-                Matches your resume to job descriptions for better ATS rankings
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              viewport={{ once: true }}
-              whileHover={{ y: -12 }}
-              className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-8 text-white shadow-xl hover:shadow-2xl transition cursor-pointer"
-            >
-              <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center mb-5">
-                <TrendingUp className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold mb-3">Impact Score</h3>
-              <p className="text-white/90 text-lg leading-relaxed">
-                Analyzes clarity, action verbs, and result-driven statements
-              </p>
-            </motion.div>
+            ))}
           </div>
         </div>
       </motion.section>
@@ -411,55 +427,78 @@ export default function ResumeChecker() {
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
         viewport={{ once: true }}
-        className="py-20 px-4"
+        className="py-20 px-4 bg-card"
       >
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-5xl font-black text-center text-slate-900 dark:text-white mb-16">
-            Real Resume Transformations
-          </h2>
+          <div className="text-center mb-16 animate-fade-up">
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Real Resume Transformations
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              See how IntenX Scanner transforms ordinary resumes into ATS powerhouses.
+            </p>
+          </div>
 
           <div className="grid md:grid-cols-2 gap-8">
             {/* Before */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              className="bg-gradient-to-br from-red-100 to-pink-50 dark:from-red-950/50 dark:to-red-900/30 border-3 border-red-400 dark:border-red-700 rounded-3xl p-10 shadow-xl"
-            >
-              <div className="inline-block px-5 py-2 bg-red-500 text-white rounded-full text-sm font-bold mb-6">
-                BEFORE
+            <div className="group animate-fade-up" style={{ animationDelay: "0.1s" }}>
+              <div className="bg-gradient-to-br from-red-500/10 via-card to-card rounded-3xl p-8 border border-border/50 hover:shadow-card hover:border-red-500/30 transition-all duration-300 h-full flex flex-col">
+                <div className="inline-block mb-6 w-fit">
+                  <div className="px-4 py-2 rounded-full bg-red-500/20 border border-red-500/40">
+                    <p className="text-sm font-bold text-red-600">BEFORE</p>
+                  </div>
+                </div>
+                <div className="mb-8">
+                  <p className="text-4xl font-black text-foreground mb-2">28/100</p>
+                  <p className="text-sm text-muted-foreground font-medium">ATS Compatibility Score</p>
+                </div>
+                <div className="w-full bg-red-500/30 rounded-full h-3 mb-8"></div>
+                <ul className="text-muted-foreground space-y-3 text-sm flex-grow">
+                  <li className="flex items-center gap-2">
+                    <span className="text-red-600 font-bold">✗</span> Missing 15+ keywords
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-red-600 font-bold">✗</span> Poor formatting
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-red-600 font-bold">✗</span> Weak action verbs
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-red-600 font-bold">✗</span> Generic content
+                  </li>
+                </ul>
               </div>
-              <p className="text-red-900 dark:text-red-200 font-black text-3xl mb-2">28/100</p>
-              <p className="text-red-800 dark:text-red-300 font-bold text-xl mb-8">ATS Compatibility Score</p>
-              <div className="w-full bg-red-300/50 rounded-full h-4 mb-10"></div>
-              <ul className="text-red-800 dark:text-red-300 space-y-4 text-lg font-semibold">
-                <li>✗ Missing 15+ keywords</li>
-                <li>✗ Poor formatting</li>
-                <li>✗ Weak action verbs</li>
-                <li>✗ Generic content</li>
-              </ul>
-            </motion.div>
+            </div>
 
             {/* After */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              className="bg-gradient-to-br from-green-100 to-emerald-50 dark:from-green-950/50 dark:to-emerald-900/30 border-3 border-green-500 dark:border-green-700 rounded-3xl p-10 shadow-xl"
-            >
-              <div className="inline-block px-5 py-2 bg-green-500 text-white rounded-full text-sm font-bold mb-6">
-                AFTER
+            <div className="group animate-fade-up" style={{ animationDelay: "0.2s" }}>
+              <div className="bg-gradient-to-br from-green-500/10 via-card to-card rounded-3xl p-8 border border-border/50 hover:shadow-card hover:border-green-500/30 transition-all duration-300 h-full flex flex-col">
+                <div className="inline-block mb-6 w-fit">
+                  <div className="px-4 py-2 rounded-full bg-green-500/20 border border-green-500/40">
+                    <p className="text-sm font-bold text-green-600">AFTER</p>
+                  </div>
+                </div>
+                <div className="mb-8">
+                  <p className="text-4xl font-black text-foreground mb-2">94/100</p>
+                  <p className="text-sm text-muted-foreground font-medium">ATS Compatibility Score</p>
+                </div>
+                <div className="w-full bg-green-500/40 rounded-full h-3 mb-8"></div>
+                <ul className="text-muted-foreground space-y-3 text-sm flex-grow">
+                  <li className="flex items-center gap-2">
+                    <span className="text-green-600 font-bold">✓</span> Perfect keywords
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-green-600 font-bold">✓</span> ATS-friendly format
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-green-600 font-bold">✓</span> Strong action verbs
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-green-600 font-bold">✓</span> Tailored content
+                  </li>
+                </ul>
               </div>
-              <p className="text-green-900 dark:text-green-200 font-black text-3xl mb-2">94/100</p>
-              <p className="text-green-800 dark:text-green-300 font-bold text-xl mb-8">ATS Compatibility Score</p>
-              <div className="w-full bg-green-400/70 rounded-full h-4 mb-10"></div>
-              <ul className="text-green-800 dark:text-green-300 space-y-4 text-lg font-semibold">
-                <li>✓ Perfect keywords</li>
-                <li>✓ ATS-friendly format</li>
-                <li>✓ Strong action verbs</li>
-                <li>✓ Tailored content</li>
-              </ul>
-            </motion.div>
+            </div>
           </div>
         </div>
       </motion.section>
