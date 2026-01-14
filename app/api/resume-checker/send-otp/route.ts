@@ -66,22 +66,35 @@ export async function POST(request: NextRequest) {
     console.log(`[Resume Checker] OTP stored for ${phoneNumber}: ${otp}`)
 
     // Send OTP via Twilio SMS
+    let smsError: any = null
     try {
       await sendSmsWithTwilio(phoneNumber, otp)
-      console.log(`[Resume Checker] SMS sent to ${phoneNumber}`)
-    } catch (smsError) {
-      console.error('[Resume Checker] Twilio SMS error:', smsError)
-      // Don't fail the request if SMS fails, but log the error
-      // In production, you might want to handle this differently
+      console.log(`[Resume Checker] SMS sent successfully to ${phoneNumber}`)
+    } catch (error: any) {
+      smsError = error
+      console.error('[Resume Checker] Twilio SMS error:', error.message)
+      console.error('[Resume Checker] Twilio error code:', error.code)
+      console.error('[Resume Checker] Full error:', error)
     }
 
-    // For development, also return test OTP for debugging
+    // For development, also return test OTP and any SMS errors for debugging
     if (process.env.NODE_ENV === 'development') {
       return NextResponse.json(
         {
           success: true,
           message: 'OTP sent successfully',
           testOtp: otp, // For development only
+          smsError: smsError ? {
+            message: smsError.message,
+            code: smsError.code,
+            details: smsError.details
+          } : null,
+          debugInfo: {
+            phoneNumber: phoneNumber,
+            twilioFrom: process.env.TWILIO_PHONE_NUMBER,
+            twilioAccountSid: process.env.TWILIO_ACCOUNT_SID ? '***' : 'NOT SET',
+            twilioAuthToken: process.env.TWILIO_AUTH_TOKEN ? '***' : 'NOT SET',
+          }
         },
         { status: 200 }
       )
