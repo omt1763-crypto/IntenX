@@ -27,12 +27,27 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
     setSuccess('')
     setLoading(true)
 
-    // Validate phone number
+    // Extract only digits and validate
     const cleanPhone = phoneNumber.replace(/\D/g, '')
+    
+    // Validate phone number
     if (cleanPhone.length < 10) {
-      setError('Please enter a valid phone number')
+      setError('Please enter a valid phone number (at least 10 digits)')
       setLoading(false)
       return
+    }
+    
+    // For India (+91), extract just the 10-digit number if they entered 12 digits
+    let phoneToSend = cleanPhone
+    if (cleanPhone.length === 12 && cleanPhone.startsWith('91')) {
+      // User entered: 91 98765 43210 - extract last 10 digits
+      phoneToSend = cleanPhone.slice(2)
+    } else if (cleanPhone.length === 11) {
+      // User entered: 1 202 555 1234 (US) - keep as is for now
+      phoneToSend = cleanPhone
+    } else if (cleanPhone.length === 10) {
+      // Just 10 digits - perfect for India
+      phoneToSend = cleanPhone
     }
 
     try {
@@ -47,11 +62,19 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
       const response = await fetch('/api/resume-checker/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber: cleanPhone }),
+        body: JSON.stringify({ phoneNumber: phoneToSend }),
         signal: abortControllerRef.current.signal,
       })
 
       const data = await response.json()
+      
+      console.log('[PhoneVerification] Send OTP response:', {
+        status: response.status,
+        success: data.success,
+        phoneNumber: phoneToSend,
+        smsStatus: data.smsStatus,
+        testOtp: data.testOtp
+      })
 
       if (!response.ok) {
         setError(data.error || 'Failed to send OTP')
@@ -181,7 +204,7 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
               </label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 font-semibold text-lg">
-                  +
+                  +91
                 </span>
                 <input
                   type="tel"
@@ -190,27 +213,24 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
                     // Extract only digits
                     const digits = e.target.value.replace(/\D/g, '')
                     
-                    // Auto-format based on length
+                    // Auto-format based on length (for Indian numbers)
                     let formatted = ''
-                    if (digits.length <= 3) {
+                    if (digits.length <= 5) {
                       formatted = digits
-                    } else if (digits.length <= 6) {
-                      // Format: +91 XXXXX
-                      formatted = digits.slice(0, 3) + ' ' + digits.slice(3)
                     } else if (digits.length <= 10) {
-                      // Format: +91 XXXXX XXXXX
-                      formatted = digits.slice(0, 3) + ' ' + digits.slice(3, 6) + ' ' + digits.slice(6)
+                      // Format: 98765 43210
+                      formatted = digits.slice(0, 5) + ' ' + digits.slice(5)
                     } else {
-                      // Format: +91 XXXXX XXXXX XXXX (up to 13 digits)
-                      formatted = digits.slice(0, 3) + ' ' + digits.slice(3, 6) + ' ' + digits.slice(6, 10) + ' ' + digits.slice(10, 13)
+                      // Limit to 10 digits for India
+                      formatted = digits.slice(0, 5) + ' ' + digits.slice(5, 10)
                     }
                     
                     setPhoneNumber(formatted)
                   }}
-                  placeholder="91 98765 43210"
+                  placeholder="98765 43210"
                   disabled={loading}
-                  maxLength={17}
-                  className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-700 border-2 border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none transition disabled:opacity-50 text-base"
+                  maxLength={12}
+                  className="w-full pl-16 pr-4 py-3 bg-white dark:bg-slate-700 border-2 border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none transition disabled:opacity-50 text-base"
                   style={{
                     borderColor: '#d1d5db',
                   }}
@@ -224,15 +244,15 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
                   }}
                 />
               </div>
-              <div className="mt-3 text-xs space-y-1">
-                <p className="text-slate-500 dark:text-slate-400">
-                  📱 <span className="font-medium">Examples:</span>
-                </p>
+              <div className="mt-3 text-xs space-y-2">
                 <p className="text-slate-600 dark:text-slate-400">
-                  • India: <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">91 98765 43210</span>
+                  <span className="font-semibold">Enter your 10-digit phone number:</span>
                 </p>
-                <p className="text-slate-600 dark:text-slate-400">
-                  • US: <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">1 202 555 1234</span>
+                <p className="text-slate-600 dark:text-slate-400 font-mono bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded">
+                  ✓ Example: 98765 43210
+                </p>
+                <p className="text-slate-500 dark:text-slate-500 text-xs">
+                  We'll automatically add +91 for India
                 </p>
               </div>
             </div>
@@ -261,7 +281,7 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
 
             <button
               type="submit"
-              disabled={loading || phoneNumber.length < 10}
+              disabled={loading || phoneNumber.replace(/\D/g, '').length < 10}
               style={{ backgroundColor: '#8241FF' }}
               className="w-full hover:opacity-90 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-base"
             >
