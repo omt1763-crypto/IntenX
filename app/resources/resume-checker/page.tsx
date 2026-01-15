@@ -91,7 +91,7 @@ export default function ResumeChecker() {
       const file = files[0]
       if (validateFile(file)) {
         setSelectedFile(file)
-        extractResumeText(file)
+        void extractResumeText(file)
       }
     }
   }
@@ -103,7 +103,7 @@ export default function ResumeChecker() {
       const file = files[0]
       if (validateFile(file)) {
         setSelectedFile(file)
-        extractResumeText(file)
+        void extractResumeText(file)
       }
     }
   }
