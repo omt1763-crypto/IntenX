@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Phone, Shield, AlertCircle, CheckCircle, Loader } from 'lucide-react'
 
@@ -16,6 +16,10 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [resendCountdown, setResendCountdown] = useState(0)
+  
+  // Refs for cleanup
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,10 +36,19 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
     }
 
     try {
+      // Cancel any previous requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+      
+      // Create new abort controller for this request
+      abortControllerRef.current = new AbortController()
+      
       const response = await fetch('/api/resume-checker/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phoneNumber: cleanPhone }),
+        signal: abortControllerRef.current.signal,
       })
 
       const data = await response.json()
@@ -50,19 +63,29 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
       setStep('otp')
       setResendCountdown(60)
 
+      // Clear any existing interval
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+
       // Countdown for resend
-      const interval = setInterval(() => {
+      intervalRef.current = setInterval(() => {
         setResendCountdown((prev) => {
           if (prev <= 1) {
-            clearInterval(interval)
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current)
+            }
             return 0
           }
           return prev - 1
         })
       }, 1000)
-    } catch (err) {
-      console.error('Error sending OTP:', err)
-      setError('Failed to send OTP. Please try again.')
+    } catch (err: any) {
+      // Don't show error if request was aborted
+      if (err.name !== 'AbortError') {
+        console.error('Error sending OTP:', err)
+        setError('Failed to send OTP. Please try again.')
+      }
     } finally {
       setLoading(false)
     }
@@ -81,6 +104,14 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
     }
 
     try {
+      // Cancel any previous requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+      
+      // Create new abort controller for this request
+      abortControllerRef.current = new AbortController()
+      
       const response = await fetch('/api/resume-checker/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -88,6 +119,7 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
           phoneNumber: phoneNumber.replace(/\D/g, ''),
           otp: otp,
         }),
+        signal: abortControllerRef.current.signal,
       })
 
       const data = await response.json()
@@ -347,4 +379,18 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
       )}
     </motion.div>
   )
+
+  // Cleanup function
+  useEffect(() => {
+    return () => {
+      // Abort any pending requests when component unmounts
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+      // Clear any pending intervals
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [])
 }
