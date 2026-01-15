@@ -66,29 +66,34 @@ export async function POST(request: NextRequest) {
     console.log(`[Resume Checker] OTP stored for ${phoneNumber}: ${otp}`)
 
     // Send OTP via Twilio SMS
+    let smsResult: any = null
     let smsError: any = null
     try {
-      await sendSmsWithTwilio(phoneNumber, otp)
-      console.log(`[Resume Checker] SMS sent successfully to ${phoneNumber}`)
+      smsResult = await sendSmsWithTwilio(phoneNumber, otp)
+      console.log(`[Resume Checker] ✓ SMS sent successfully to ${phoneNumber}`)
     } catch (error: any) {
       smsError = error
-      console.error('[Resume Checker] Twilio SMS error:', error.message)
-      console.error('[Resume Checker] Twilio error code:', error.code)
-      console.error('[Resume Checker] Full error:', error)
+      console.error('[Resume Checker] ✗ Twilio SMS error:', error.message)
     }
 
-    // For development, also return test OTP and any SMS errors for debugging
+    // For development, return detailed SMS status
     if (process.env.NODE_ENV === 'development') {
       return NextResponse.json(
         {
           success: true,
           message: 'OTP sent successfully',
           testOtp: otp, // For development only
-          smsError: smsError ? {
-            message: smsError.message,
-            code: smsError.code,
-            details: smsError.details
-          } : null,
+          smsStatus: smsResult ? {
+            success: true,
+            sid: smsResult.sid,
+            status: smsResult.status, // 'queued', 'sending', 'sent', etc.
+            to: smsResult.to,
+            from: smsResult.from,
+            dateCreated: smsResult.date_created,
+          } : {
+            success: false,
+            error: smsError?.message || 'Unknown error'
+          },
           debugInfo: {
             phoneNumber: phoneNumber,
             twilioFrom: process.env.TWILIO_PHONE_NUMBER,
@@ -100,8 +105,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Production response
     return NextResponse.json(
-      { success: true, message: 'OTP sent successfully' },
+      { 
+        success: true, 
+        message: 'OTP sent successfully',
+        smsStatus: smsResult?.status || 'unknown',
+        smsId: smsResult?.sid || null
+      },
       { status: 200 }
     )
   } catch (error) {
@@ -113,7 +124,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Send SMS via Twilio
+// Send SMS via Twilio - Supports Indian numbers
 async function sendSmsWithTwilio(phoneNumber: string, otp: string) {
   try {
     const twilio = require('twilio')
@@ -122,28 +133,45 @@ async function sendSmsWithTwilio(phoneNumber: string, otp: string) {
       process.env.TWILIO_AUTH_TOKEN
     )
 
-    // Ensure phone number is in E.164 format: +<country_code><number>
-    let formattedPhone = phoneNumber
-    if (!formattedPhone.startsWith('+')) {
+    // Format phone number to E.164 format: +<country_code><number>
+    let formattedPhone = phoneNumber.replace(/\D/g, '') // Remove all non-digits
+    
+    // If it's 10 digits, assume India
+    if (formattedPhone.length === 10) {
+      formattedPhone = `+91${formattedPhone}`
+    } else if (!formattedPhone.startsWith('+')) {
+      // Otherwise add + prefix
       formattedPhone = `+${formattedPhone}`
+    } else if (formattedPhone.startsWith('0')) {
+      // Remove leading 0 if present
+      formattedPhone = `+91${formattedPhone.slice(1)}`
     }
 
-    console.log(`[Twilio] Sending SMS to: ${formattedPhone}`)
+    console.log(`[Twilio] Attempting to send SMS...`)
+    console.log(`[Twilio] To: ${formattedPhone}`)
     console.log(`[Twilio] From: ${process.env.TWILIO_PHONE_NUMBER}`)
+    console.log(`[Twilio] Account SID: ${process.env.TWILIO_ACCOUNT_SID}`)
+    console.log(`[Twilio] OTP: ${otp}`)
 
     const message = await client.messages.create({
-      body: `Your IntenX Scanner verification code is: ${otp}. Valid for 10 minutes.`,
+      body: `Your verification code is: ${otp}. Valid for 10 minutes.`,
       from: process.env.TWILIO_PHONE_NUMBER,
       to: formattedPhone,
     })
 
-    console.log(`[Twilio] SMS sent successfully! SID: ${message.sid}`)
+    console.log(`[Twilio] ✓ SMS created successfully!`)
+    console.log(`[Twilio] Message SID: ${message.sid}`)
+    console.log(`[Twilio] Status: ${message.status}`)
+    console.log(`[Twilio] Sent to: ${message.to}`)
+    console.log(`[Twilio] Full response:`, JSON.stringify(message, null, 2))
+    
     return message
   } catch (error: any) {
-    console.error(`[Twilio] Error sending SMS:`, error.message)
+    console.error(`[Twilio] ✗ Error sending SMS`)
+    console.error(`[Twilio] Error message:`, error.message)
     console.error(`[Twilio] Error code:`, error.code)
+    console.error(`[Twilio] Error status:`, error.status)
+    console.error(`[Twilio] Full error:`, JSON.stringify(error, null, 2))
     throw error
   }
 }
-//   })
-// }
