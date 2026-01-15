@@ -18,15 +18,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 )
 
-console.log('[Resume Tracker Init] OPENAI_API_KEY status:', {
-  isSet: !!process.env.OPENAI_API_KEY,
-  length: process.env.OPENAI_API_KEY?.length || 0,
-  startsWithSkProj: process.env.OPENAI_API_KEY?.startsWith('sk-proj-') || false
-})
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+console.log('[Resume Tracker Init] Module initialized')
 
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
@@ -45,6 +37,11 @@ export async function POST(request: NextRequest) {
   try {
     console.log('[Resume Tracker] ==================== NEW REQUEST ====================')
     
+    // Initialize OpenAI client INSIDE the handler to ensure env vars are loaded
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    })
+    
     // Check if OpenAI API key is set
     if (!process.env.OPENAI_API_KEY) {
       console.error('[Resume Tracker] FATAL: OPENAI_API_KEY is not set in environment variables')
@@ -57,6 +54,7 @@ export async function POST(request: NextRequest) {
     
     console.log('[Resume Tracker] ✅ STEP 1: OPENAI_API_KEY is configured')
     console.log('[Resume Tracker] Key length:', process.env.OPENAI_API_KEY.length)
+    console.log('[Resume Tracker] Key prefix:', process.env.OPENAI_API_KEY.substring(0, 20) + '...')
 
     console.log('[Resume Tracker] STEP 2: Parsing form data...')
     const formData = await request.formData()
