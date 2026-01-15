@@ -179,8 +179,15 @@ async function sendSmsWithTwilio(phoneNumber: string, otp: string) {
     }
     
     console.log(`[Twilio] ✓ All environment variables are set`)
+    console.log(`[Twilio] Raw Phone Number from env: ${process.env.TWILIO_PHONE_NUMBER}`)
+    
+    // Format FROM number (Twilio number) to ensure it has + prefix
+    let formattedFromNumber = process.env.TWILIO_PHONE_NUMBER!.replace(/\D/g, '')
+    if (!formattedFromNumber.startsWith('+')) {
+      formattedFromNumber = `+${formattedFromNumber}`
+    }
+    console.log(`[Twilio] Formatted FROM number: ${formattedFromNumber}`)
     console.log(`[Twilio] Account SID: ${process.env.TWILIO_ACCOUNT_SID}`)
-    console.log(`[Twilio] Phone Number: ${process.env.TWILIO_PHONE_NUMBER}`)
 
     const twilio = require('twilio')
     console.log(`[Twilio] Twilio SDK loaded successfully`)
@@ -223,12 +230,12 @@ async function sendSmsWithTwilio(phoneNumber: string, otp: string) {
 
     console.log(`[Twilio] Creating message with Twilio API...`)
     console.log(`[Twilio]   To: ${formattedPhone}`)
-    console.log(`[Twilio]   From: ${process.env.TWILIO_PHONE_NUMBER}`)
+    console.log(`[Twilio]   From: ${formattedFromNumber}`)
     console.log(`[Twilio]   Body: ${messageBody}`)
 
     const message = await client.messages.create({
       body: messageBody,
-      from: process.env.TWILIO_PHONE_NUMBER,
+      from: formattedFromNumber,
       to: formattedPhone,
     })
 
