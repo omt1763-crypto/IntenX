@@ -43,32 +43,33 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[Resume Tracker] ==================== NEW REQUEST ====================')
+    
     // Check if OpenAI API key is set
     if (!process.env.OPENAI_API_KEY) {
       console.error('[Resume Tracker] FATAL: OPENAI_API_KEY is not set in environment variables')
       console.error('[Resume Tracker] Available env vars:', Object.keys(process.env).filter(k => k.includes('OPENAI') || k.includes('KEY')).join(', '))
-      console.error('[Resume Tracker] All env var keys:', Object.keys(process.env).slice(0, 20).join(', '))
       return NextResponse.json(
-        { error: 'Server configuration error: OpenAI API key is not configured. Please set OPENAI_API_KEY environment variable.' },
+        { error: 'Server configuration error: OpenAI API key is not configured.' },
         { status: 500 }
       )
     }
     
-    console.log('[Resume Tracker] ✅ OPENAI_API_KEY is configured')
+    console.log('[Resume Tracker] ✅ STEP 1: OPENAI_API_KEY is configured')
     console.log('[Resume Tracker] Key length:', process.env.OPENAI_API_KEY.length)
-    console.log('[Resume Tracker] Key starts with sk-proj:', process.env.OPENAI_API_KEY.startsWith('sk-proj-'))
 
+    console.log('[Resume Tracker] STEP 2: Parsing form data...')
     const formData = await request.formData()
     const file = formData.get('file') as File | null
     let resumeText = formData.get('resumeText') as string | null
     const jobDescription = formData.get('jobDescription') as string | null
     const phoneNumber = formData.get('phoneNumber') as string
 
-    console.log('[Resume Tracker] Received request:', { hasFile: !!file, hasText: !!resumeText, phoneNumber })
+    console.log('[Resume Tracker] Form data received:', { hasFile: !!file, hasText: !!resumeText, phoneNumber })
 
     // Extract text from file if provided
     if (file) {
-      console.log('[Resume Tracker] Processing file:', file.name, file.type)
+      console.log('[Resume Tracker] STEP 3: Processing file:', file.name, file.type)
       const buffer = Buffer.from(await file.arrayBuffer())
       
       if (file.type === 'application/pdf') {
@@ -77,31 +78,27 @@ export async function POST(request: NextRequest) {
       } else if (file.type === 'text/plain') {
         resumeText = buffer.toString('utf-8')
       } else {
-        // For DOCX, try to extract as text
         resumeText = buffer.toString('utf-8')
       }
       console.log('[Resume Tracker] Extracted text length:', resumeText?.length)
     }
 
     if (!resumeText || !resumeText.trim()) {
+      console.warn('[Resume Tracker] No resume text provided')
       return NextResponse.json({ error: 'Could not extract text from file. Please paste text manually.' }, { status: 400 })
     }
 
-    console.log('[Resume Tracker] Analyzing resume with OpenAI...')
-    console.log('[Resume Tracker] Resume text length:', resumeText.length)
-    console.log('[Resume Tracker] Job description provided:', !!jobDescription)
+    console.log('[Resume Tracker] STEP 4: Resume text ready (' + resumeText.length + ' chars)')
+    console.log('[Resume Tracker] STEP 5: Preparing OpenAI API call...')
 
     // OpenAI Analysis
     let analysis
 
     try {
-      console.log('[Resume Tracker] Making OpenAI API call with model: gpt-4o-mini')
-      console.log('[Resume Tracker] Request details:')
-      console.log('  - Model: gpt-4o-mini')
-      console.log('  - Resume text length:', resumeText.length)
-      console.log('  - Has job description:', !!jobDescription)
-      console.log('  - Temperature: 0.7')
-      console.log('  - Max tokens: 4000')
+      console.log('[Resume Tracker] STEP 6: Creating OpenAI client...')
+      console.log('[Resume Tracker] OpenAI client exists:', !!openai)
+      
+      console.log('[Resume Tracker] STEP 7: Calling openai.chat.completions.create()...')
       
       const response = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
@@ -157,22 +154,24 @@ export async function POST(request: NextRequest) {
               ? `Analyze this resume against the job description:\n\nRESUME:\n${resumeText}\n\nJOB DESCRIPTION:\n${jobDescription}`
               : `Analyze this resume:\n\n${resumeText}`,
           },
-        ],
+        ] as any,
         temperature: 0.7,
         max_tokens: 4000,
       })
 
+      console.log('[Resume Tracker] STEP 8: ✅ OpenAI API call succeeded')
+      
       const analysisText = response.choices[0].message.content
-      console.log('[Resume Tracker] ✅ OpenAI response received successfully')
       console.log('[Resume Tracker] Response length:', analysisText?.length)
-      console.log('[Resume Tracker] Response starts with:', analysisText?.substring(0, 100))
 
+      console.log('[Resume Tracker] STEP 9: Parsing JSON response...')
       try {
         analysis = JSON.parse(analysisText || '{}')
-        console.log('[Resume Tracker] ✅ Successfully parsed OpenAI response as JSON')
-        console.log('[Resume Tracker] Parsed keys:', Object.keys(analysis).join(', '))
+        console.log('[Resume Tracker] STEP 10: ✅ JSON parsed successfully')
+        console.log('[Resume Tracker] Analysis keys:', Object.keys(analysis).join(', '))
       } catch (parseError) {
-        console.error('[Resume Tracker] JSON parse error:', parseError, 'Content:', analysisText?.substring(0, 500))
+        console.error('[Resume Tracker] ❌ JSON parse error:', parseError)
+        console.error('[Resume Tracker] Content:', analysisText?.substring(0, 500))
         return NextResponse.json(
           {
             error: 'Failed to parse resume analysis response',
@@ -182,21 +181,19 @@ export async function POST(request: NextRequest) {
         )
       }
     } catch (openaiError) {
-      console.error('[Resume Tracker] ❌ OpenAI API error occurred')
+      console.error('[Resume Tracker] ❌ STEP 7/8 FAILED: OpenAI API error')
       console.error('[Resume Tracker] Error type:', openaiError instanceof Error ? openaiError.constructor.name : typeof openaiError)
       console.error('[Resume Tracker] Error message:', openaiError instanceof Error ? openaiError.message : String(openaiError))
       
-      // Log full error object for debugging
       if (openaiError instanceof Error) {
         console.error('[Resume Tracker] Error stack:', openaiError.stack)
       }
-      console.error('[Resume Tracker] Full error object:', JSON.stringify(openaiError, null, 2))
       
       const errorMessage = openaiError instanceof Error ? openaiError.message : String(openaiError)
       
       // Check for specific OpenAI errors
       if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
-        console.error('[Resume Tracker] ❌ AUTHENTICATION ERROR - API key might be invalid')
+        console.error('[Resume Tracker] ❌ AUTHENTICATION ERROR - API key invalid or expired')
         return NextResponse.json(
           {
             error: 'Authentication error with OpenAI',
@@ -239,6 +236,7 @@ export async function POST(request: NextRequest) {
 
     // Save to Supabase (optional - don't fail if it doesn't work)
     try {
+      console.log('[Resume Tracker] STEP 11: Saving to Supabase...')
       const { data: resumeData, error: saveError } = await supabase
         .from('resumes')
         .insert({
@@ -254,11 +252,14 @@ export async function POST(request: NextRequest) {
       if (saveError) {
         console.warn('[Resume Tracker] Supabase save warning (non-fatal):', saveError.message)
       } else {
-        console.log('[Resume Tracker] Successfully saved to Supabase')
+        console.log('[Resume Tracker] ✅ Saved to Supabase')
       }
     } catch (supabaseError) {
       console.warn('[Resume Tracker] Supabase save failed (non-fatal):', supabaseError)
     }
+
+    console.log('[Resume Tracker] STEP 12: ✅ REQUEST COMPLETED SUCCESSFULLY')
+    console.log('[Resume Tracker] ==================================================\n')
 
     return NextResponse.json({
       success: true,
@@ -267,7 +268,13 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString(),
     })
   } catch (error) {
-    console.error('[Resume Tracker] Unexpected outer error:', error)
+    console.error('[Resume Tracker] ❌ UNEXPECTED ERROR:')
+    console.error('[Resume Tracker] Type:', error instanceof Error ? error.constructor.name : typeof error)
+    console.error('[Resume Tracker] Message:', error instanceof Error ? error.message : String(error))
+    if (error instanceof Error) {
+      console.error('[Resume Tracker] Stack:', error.stack)
+    }
+    
     const errorMessage = error instanceof Error ? error.message : String(error)
     return NextResponse.json(
       {
