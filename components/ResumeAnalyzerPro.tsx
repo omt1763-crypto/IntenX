@@ -111,7 +111,7 @@ const ResumeAnalyzerPro: React.FC<{
     // Score Cards Section
     yPosition = addSection('OVERALL SCORES', yPosition)
 
-    const scores = [
+    const scores: Array<{ label: string; value: string; color: [number, number, number] }> = [
       { label: 'Overall Score', value: `${analysis.overallScore}/100`, color: [200, 220, 255] },
       { label: 'ATS Score', value: `${analysis.atsScore}%`, color: [200, 255, 200] },
       { label: 'Content Score', value: `${analysis.contentScore}%`, color: [255, 240, 200] },
@@ -120,7 +120,7 @@ const ResumeAnalyzerPro: React.FC<{
 
     let xPos = 10
     scores.forEach((score) => {
-      pdf.setFillColor(...score.color)
+      pdf.setFillColor(score.color[0], score.color[1], score.color[2])
       pdf.rect(xPos, yPosition, 40, 20, 'F')
       pdf.setFontSize(14)
       pdf.setTextColor(30, 30, 30)
