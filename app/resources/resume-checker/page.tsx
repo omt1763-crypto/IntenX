@@ -108,21 +108,51 @@ export default function ResumeChecker() {
     }
   }
 
-  const extractResumeText = (file: File) => {
+  const extractResumeText = async (file: File) => {
     const reader = new FileReader()
-    reader.onload = (event) => {
-      const text = event.target?.result as string
-      setResumeText(text.substring(0, 10000)) // Limit to 10k chars
+    
+    reader.onload = async (event) => {
+      try {
+        if (file.type === 'application/pdf') {
+          // Handle PDF
+          const arrayBuffer = event.target?.result as ArrayBuffer
+          const { default: pdfjsLib } = await import('pdfjs-dist')
+          
+          // Set up the worker
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+          
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+          let fullText = ''
+          
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i)
+            const textContent = await page.getTextContent()
+            const pageText = textContent.items.map((item: any) => item.str).join(' ')
+            fullText += pageText + ' '
+          }
+          
+          setResumeText(fullText.substring(0, 10000))
+          setError('')
+        } else {
+          // Handle text and DOCX as text fallback
+          const text = event.target?.result as string
+          setResumeText(text.substring(0, 10000))
+          setError('')
+        }
+      } catch (err) {
+        console.error('Error extracting text:', err)
+        setError('Could not extract text from file. Please paste text manually below.')
+      }
     }
+    
     reader.onerror = () => {
       setError('Failed to read file')
     }
-    if (file.type === 'text/plain') {
-      reader.readAsText(file)
+    
+    if (file.type === 'application/pdf') {
+      reader.readAsArrayBuffer(file)
     } else {
-      // For PDF/DOCX, we'll use the file name as fallback
-      setResumeText(`Resume from ${file.name}`)
-      setError('Please paste your resume text below for analysis')
+      reader.readAsText(file)
     }
   }
 
@@ -615,9 +645,9 @@ export default function ResumeChecker() {
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-6 p-4 bg-red-100 dark:bg-red-950/40 border-2 border-red-400 dark:border-red-700/60 rounded-lg"
+                    className="mt-6 p-4 bg-amber-100 dark:bg-amber-950/40 border-2 border-amber-400 dark:border-amber-700/60 rounded-lg"
                   >
-                    <p className="text-red-700 dark:text-red-300 font-semibold">{error}</p>
+                    <p className="text-amber-700 dark:text-amber-300 font-semibold text-sm">{error}</p>
                   </motion.div>
                 )}
 
