@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import OpenAI from 'openai'
-import pdfParse from 'pdf-parse'
+
+// Dynamic import for pdf-parse to handle ESM/CJS compatibility
+let pdfParse: any = null
+
+async function getPdfParser() {
+  if (!pdfParse) {
+    const module = await import('pdf-parse')
+    pdfParse = module.default || module
+  }
+  return pdfParse
+}
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -21,7 +31,8 @@ const openai = new OpenAI({
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
     console.log('[Resume Tracker] Parsing PDF buffer...')
-    const data = await pdfParse(buffer)
+    const pdfParser = await getPdfParser()
+    const data = await pdfParser(buffer)
     console.log('[Resume Tracker] PDF parsed successfully, text length:', data.text?.length)
     return data.text
   } catch (error) {
@@ -36,6 +47,7 @@ export async function POST(request: NextRequest) {
     if (!process.env.OPENAI_API_KEY) {
       console.error('[Resume Tracker] FATAL: OPENAI_API_KEY is not set in environment variables')
       console.error('[Resume Tracker] Available env vars:', Object.keys(process.env).filter(k => k.includes('OPENAI') || k.includes('KEY')).join(', '))
+      console.error('[Resume Tracker] All env var keys:', Object.keys(process.env).slice(0, 20).join(', '))
       return NextResponse.json(
         { error: 'Server configuration error: OpenAI API key is not configured. Please set OPENAI_API_KEY environment variable.' },
         { status: 500 }
@@ -43,6 +55,8 @@ export async function POST(request: NextRequest) {
     }
     
     console.log('[Resume Tracker] ✅ OPENAI_API_KEY is configured')
+    console.log('[Resume Tracker] Key length:', process.env.OPENAI_API_KEY.length)
+    console.log('[Resume Tracker] Key starts with sk-proj:', process.env.OPENAI_API_KEY.startsWith('sk-proj-'))
 
     const formData = await request.formData()
     const file = formData.get('file') as File | null
@@ -82,6 +96,13 @@ export async function POST(request: NextRequest) {
 
     try {
       console.log('[Resume Tracker] Making OpenAI API call with model: gpt-4o-mini')
+      console.log('[Resume Tracker] Request details:')
+      console.log('  - Model: gpt-4o-mini')
+      console.log('  - Resume text length:', resumeText.length)
+      console.log('  - Has job description:', !!jobDescription)
+      console.log('  - Temperature: 0.7')
+      console.log('  - Max tokens: 4000')
+      
       const response = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
@@ -142,11 +163,14 @@ export async function POST(request: NextRequest) {
       })
 
       const analysisText = response.choices[0].message.content
-      console.log('[Resume Tracker] OpenAI response received, length:', analysisText?.length)
+      console.log('[Resume Tracker] ✅ OpenAI response received successfully')
+      console.log('[Resume Tracker] Response length:', analysisText?.length)
+      console.log('[Resume Tracker] Response starts with:', analysisText?.substring(0, 100))
 
       try {
         analysis = JSON.parse(analysisText || '{}')
-        console.log('[Resume Tracker] Successfully parsed OpenAI response')
+        console.log('[Resume Tracker] ✅ Successfully parsed OpenAI response as JSON')
+        console.log('[Resume Tracker] Parsed keys:', Object.keys(analysis).join(', '))
       } catch (parseError) {
         console.error('[Resume Tracker] JSON parse error:', parseError, 'Content:', analysisText?.substring(0, 500))
         return NextResponse.json(
@@ -158,10 +182,15 @@ export async function POST(request: NextRequest) {
         )
       }
     } catch (openaiError) {
-      console.error('[Resume Tracker] OpenAI API error occurred')
+      console.error('[Resume Tracker] ❌ OpenAI API error occurred')
       console.error('[Resume Tracker] Error type:', openaiError instanceof Error ? openaiError.constructor.name : typeof openaiError)
       console.error('[Resume Tracker] Error message:', openaiError instanceof Error ? openaiError.message : String(openaiError))
-      console.error('[Resume Tracker] Full error:', JSON.stringify(openaiError, null, 2))
+      
+      // Log full error object for debugging
+      if (openaiError instanceof Error) {
+        console.error('[Resume Tracker] Error stack:', openaiError.stack)
+      }
+      console.error('[Resume Tracker] Full error object:', JSON.stringify(openaiError, null, 2))
       
       const errorMessage = openaiError instanceof Error ? openaiError.message : String(openaiError)
       
