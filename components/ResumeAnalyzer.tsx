@@ -15,6 +15,7 @@ interface Analysis {
   strengths: string[]
   areasToImprove: string[]
   keywords: string[]
+  analyzedAt?: string
   sections?: {
     contentChecks?: Record<string, AnalysisSection>
     formatChecks?: Record<string, AnalysisSection>

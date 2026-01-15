@@ -108,7 +108,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        analysis: analysis,
+        analysis: {
+          ...analysis,
+          analyzedAt: new Date().toISOString(),
+        },
         phoneNumber: phoneNumber,
         analyzedAt: new Date().toISOString(),
       },
