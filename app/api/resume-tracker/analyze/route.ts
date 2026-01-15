@@ -7,6 +7,12 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 )
 
+console.log('[Resume Tracker Init] OPENAI_API_KEY status:', {
+  isSet: !!process.env.OPENAI_API_KEY,
+  length: process.env.OPENAI_API_KEY?.length || 0,
+  startsWithSkProj: process.env.OPENAI_API_KEY?.startsWith('sk-proj-') || false
+})
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
@@ -150,8 +156,47 @@ export async function POST(request: NextRequest) {
         )
       }
     } catch (openaiError) {
-      console.error('[Resume Tracker] OpenAI API error:', openaiError)
+      console.error('[Resume Tracker] OpenAI API error occurred')
+      console.error('[Resume Tracker] Error type:', openaiError instanceof Error ? openaiError.constructor.name : typeof openaiError)
+      console.error('[Resume Tracker] Error message:', openaiError instanceof Error ? openaiError.message : String(openaiError))
+      console.error('[Resume Tracker] Full error:', JSON.stringify(openaiError, null, 2))
+      
       const errorMessage = openaiError instanceof Error ? openaiError.message : String(openaiError)
+      
+      // Check for specific OpenAI errors
+      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+        console.error('[Resume Tracker] ❌ AUTHENTICATION ERROR - API key might be invalid')
+        return NextResponse.json(
+          {
+            error: 'Authentication error with OpenAI',
+            details: 'API key appears to be invalid or expired',
+          },
+          { status: 401 }
+        )
+      }
+      
+      if (errorMessage.includes('429') || errorMessage.includes('rate_limit')) {
+        console.error('[Resume Tracker] ❌ RATE LIMIT - Too many requests')
+        return NextResponse.json(
+          {
+            error: 'OpenAI rate limit exceeded',
+            details: 'Please try again in a few moments',
+          },
+          { status: 429 }
+        )
+      }
+      
+      if (errorMessage.includes('quota') || errorMessage.includes('insufficient_quota')) {
+        console.error('[Resume Tracker] ❌ QUOTA EXCEEDED')
+        return NextResponse.json(
+          {
+            error: 'OpenAI quota exceeded',
+            details: 'Your OpenAI account has reached its usage limit',
+          },
+          { status: 402 }
+        )
+      }
+      
       return NextResponse.json(
         {
           error: 'Failed to analyze resume with AI',
