@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import OpenAI from 'openai'
+import pdfParse from 'pdf-parse'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -19,11 +20,12 @@ const openai = new OpenAI({
 
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
-    const pdfParse = require('pdf-parse')
+    console.log('[Resume Tracker] Parsing PDF buffer...')
     const data = await pdfParse(buffer)
+    console.log('[Resume Tracker] PDF parsed successfully, text length:', data.text?.length)
     return data.text
   } catch (error) {
-    console.error('PDF parse error:', error)
+    console.error('[Resume Tracker] PDF parse error:', error)
     throw new Error('Failed to extract text from PDF')
   }
 }
