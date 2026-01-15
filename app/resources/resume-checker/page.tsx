@@ -530,7 +530,7 @@ export default function ResumeChecker() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto"
             onClick={() => setShowUploadModal(false)}
           >
             <motion.div
@@ -538,7 +538,7 @@ export default function ResumeChecker() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-2xl"
+              className="relative w-full max-w-lg my-8"
             >
               <button
                 onClick={() => setShowUploadModal(false)}
@@ -547,9 +547,9 @@ export default function ResumeChecker() {
                 <X className="w-8 h-8" />
               </button>
 
-              <div className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 rounded-3xl p-8 shadow-2xl border border-slate-200/50 dark:border-slate-700/50">
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-1">Upload Your Resume</h2>
-                <p className="text-slate-600 dark:text-slate-400 text-base mb-8">
+              <div className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 rounded-2xl p-6 shadow-2xl border border-slate-200/50 dark:border-slate-700/50 max-h-[90vh] overflow-y-auto">
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-1">Upload Your Resume</h2>
+                <p className="text-slate-600 dark:text-slate-400 text-sm mb-6">
                   Let's analyze and optimize your resume for ATS success
                 </p>
 
@@ -566,7 +566,7 @@ export default function ResumeChecker() {
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  className={`relative border-2 border-dashed rounded-2xl p-8 transition-all cursor-pointer block ${
+                  className={`relative border-2 border-dashed rounded-xl p-6 transition-all cursor-pointer block ${
                     isDragging
                       ? 'border-purple-600 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50 shadow-lg shadow-purple-500/30'
                       : selectedFile
@@ -582,26 +582,26 @@ export default function ResumeChecker() {
                         animate={{ scale: 1 }}
                         transition={{ type: 'spring' }}
                       >
-                        <CheckCircle2 className="w-16 h-16 text-green-600 dark:text-green-400 mx-auto mb-3" />
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Ready to Scan</h3>
-                        <p className="text-slate-600 dark:text-slate-300 mb-1 text-sm">{selectedFile.name}</p>
+                        <CheckCircle2 className="w-12 h-12 text-green-600 dark:text-green-400 mx-auto mb-2" />
+                        <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">Ready to Scan</h3>
+                        <p className="text-slate-600 dark:text-slate-300 mb-1 text-xs">{selectedFile.name}</p>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
                           {(selectedFile.size / 1024).toFixed(2)} KB
                         </p>
                       </motion.div>
                     ) : (
                       <>
-                        <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/50 dark:to-blue-900/50 flex items-center justify-center">
-                          <FileUp className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                        <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/50 dark:to-blue-900/50 flex items-center justify-center">
+                          <FileUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                         </div>
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
-                          Drag & drop your resume here
+                        <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
+                          Drag & drop your resume
                         </h3>
-                        <p className="text-slate-600 dark:text-slate-400 mb-5 text-sm">
-                          or click anywhere to browse (PDF, DOCX, TXT - max 5MB)
+                        <p className="text-slate-600 dark:text-slate-400 mb-3 text-xs">
+                          or click to browse (PDF, DOCX, TXT - max 5MB)
                         </p>
-                        <span style={{ backgroundColor: '#8241FF' }} className="inline-flex items-center gap-2 text-white font-bold py-2.5 px-7 rounded-xl shadow-md text-sm pointer-events-none hover:opacity-90 hover:shadow-lg transition">
-                          <FileUp className="w-4 h-4" />
+                        <span style={{ backgroundColor: '#8241FF' }} className="inline-flex items-center gap-2 text-white font-bold py-2 px-6 rounded-lg shadow-md text-xs pointer-events-none hover:opacity-90 hover:shadow-lg transition">
+                          <FileUp className="w-3 h-3" />
                           Browse File
                         </span>
                       </>
@@ -613,16 +613,16 @@ export default function ResumeChecker() {
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-6 p-4 bg-amber-100 dark:bg-amber-950/40 border-2 border-amber-400 dark:border-amber-700/60 rounded-lg"
+                    className="mt-4 p-3 bg-amber-100 dark:bg-amber-950/40 border-2 border-amber-400 dark:border-amber-700/60 rounded-lg"
                   >
-                    <p className="text-amber-700 dark:text-amber-300 font-semibold text-sm">{error}</p>
+                    <p className="text-amber-700 dark:text-amber-300 font-semibold text-xs">{error}</p>
                   </motion.div>
                 )}
 
                 {/* Resume Text Area */}
-                <div className="mt-6">
-                  <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">
-                    Or paste your resume text here:
+                <div className="mt-4">
+                  <label className="block text-xs font-semibold text-slate-900 dark:text-white mb-2">
+                    Or paste your resume text:
                   </label>
                   <textarea
                     value={resumeText}
@@ -630,35 +630,41 @@ export default function ResumeChecker() {
                       setResumeText(e.target.value)
                       setError('')
                     }}
-                    placeholder="Paste your complete resume text here..."
-                    className="w-full h-32 p-4 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition"
+                    placeholder="Paste your resume text here..."
+                    className="w-full h-24 p-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition text-sm"
                   />
                 </div>
 
                 {/* Job Description (Optional) */}
-                <div className="mt-4">
-                  <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">
+                <div className="mt-3">
+                  <label className="block text-xs font-semibold text-slate-900 dark:text-white mb-2">
                     Job Description (Optional):
                   </label>
                   <textarea
                     value={jobDescription}
                     onChange={(e) => setJobDescription(e.target.value)}
-                    placeholder="Paste the job description for better matching..."
-                    className="w-full h-24 p-4 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition"
+                    placeholder="Paste the job description..."
+                    className="w-full h-20 p-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition text-sm"
                   />
                 </div>
 
-                {resumeText.trim() && (
+                {(resumeText.trim() || selectedFile) && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-6 space-y-3"
+                    className="mt-4 space-y-2"
                   >
                     <button
-                      onClick={handleAnalyze}
+                      onClick={() => {
+                        if (!isVerified) {
+                          setShowPhoneModal(true)
+                        } else {
+                          handleAnalyze()
+                        }
+                      }}
                       disabled={loading}
                       style={{ backgroundColor: '#8241FF' }}
-                      className="w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 text-base rounded-xl transition flex items-center justify-center gap-2 shadow-md"
+                      className="w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 text-sm rounded-lg transition flex items-center justify-center gap-2 shadow-md"
                     >
                       {loading ? (
                         <>
@@ -666,13 +672,13 @@ export default function ResumeChecker() {
                             animate={{ rotate: 360 }}
                             transition={{ duration: 1, repeat: Infinity }}
                           >
-                            <Zap className="w-5 h-5" />
+                            <Zap className="w-4 h-4" />
                           </motion.div>
-                          Analyzing Resume...
+                          Analyzing...
                         </>
                       ) : (
                         <>
-                          <Zap className="w-5 h-5" />
+                          <Zap className="w-4 h-4" />
                           Analyze My Resume Now
                         </>
                       )}
@@ -683,7 +689,7 @@ export default function ResumeChecker() {
                         setSelectedFile(null)
                         setResumeText('')
                       }}
-                      className="w-full text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-semibold text-sm transition py-2"
+                      className="w-full text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-semibold text-xs transition py-1.5"
                     >
                       Clear
                     </button>
