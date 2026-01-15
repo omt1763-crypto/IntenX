@@ -25,10 +25,11 @@ interface Analysis {
 }
 
 interface AnalysisResult {
-  success: boolean
-  analysis: Analysis
+  success?: boolean
+  analysis?: Analysis
   phoneNumber?: string
-  analyzedAt: string
+  analyzedAt?: string
+  error?: string
 }
 
 const ResumeAnalyzer: React.FC<{
