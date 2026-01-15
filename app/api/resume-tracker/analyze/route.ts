@@ -24,17 +24,30 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if OpenAI API key is set
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY is not set in environment variables')
+      return NextResponse.json(
+        { error: 'Server configuration error: OpenAI API key is not configured. Please set OPENAI_API_KEY environment variable.' },
+        { status: 500 }
+      )
+    }
+
     const formData = await request.formData()
     const file = formData.get('file') as File | null
     let resumeText = formData.get('resumeText') as string | null
     const jobDescription = formData.get('jobDescription') as string | null
     const phoneNumber = formData.get('phoneNumber') as string
 
+    console.log('[Resume Tracker] Received request:', { hasFile: !!file, hasText: !!resumeText, phoneNumber })
+
     // Extract text from file if provided
     if (file) {
+      console.log('[Resume Tracker] Processing file:', file.name, file.type)
       const buffer = Buffer.from(await file.arrayBuffer())
       
       if (file.type === 'application/pdf') {
+        console.log('[Resume Tracker] Extracting text from PDF...')
         resumeText = await extractTextFromPDF(buffer)
       } else if (file.type === 'text/plain') {
         resumeText = buffer.toString('utf-8')
@@ -42,13 +55,14 @@ export async function POST(request: NextRequest) {
         // For DOCX, try to extract as text
         resumeText = buffer.toString('utf-8')
       }
+      console.log('[Resume Tracker] Extracted text length:', resumeText?.length)
     }
 
     if (!resumeText || !resumeText.trim()) {
       return NextResponse.json({ error: 'Could not extract text from file. Please paste text manually.' }, { status: 400 })
     }
 
-    console.log('[Resume Tracker] Analyzing resume...')
+    console.log('[Resume Tracker] Analyzing resume with OpenAI...')
 
     // OpenAI Analysis
     const response = await openai.chat.completions.create({
@@ -111,51 +125,21 @@ export async function POST(request: NextRequest) {
     })
 
     const analysisText = response.choices[0].message.content
+    console.log('[Resume Tracker] OpenAI response received, length:', analysisText?.length)
     let analysis
 
     try {
-      const jsonMatch = analysisText?.match(/\{[\s\S]*\}/)
-      analysis = JSON.parse(jsonMatch ? jsonMatch[0] : analysisText || '{}')
+      analysis = JSON.parse(analysisText || '{}')
+      console.log('[Resume Tracker] Successfully parsed OpenAI response')
     } catch (parseError) {
-      console.error('[Resume Tracker] JSON parse error')
-      analysis = {
-        atsScore: 70,
-        readabilityScore: 75,
-        keywordMatchScore: 65,
-        roleFitScore: 60,
-        experienceRelevance: 70,
-        skillsCoverage: 65,
-        formattingQuality: 80,
-        overallScore: 70,
-        strengths: ['Clear structure', 'Good formatting'],
-        weaknesses: ['Add more metrics', 'Expand skills'],
-        keywords: [],
-        missingKeywords: [],
-        atsCompatibility: { issues: [], passed: [] },
-        improvementSuggestions: {
-          criticalFixes: [],
-          bulletPointImprovements: [],
-          actionVerbSuggestions: [],
-          summaryRewrite: '',
-          skillSectionTips: [],
-          quantificationNeeded: [],
+      console.error('[Resume Tracker] JSON parse error:', parseError, 'Content:', analysisText?.substring(0, 500))
+      return NextResponse.json(
+        {
+          error: 'Failed to parse resume analysis response',
+          details: 'OpenAI response was not valid JSON',
         },
-        jdComparison: {
-          matchedKeywords: [],
-          missingKeywords: [],
-          roleAlignment: 60,
-          matchPercentage: 60,
-        },
-        atsSimulation: {
-          parsedSuccessfully: true,
-          contactInfoFound: true,
-          experienceSection: true,
-          educationSection: true,
-          skillsSection: true,
-          formattingWarnings: [],
-        },
-        actionableTips: [],
-      }
+        { status: 500 }
+      )
     }
 
     // Save to Supabase
