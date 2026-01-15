@@ -65,12 +65,15 @@ export async function POST(request: NextRequest) {
     console.log('[Resume Tracker] Analyzing resume with OpenAI...')
 
     // OpenAI Analysis
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: `You are an expert ATS system and recruiter. Analyze the resume and provide ONLY a JSON response with this exact structure (no extra text):
+    let analysis
+
+    try {
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `You are an expert ATS system and recruiter. Analyze the resume and provide ONLY a JSON response with this exact structure (no extra text):
 {
   "atsScore": number (0-100),
   "readabilityScore": number (0-100),
@@ -91,16 +94,16 @@ export async function POST(request: NextRequest) {
   "improvementSuggestions": {
     "criticalFixes": [array of 3-4 critical things to fix immediately],
     "bulletPointImprovements": [array of 3-5 weak bullet points to rewrite with suggestions],
-    "actionVerbSuggestions": [array of weak verbs to replace, e.g. "Replace 'worked' with 'led' or 'drove'"],
-    "summaryRewrite": "A compelling professional summary suggestion (2-3 sentences)",
-    "skillSectionTips": [array of 2-3 tips to optimize skills section],
-    "quantificationNeeded": [array of achievements that need metrics]
+    "actionVerbSuggestions": [array of weak verbs to replace],
+    "summaryRewrite": "A compelling professional summary suggestion",
+    "skillSectionTips": [array of tips],
+    "quantificationNeeded": [array of achievements needing metrics]
   },
   "jdComparison": {
-    "matchedKeywords": [array of keywords from JD that are in resume],
-    "missingKeywords": [array of keywords from JD that are NOT in resume],
-    "roleAlignment": number (0-100, how well resume fits the job),
-    "matchPercentage": number (0-100, percentage of JD keywords covered)
+    "matchedKeywords": [array of matched keywords],
+    "missingKeywords": [array of missing keywords],
+    "roleAlignment": number (0-100),
+    "matchPercentage": number (0-100)
   },
   "atsSimulation": {
     "parsedSuccessfully": boolean,
@@ -108,70 +111,86 @@ export async function POST(request: NextRequest) {
     "experienceSection": boolean,
     "educationSection": boolean,
     "skillsSection": boolean,
-    "formattingWarnings": [array of formatting issues that ATS might struggle with]
+    "formattingWarnings": [array of warnings]
   },
-  "actionableTips": [array of 5-7 specific, actionable tips to improve resume in 10-20 minutes]
+  "actionableTips": [array of 5-7 tips]
 }`,
-        },
-        {
-          role: 'user',
-          content: jobDescription
-            ? `Analyze this resume against the job description:\n\nRESUME:\n${resumeText}\n\nJOB DESCRIPTION:\n${jobDescription}`
-            : `Analyze this resume:\n\n${resumeText}`,
-        },
-      ],
-      temperature: 0.7,
-      max_tokens: 4000,
-    })
+          },
+          {
+            role: 'user',
+            content: jobDescription
+              ? `Analyze this resume against the job description:\n\nRESUME:\n${resumeText}\n\nJOB DESCRIPTION:\n${jobDescription}`
+              : `Analyze this resume:\n\n${resumeText}`,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 4000,
+      })
 
-    const analysisText = response.choices[0].message.content
-    console.log('[Resume Tracker] OpenAI response received, length:', analysisText?.length)
-    let analysis
+      const analysisText = response.choices[0].message.content
+      console.log('[Resume Tracker] OpenAI response received, length:', analysisText?.length)
 
-    try {
-      analysis = JSON.parse(analysisText || '{}')
-      console.log('[Resume Tracker] Successfully parsed OpenAI response')
-    } catch (parseError) {
-      console.error('[Resume Tracker] JSON parse error:', parseError, 'Content:', analysisText?.substring(0, 500))
+      try {
+        analysis = JSON.parse(analysisText || '{}')
+        console.log('[Resume Tracker] Successfully parsed OpenAI response')
+      } catch (parseError) {
+        console.error('[Resume Tracker] JSON parse error:', parseError, 'Content:', analysisText?.substring(0, 500))
+        return NextResponse.json(
+          {
+            error: 'Failed to parse resume analysis response',
+            details: 'OpenAI response was not valid JSON',
+          },
+          { status: 500 }
+        )
+      }
+    } catch (openaiError) {
+      console.error('[Resume Tracker] OpenAI API error:', openaiError)
+      const errorMessage = openaiError instanceof Error ? openaiError.message : String(openaiError)
       return NextResponse.json(
         {
-          error: 'Failed to parse resume analysis response',
-          details: 'OpenAI response was not valid JSON',
+          error: 'Failed to analyze resume with AI',
+          details: errorMessage,
         },
         { status: 500 }
       )
     }
 
-    // Save to Supabase
-    const { data: resumeData, error: saveError } = await supabase
-      .from('resumes')
-      .insert({
-        phone_number: phoneNumber || 'anonymous',
-        resume_text: resumeText,
-        job_description: jobDescription || null,
-        analysis: analysis,
-        status: 'applied',
-        created_at: new Date().toISOString(),
-      })
-      .select()
+    // Save to Supabase (optional - don't fail if it doesn't work)
+    try {
+      const { data: resumeData, error: saveError } = await supabase
+        .from('resumes')
+        .insert({
+          phone_number: phoneNumber || 'anonymous',
+          resume_text: resumeText,
+          job_description: jobDescription || null,
+          analysis: analysis,
+          status: 'applied',
+          created_at: new Date().toISOString(),
+        })
+        .select()
 
-    if (saveError) {
-      console.error('[Resume Tracker] Save error:', saveError)
+      if (saveError) {
+        console.warn('[Resume Tracker] Supabase save warning (non-fatal):', saveError.message)
+      } else {
+        console.log('[Resume Tracker] Successfully saved to Supabase')
+      }
+    } catch (supabaseError) {
+      console.warn('[Resume Tracker] Supabase save failed (non-fatal):', supabaseError)
     }
 
     return NextResponse.json({
       success: true,
       analysis,
-      resumeId: resumeData?.[0]?.id,
       phoneNumber,
       createdAt: new Date().toISOString(),
     })
   } catch (error) {
-    console.error('[Resume Tracker] Error:', error)
+    console.error('[Resume Tracker] Unexpected outer error:', error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
     return NextResponse.json(
       {
         error: 'Failed to analyze resume',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        details: errorMessage,
       },
       { status: 500 }
     )
