@@ -1,285 +1,303 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import OpenAI from 'openai'
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
-// Dynamic import for pdf-parse to handle ESM/CJS compatibility
-let pdfParse: any = null
+export const maxDuration = 300; // 5 minutes for Vercel
 
-async function getPdfParser() {
-  if (!pdfParse) {
-    const module = await import('pdf-parse')
-    pdfParse = module.default || module
-  }
-  return pdfParse
+// Initialize Supabase
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('FATAL: Missing Supabase credentials');
 }
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-)
-
-console.log('[Resume Tracker Init] Module initialized')
-
-async function extractTextFromPDF(buffer: Buffer): Promise<string> {
-  try {
-    console.log('[Resume Tracker] Parsing PDF buffer...')
-    const pdfParser = await getPdfParser()
-    const data = await pdfParser(buffer)
-    console.log('[Resume Tracker] PDF parsed successfully, text length:', data.text?.length)
-    return data.text
-  } catch (error) {
-    console.error('[Resume Tracker] PDF parse error:', error)
-    throw new Error('Failed to extract text from PDF')
-  }
-}
+const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
 export async function POST(request: NextRequest) {
+  const requestId = Math.random().toString(36).substring(7);
+  const logs: string[] = [];
+
+  const log = (step: string, message: string, data?: any) => {
+    const entry = `[Resume-${requestId}] ${step}: ${message}${
+      data ? ' | ' + JSON.stringify(data) : ''
+    }`;
+    logs.push(entry);
+    console.log(entry);
+  };
+
   try {
-    console.log('[Resume Tracker] ==================== NEW REQUEST ====================')
-    
-    // Initialize OpenAI client INSIDE the handler to ensure env vars are loaded
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    })
-    
-    // Check if OpenAI API key is set
-    if (!process.env.OPENAI_API_KEY) {
-      console.error('[Resume Tracker] FATAL: OPENAI_API_KEY is not set in environment variables')
-      console.error('[Resume Tracker] Available env vars:', Object.keys(process.env).filter(k => k.includes('OPENAI') || k.includes('KEY')).join(', '))
+    log('STEP-1', 'POST request received');
+
+    // ===== FORM PARSING =====
+    log('STEP-2', 'Parsing form data...');
+    const formData = await request.formData();
+    log('STEP-3', 'Form data parsed successfully', {
+      hasResume: formData.has('resume'),
+      hasJobDescription: formData.has('jobDescription'),
+    });
+
+    const resumeInput = formData.get('resume') as string | File | null;
+    const jobDescription = (formData.get('jobDescription') as string) || '';
+
+    log('STEP-4', 'Extracted form fields', {
+      resumeType: resumeInput instanceof File ? 'File' : 'String',
+      jobDescriptionLength: jobDescription?.length || 0,
+    });
+
+    if (!resumeInput) {
+      log('STEP-5', 'ERROR: No resume provided');
       return NextResponse.json(
-        { error: 'Server configuration error: OpenAI API key is not configured.' },
-        { status: 500 }
-      )
+        { error: 'No resume provided' },
+        { status: 400 }
+      );
     }
-    
-    console.log('[Resume Tracker] ✅ STEP 1: OPENAI_API_KEY is configured')
-    console.log('[Resume Tracker] Key length:', process.env.OPENAI_API_KEY.length)
-    console.log('[Resume Tracker] Key prefix:', process.env.OPENAI_API_KEY.substring(0, 20) + '...')
 
-    console.log('[Resume Tracker] STEP 2: Parsing form data...')
-    const formData = await request.formData()
-    const file = formData.get('file') as File | null
-    let resumeText = formData.get('resumeText') as string | null
-    const jobDescription = formData.get('jobDescription') as string | null
-    const phoneNumber = formData.get('phoneNumber') as string
+    let resumeText: string = '';
 
-    console.log('[Resume Tracker] Form data received:', { hasFile: !!file, hasText: !!resumeText, phoneNumber })
+    // Extract resume text based on type
+    if (resumeInput instanceof File) {
+      log('STEP-6a', 'Processing resume as File', { fileName: resumeInput.name });
+      const buffer = await resumeInput.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
 
-    // Extract text from file if provided
-    if (file) {
-      console.log('[Resume Tracker] STEP 3: Processing file:', file.name, file.type)
-      const buffer = Buffer.from(await file.arrayBuffer())
-      
-      if (file.type === 'application/pdf') {
-        console.log('[Resume Tracker] Extracting text from PDF...')
-        resumeText = await extractTextFromPDF(buffer)
-      } else if (file.type === 'text/plain') {
-        resumeText = buffer.toString('utf-8')
+      // Try pdf-parse for PDF files
+      if (resumeInput.name.toLowerCase().endsWith('.pdf')) {
+        log('STEP-6b', 'Detected PDF file, attempting pdf-parse...');
+        try {
+          // @ts-ignore - dynamic import
+          const pdf = await import('pdf-parse/lib/pdf-parse.js').then(
+            (m) => m.default || m
+          );
+          const pdfData = await pdf(bytes);
+          resumeText = pdfData.text;
+          log('STEP-6c', 'PDF parsed successfully', {
+            textLength: resumeText?.length || 0,
+          });
+        } catch (pdfError) {
+          log('STEP-6c-ERROR', 'PDF parsing failed, using empty text', {
+            error: String(pdfError),
+          });
+          resumeText = '';
+        }
       } else {
-        resumeText = buffer.toString('utf-8')
+        // For non-PDF files, try to convert to text
+        log('STEP-6d', 'Processing non-PDF file');
+        resumeText = new TextDecoder().decode(bytes);
+        log('STEP-6e', 'File converted to text', {
+          textLength: resumeText?.length || 0,
+        });
       }
-      console.log('[Resume Tracker] Extracted text length:', resumeText?.length)
+    } else {
+      // resumeInput is a string
+      resumeText = resumeInput;
+      log('STEP-6f', 'Resume provided as string', {
+        textLength: resumeText?.length || 0,
+      });
     }
 
-    if (!resumeText || !resumeText.trim()) {
-      console.warn('[Resume Tracker] No resume text provided')
-      return NextResponse.json({ error: 'Could not extract text from file. Please paste text manually.' }, { status: 400 })
+    if (!resumeText.trim()) {
+      log('STEP-7', 'ERROR: Resume text is empty after extraction');
+      return NextResponse.json(
+        { error: 'Could not extract resume text' },
+        { status: 400 }
+      );
     }
 
-    console.log('[Resume Tracker] STEP 4: Resume text ready (' + resumeText.length + ' chars)')
-    console.log('[Resume Tracker] STEP 5: Preparing OpenAI API call...')
+    log('STEP-8', 'Resume text successfully extracted', {
+      textLength: resumeText.length,
+      preview: resumeText.substring(0, 100),
+    });
 
-    // OpenAI Analysis
-    let analysis
+    // ===== OPENAI INITIALIZATION =====
+    log('STEP-9', 'Initializing OpenAI client...', {
+      apiKeyExists: !!process.env.OPENAI_API_KEY,
+      apiKeyLength: process.env.OPENAI_API_KEY?.length || 0,
+      apiKeyPrefix: process.env.OPENAI_API_KEY?.substring(0, 10) || 'NONE',
+    });
 
+    let OpenAI;
     try {
-      console.log('[Resume Tracker] STEP 6: Creating OpenAI client...')
-      console.log('[Resume Tracker] OpenAI client exists:', !!openai)
-      
-      console.log('[Resume Tracker] STEP 7: Calling openai.chat.completions.create()...')
-      
-      const response = await openai.chat.completions.create({
+      // @ts-ignore - dynamic import
+      OpenAI = (await import('openai')).default || (await import('openai')).OpenAI;
+      log('STEP-10', 'OpenAI module imported successfully');
+    } catch (importError) {
+      log('STEP-10-ERROR', 'Failed to import OpenAI module', {
+        error: String(importError),
+      });
+      throw new Error(`OpenAI import failed: ${importError}`);
+    }
+
+    if (!OpenAI) {
+      log('STEP-10a-ERROR', 'OpenAI module is null/undefined');
+      throw new Error('OpenAI module is null/undefined');
+    }
+
+    let openai;
+    try {
+      openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+      log('STEP-11', 'OpenAI client instantiated successfully', {
+        clientType: typeof openai,
+        hasChat: !!openai.chat,
+        hasCompletions: !!openai.chat?.completions,
+      });
+    } catch (clientError) {
+      log('STEP-11-ERROR', 'Failed to instantiate OpenAI client', {
+        error: String(clientError),
+      });
+      throw new Error(`OpenAI client instantiation failed: ${clientError}`);
+    }
+
+    if (!openai.chat?.completions?.create) {
+      log(
+        'STEP-11a-ERROR',
+        'OpenAI client missing chat.completions.create method'
+      );
+      throw new Error(
+        'OpenAI client missing chat.completions.create method'
+      );
+    }
+
+    // ===== OPENAI API CALL =====
+    log('STEP-12', 'Building prompt and messages...');
+
+    const systemPrompt = `You are an expert resume analyzer. Analyze the provided resume and job description, then provide:
+1. A match score (0-100)
+2. Key strengths
+3. Areas for improvement
+4. Specific recommendations
+
+Format your response as JSON with keys: matchScore, strengths, improvements, recommendations`;
+
+    const userMessage = `Resume:\n${resumeText}\n\nJob Description:\n${jobDescription}\n\nPlease analyze this resume against the job description.`;
+
+    log('STEP-13', 'Messages prepared', {
+      systemPromptLength: systemPrompt.length,
+      userMessageLength: userMessage.length,
+      model: 'gpt-4o-mini',
+    });
+
+    log('STEP-14', 'ABOUT TO CALL openai.chat.completions.create()');
+
+    let response;
+    try {
+      log('STEP-15', 'Inside try block, calling OpenAI API...');
+
+      response = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
-          {
-            role: 'system',
-            content: `You are an expert ATS system and recruiter. Analyze the resume and provide ONLY a JSON response with this exact structure (no extra text):
-{
-  "atsScore": number (0-100),
-  "readabilityScore": number (0-100),
-  "keywordMatchScore": number (0-100),
-  "roleFitScore": number (0-100),
-  "experienceRelevance": number (0-100),
-  "skillsCoverage": number (0-100),
-  "formattingQuality": number (0-100),
-  "overallScore": number (0-100),
-  "strengths": [string array of 4-5 key strengths],
-  "weaknesses": [string array of 4-5 areas to improve],
-  "keywords": [array of 15-20 important keywords found],
-  "missingKeywords": [array of 10-15 important keywords that should be added],
-  "atsCompatibility": {
-    "issues": [array of specific ATS issues found],
-    "passed": [array of ATS checks that passed]
-  },
-  "improvementSuggestions": {
-    "criticalFixes": [array of 3-4 critical things to fix immediately],
-    "bulletPointImprovements": [array of 3-5 weak bullet points to rewrite with suggestions],
-    "actionVerbSuggestions": [array of weak verbs to replace],
-    "summaryRewrite": "A compelling professional summary suggestion",
-    "skillSectionTips": [array of tips],
-    "quantificationNeeded": [array of achievements needing metrics]
-  },
-  "jdComparison": {
-    "matchedKeywords": [array of matched keywords],
-    "missingKeywords": [array of missing keywords],
-    "roleAlignment": number (0-100),
-    "matchPercentage": number (0-100)
-  },
-  "atsSimulation": {
-    "parsedSuccessfully": boolean,
-    "contactInfoFound": boolean,
-    "experienceSection": boolean,
-    "educationSection": boolean,
-    "skillsSection": boolean,
-    "formattingWarnings": [array of warnings]
-  },
-  "actionableTips": [array of 5-7 tips]
-}`,
-          },
-          {
-            role: 'user',
-            content: jobDescription
-              ? `Analyze this resume against the job description:\n\nRESUME:\n${resumeText}\n\nJOB DESCRIPTION:\n${jobDescription}`
-              : `Analyze this resume:\n\n${resumeText}`,
-          },
-        ] as any,
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage },
+        ],
         temperature: 0.7,
         max_tokens: 4000,
-      })
+      });
 
-      console.log('[Resume Tracker] STEP 8: ✅ OpenAI API call succeeded')
-      
-      const analysisText = response.choices[0].message.content
-      console.log('[Resume Tracker] Response length:', analysisText?.length)
+      log('STEP-16', 'OpenAI API call succeeded', {
+        hasContent: !!response.choices?.[0]?.message?.content,
+        firstContentChars: response.choices?.[0]?.message?.content?.substring(0, 50),
+      });
+    } catch (openaiError: any) {
+      log('STEP-15-CATCH', 'OpenAI API call threw error', {
+        errorType: openaiError?.constructor?.name,
+        errorMessage: openaiError?.message,
+        errorCode: openaiError?.code,
+        errorStatus: openaiError?.status,
+        fullError: JSON.stringify(openaiError, null, 2),
+      });
 
-      console.log('[Resume Tracker] STEP 9: Parsing JSON response...')
-      try {
-        analysis = JSON.parse(analysisText || '{}')
-        console.log('[Resume Tracker] STEP 10: ✅ JSON parsed successfully')
-        console.log('[Resume Tracker] Analysis keys:', Object.keys(analysis).join(', '))
-      } catch (parseError) {
-        console.error('[Resume Tracker] ❌ JSON parse error:', parseError)
-        console.error('[Resume Tracker] Content:', analysisText?.substring(0, 500))
-        return NextResponse.json(
-          {
-            error: 'Failed to parse resume analysis response',
-            details: 'OpenAI response was not valid JSON',
-          },
-          { status: 500 }
-        )
-      }
-    } catch (openaiError) {
-      console.error('[Resume Tracker] ❌ STEP 7/8 FAILED: OpenAI API error')
-      console.error('[Resume Tracker] Error type:', openaiError instanceof Error ? openaiError.constructor.name : typeof openaiError)
-      console.error('[Resume Tracker] Error message:', openaiError instanceof Error ? openaiError.message : String(openaiError))
-      
-      if (openaiError instanceof Error) {
-        console.error('[Resume Tracker] Error stack:', openaiError.stack)
-      }
-      
-      const errorMessage = openaiError instanceof Error ? openaiError.message : String(openaiError)
-      
-      // Check for specific OpenAI errors
-      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
-        console.error('[Resume Tracker] ❌ AUTHENTICATION ERROR - API key invalid or expired')
-        return NextResponse.json(
-          {
-            error: 'Authentication error with OpenAI',
-            details: 'API key appears to be invalid or expired',
-          },
-          { status: 401 }
-        )
-      }
-      
-      if (errorMessage.includes('429') || errorMessage.includes('rate_limit')) {
-        console.error('[Resume Tracker] ❌ RATE LIMIT - Too many requests')
-        return NextResponse.json(
-          {
-            error: 'OpenAI rate limit exceeded',
-            details: 'Please try again in a few moments',
-          },
-          { status: 429 }
-        )
-      }
-      
-      if (errorMessage.includes('quota') || errorMessage.includes('insufficient_quota')) {
-        console.error('[Resume Tracker] ❌ QUOTA EXCEEDED')
-        return NextResponse.json(
-          {
-            error: 'OpenAI quota exceeded',
-            details: 'Your OpenAI account has reached its usage limit',
-          },
-          { status: 402 }
-        )
-      }
-      
-      return NextResponse.json(
-        {
-          error: 'Failed to analyze resume with AI',
-          details: errorMessage,
-        },
-        { status: 500 }
-      )
+      // Log the full error for debugging
+      console.error('FULL OPENAI ERROR:', openaiError);
+
+      throw new Error(
+        `OpenAI API failed: ${openaiError?.message || JSON.stringify(openaiError)}`
+      );
     }
 
-    // Save to Supabase (optional - don't fail if it doesn't work)
+    // ===== PARSE RESPONSE =====
+    log('STEP-17', 'Parsing OpenAI response...');
+
+    const analysisContent = response.choices[0]?.message?.content;
+
+    if (!analysisContent) {
+      log('STEP-18-ERROR', 'No content in OpenAI response');
+      throw new Error('No analysis content from OpenAI');
+    }
+
+    log('STEP-18', 'Response content extracted', {
+      contentLength: analysisContent.length,
+    });
+
+    let analysis;
     try {
-      console.log('[Resume Tracker] STEP 11: Saving to Supabase...')
-      const { data: resumeData, error: saveError } = await supabase
-        .from('resumes')
-        .insert({
-          phone_number: phoneNumber || 'anonymous',
-          resume_text: resumeText,
-          job_description: jobDescription || null,
-          analysis: analysis,
-          status: 'applied',
-          created_at: new Date().toISOString(),
-        })
-        .select()
+      // Try to extract JSON from the response
+      const jsonMatch = analysisContent.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : analysisContent;
 
-      if (saveError) {
-        console.warn('[Resume Tracker] Supabase save warning (non-fatal):', saveError.message)
-      } else {
-        console.log('[Resume Tracker] ✅ Saved to Supabase')
-      }
-    } catch (supabaseError) {
-      console.warn('[Resume Tracker] Supabase save failed (non-fatal):', supabaseError)
+      analysis = JSON.parse(jsonStr);
+      log('STEP-19', 'JSON parsed successfully', {
+        keys: Object.keys(analysis),
+      });
+    } catch (parseError) {
+      log('STEP-19-WARNING', 'Could not parse JSON, using raw content', {
+        error: String(parseError),
+      });
+      analysis = { rawAnalysis: analysisContent };
     }
 
-    console.log('[Resume Tracker] STEP 12: ✅ REQUEST COMPLETED SUCCESSFULLY')
-    console.log('[Resume Tracker] ==================================================\n')
+    // ===== SAVE TO DATABASE =====
+    log('STEP-20', 'Saving analysis to Supabase...');
 
-    return NextResponse.json({
-      success: true,
-      analysis,
-      phoneNumber,
-      createdAt: new Date().toISOString(),
-    })
-  } catch (error) {
-    console.error('[Resume Tracker] ❌ UNEXPECTED ERROR:')
-    console.error('[Resume Tracker] Type:', error instanceof Error ? error.constructor.name : typeof error)
-    console.error('[Resume Tracker] Message:', error instanceof Error ? error.message : String(error))
-    if (error instanceof Error) {
-      console.error('[Resume Tracker] Stack:', error.stack)
+    const { data: saved, error: dbError } = await supabase
+      .from('resume_tracker')
+      .insert({
+        resume_text: resumeText,
+        job_description: jobDescription,
+        analysis: analysis,
+        created_at: new Date(),
+      });
+
+    if (dbError) {
+      log('STEP-20-ERROR', 'Database save failed', {
+        error: dbError.message,
+        details: dbError.details,
+      });
+      // Don't throw - still return the analysis even if DB save fails
+    } else {
+      log('STEP-21', 'Analysis saved to database', {
+        savedId: saved?.[0]?.id,
+      });
     }
-    
-    const errorMessage = error instanceof Error ? error.message : String(error)
+
+    // ===== SUCCESS =====
+    log('STEP-22', 'SUCCESS: Returning analysis to client');
+
     return NextResponse.json(
       {
-        error: 'Failed to analyze resume',
-        details: errorMessage,
+        success: true,
+        analysis: analysis,
+        debugLogs: logs, // Return logs for debugging
+      },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    log('FATAL-ERROR', 'Unhandled error in POST handler', {
+      errorType: error?.constructor?.name,
+      errorMessage: error?.message,
+      errorStack: error?.stack?.split('\n').slice(0, 5).join(' | '),
+      fullError: JSON.stringify(error, null, 2),
+    });
+
+    console.error('FATAL ERROR in resume analyzer:', error);
+    console.error('Full logs:', logs);
+
+    return NextResponse.json(
+      {
+        error: error?.message || 'Failed to analyze resume',
+        debugLogs: logs, // Return logs even on error for debugging
       },
       { status: 500 }
-    )
+    );
   }
 }
