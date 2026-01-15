@@ -26,12 +26,15 @@ export async function POST(request: NextRequest) {
   try {
     // Check if OpenAI API key is set
     if (!process.env.OPENAI_API_KEY) {
-      console.error('OPENAI_API_KEY is not set in environment variables')
+      console.error('[Resume Tracker] FATAL: OPENAI_API_KEY is not set in environment variables')
+      console.error('[Resume Tracker] Available env vars:', Object.keys(process.env).filter(k => k.includes('OPENAI') || k.includes('KEY')).join(', '))
       return NextResponse.json(
         { error: 'Server configuration error: OpenAI API key is not configured. Please set OPENAI_API_KEY environment variable.' },
         { status: 500 }
       )
     }
+    
+    console.log('[Resume Tracker] ✅ OPENAI_API_KEY is configured')
 
     const formData = await request.formData()
     const file = formData.get('file') as File | null
@@ -63,11 +66,14 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[Resume Tracker] Analyzing resume with OpenAI...')
+    console.log('[Resume Tracker] Resume text length:', resumeText.length)
+    console.log('[Resume Tracker] Job description provided:', !!jobDescription)
 
     // OpenAI Analysis
     let analysis
 
     try {
+      console.log('[Resume Tracker] Making OpenAI API call with model: gpt-4o-mini')
       const response = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
