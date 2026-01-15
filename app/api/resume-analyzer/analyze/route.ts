@@ -32,41 +32,28 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: 'system',
-          content: `You are an expert resume analyst. Analyze the given resume and provide a detailed JSON response with the following structure:
+          content: `You are an expert resume analyst and recruiter. Analyze the given resume and provide a detailed JSON response ONLY with this exact structure (no extra text, pure JSON):
 {
   "overallScore": number (0-100),
   "atsScore": number (0-100),
   "contentScore": number (0-100),
-  "strengths": [string array of 3-5 strengths],
+  "searchability": number (0-100),
+  "strengths": [string array of 3-5 key strengths],
   "areasToImprove": [string array of 3-5 areas to improve],
-  "keywords": [array of important keywords found],
+  "keywords": [array of 10-15 important keywords found],
+  "hardSkills": [array of technical/hard skills found like "Python", "AWS", "SQL"],
+  "softSkills": [array of soft skills found like "Leadership", "Communication"],
+  "missingElements": [array of important elements missing that would make resume better, e.g. "GPA/Academic honors", "Certifications", "Quantifiable metrics"],
+  "skillsComparison": {"skillName": {"yourLevel": "Expert|Intermediate|Beginner", "industryAverage": "Expert|Intermediate|Beginner", "gap": number (-100 to 100)}, ...},
+  "competitiveAnalysis": "1-2 sentence analysis of how this resume compares to typical candidates in the industry",
+  "recruiterTips": [array of 5-7 specific actionable tips from a recruiter perspective to make the resume excellent],
+  "formattingIssues": [array of formatting problems if any, e.g. "Inconsistent date formats", "Too many fonts"],
   "sections": {
-    "contentChecks": {
-      "atsParseRate": { status: "pass|fail", feedback: string },
-      "repetitionOfWords": { status: "pass|fail", feedback: string },
-      "spellingAndGrammar": { status: "pass|fail", feedback: string },
-      "quantifiedAchievements": { status: "pass|fail", feedback: string }
-    },
-    "formatChecks": {
-      "fileFormat": { status: "pass|fail", feedback: string },
-      "resumeLength": { status: "pass|fail", feedback: string },
-      "bulletPointLength": { status: "pass|fail", feedback: string }
-    },
-    "skillsChecks": {
-      "hardSkillsListed": { status: "pass|fail", feedback: string },
-      "softSkillsIncluded": { status: "pass|fail", feedback: string }
-    },
-    "resumeSectionsChecks": {
-      "contactInformation": { status: "pass|fail", feedback: string },
-      "essentialSections": { status: "pass|fail", feedback: string },
-      "personalityShowcase": { status: "pass|fail", feedback: string }
-    },
-    "styleChecks": {
-      "resumeDesign": { status: "pass|fail", feedback: string },
-      "emailAddressFormat": { status: "pass|fail", feedback: string },
-      "activeVoiceUsage": { status: "pass|fail", feedback: string },
-      "buzzwordsClichés": { status: "pass|fail", feedback: string }
-    }
+    "contentChecks": {"atsParseRate": {"status": "pass|fail", "feedback": string}, "repetitionOfWords": {"status": "pass|fail", "feedback": string}, "spellingAndGrammar": {"status": "pass|fail", "feedback": string}, "quantifiedAchievements": {"status": "pass|fail", "feedback": string}},
+    "formatChecks": {"fileFormat": {"status": "pass|fail", "feedback": string}, "resumeLength": {"status": "pass|fail", "feedback": string}, "bulletPointLength": {"status": "pass|fail", "feedback": string}},
+    "skillsChecks": {"hardSkillsListed": {"status": "pass|fail", "feedback": string}, "softSkillsIncluded": {"status": "pass|fail", "feedback": string}},
+    "resumeSectionsChecks": {"contactInformation": {"status": "pass|fail", "feedback": string}, "essentialSections": {"status": "pass|fail", "feedback": string}, "personalityShowcase": {"status": "pass|fail", "feedback": string}},
+    "styleChecks": {"resumeDesign": {"status": "pass|fail", "feedback": string}, "emailAddressFormat": {"status": "pass|fail", "feedback": string}, "activeVoiceUsage": {"status": "pass|fail", "feedback": string}, "buzzwordsClichés": {"status": "pass|fail", "feedback": string}}
   }
 }`,
         },
@@ -76,7 +63,7 @@ export async function POST(request: NextRequest) {
         },
       ],
       temperature: 0.7,
-      max_tokens: 2000,
+      max_tokens: 3000,
     })
 
     // Extract the response
@@ -99,6 +86,14 @@ export async function POST(request: NextRequest) {
         areasToImprove: ['Add more metrics', 'Improve formatting'],
         keywords: [],
         sections: {},
+        searchability: 75,
+        hardSkills: [],
+        softSkills: [],
+        missingElements: [],
+        skillsComparison: {},
+        competitiveAnalysis: '',
+        recruiterTips: [],
+        formattingIssues: [],
       }
     }
 
