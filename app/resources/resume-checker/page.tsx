@@ -109,55 +109,13 @@ export default function ResumeChecker() {
   }
 
   const extractResumeText = async (file: File) => {
-    const reader = new FileReader()
-    
-    reader.onload = async (event) => {
-      try {
-        if (file.type === 'application/pdf') {
-          // Handle PDF
-          const arrayBuffer = event.target?.result as ArrayBuffer
-          const { default: pdfjsLib } = await import('pdfjs-dist')
-          
-          // Set up the worker
-          pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
-          
-          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-          let fullText = ''
-          
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i)
-            const textContent = await page.getTextContent()
-            const pageText = textContent.items.map((item: any) => item.str).join(' ')
-            fullText += pageText + ' '
-          }
-          
-          setResumeText(fullText.substring(0, 10000))
-          setError('')
-        } else {
-          // Handle text and DOCX as text fallback
-          const text = event.target?.result as string
-          setResumeText(text.substring(0, 10000))
-          setError('')
-        }
-      } catch (err) {
-        console.error('Error extracting text:', err)
-        setError('Could not extract text from file. Please paste text manually below.')
-      }
-    }
-    
-    reader.onerror = () => {
-      setError('Failed to read file')
-    }
-    
-    if (file.type === 'application/pdf') {
-      reader.readAsArrayBuffer(file)
-    } else {
-      reader.readAsText(file)
-    }
+    // Simply store file for upload - don't extract on client
+    setSelectedFile(file)
+    setError('')
   }
 
   const handleAnalyze = async () => {
-    if (!resumeText.trim()) {
+    if (!resumeText.trim() && !selectedFile) {
       setError('Please paste or upload your resume')
       return
     }
@@ -166,14 +124,24 @@ export default function ResumeChecker() {
     setLoading(true)
 
     try {
+      const formData = new FormData()
+      
+      // Add resume - either from text or file
+      if (selectedFile) {
+        formData.append('file', selectedFile)
+      } else {
+        formData.append('resumeText', resumeText.trim())
+      }
+      
+      if (jobDescription.trim()) {
+        formData.append('jobDescription', jobDescription.trim())
+      }
+      
+      formData.append('phoneNumber', phoneNumber || 'guest')
+
       const response = await fetch('/api/resume-tracker/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          resumeText: resumeText.trim(),
-          jobDescription: jobDescription.trim() || null,
-          phoneNumber: phoneNumber || 'guest',
-        }),
+        body: formData,
       })
 
       const data = await response.json()

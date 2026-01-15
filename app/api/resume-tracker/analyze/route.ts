@@ -11,12 +11,41 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
+async function extractTextFromPDF(buffer: Buffer): Promise<string> {
+  try {
+    const pdfParse = require('pdf-parse')
+    const data = await pdfParse(buffer)
+    return data.text
+  } catch (error) {
+    console.error('PDF parse error:', error)
+    throw new Error('Failed to extract text from PDF')
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { resumeText, jobDescription, phoneNumber } = await request.json()
+    const formData = await request.formData()
+    const file = formData.get('file') as File | null
+    let resumeText = formData.get('resumeText') as string | null
+    const jobDescription = formData.get('jobDescription') as string | null
+    const phoneNumber = formData.get('phoneNumber') as string
 
-    if (!resumeText) {
-      return NextResponse.json({ error: 'Resume text is required' }, { status: 400 })
+    // Extract text from file if provided
+    if (file) {
+      const buffer = Buffer.from(await file.arrayBuffer())
+      
+      if (file.type === 'application/pdf') {
+        resumeText = await extractTextFromPDF(buffer)
+      } else if (file.type === 'text/plain') {
+        resumeText = buffer.toString('utf-8')
+      } else {
+        // For DOCX, try to extract as text
+        resumeText = buffer.toString('utf-8')
+      }
+    }
+
+    if (!resumeText || !resumeText.trim()) {
+      return NextResponse.json({ error: 'Could not extract text from file. Please paste text manually.' }, { status: 400 })
     }
 
     console.log('[Resume Tracker] Analyzing resume...')
