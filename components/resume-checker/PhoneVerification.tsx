@@ -73,11 +73,20 @@ export default function PhoneVerification({ onPhoneVerified }: PhoneVerification
         success: data.success,
         phoneNumber: phoneToSend,
         smsStatus: data.smsStatus,
-        testOtp: data.testOtp
+        testOtp: data.testOtp,
+        fullResponse: data
       })
 
       if (!response.ok) {
         setError(data.error || 'Failed to send OTP')
+        setLoading(false)
+        return
+      }
+
+      // Check if SMS failed
+      if (data.smsStatus && !data.smsStatus.success) {
+        console.error('[PhoneVerification] SMS delivery failed:', data.smsStatus.error)
+        setError(`SMS failed: ${data.smsStatus.error}. Please check your number and try again.`)
         setLoading(false)
         return
       }

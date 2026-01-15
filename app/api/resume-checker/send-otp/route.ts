@@ -138,13 +138,32 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('===== SEND OTP DEBUG END (Production Mode) =====')
-    // Production response
+    // Production response - but always return SMS status for debugging
     return NextResponse.json(
       { 
         success: true, 
         message: 'OTP sent successfully',
-        smsStatus: smsResult?.status || 'unknown',
-        smsId: smsResult?.sid || null
+        phoneNumber: phoneNumber,
+        smsStatus: smsResult ? {
+          success: true,
+          status: smsResult.status,
+          sid: smsResult.sid,
+          to: smsResult.to,
+        } : {
+          success: false,
+          error: smsError?.message || 'Unknown SMS error',
+          status: 'failed'
+        },
+        smsId: smsResult?.sid || null,
+        // Always include test info for debugging on live site
+        ...(process.env.NODE_ENV !== 'production' && {
+          testOtp: otp,
+          debugInfo: {
+            twilioAccountSid: process.env.TWILIO_ACCOUNT_SID ? '***' : 'NOT SET',
+            twilioAuthToken: process.env.TWILIO_AUTH_TOKEN ? '***' : 'NOT SET',
+            twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER,
+          }
+        })
       },
       { status: 200 }
     )

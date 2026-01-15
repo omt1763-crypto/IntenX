@@ -113,57 +113,72 @@ export function AuthProvider({ children }) {
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, currentSession) => {
-        console.log('[Auth] Auth state change event:', _event)
-        
-        if (currentSession?.user) {
-          console.log('[Auth] Session valid, updating state')
-          setSession(currentSession)
-          setUser(currentSession.user)
-          setIsAuthenticated(true)
+        try {
+          console.log('[Auth] Auth state change event:', _event)
           
-          // Fetch user profile for role
-          const { data } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', currentSession.user.id)
-            .single()
-          
-          if (data) {
-            setRole(data.role)
-            saveAuthState(currentSession.user, currentSession, data.role)
-          }
-        } else {
-          // Only clear if this is a SIGNED_OUT event, not INITIAL_SESSION
-          if (_event === 'SIGNED_OUT') {
-            console.log('[Auth] User signed out, clearing session')
-            setSession(null)
-            setUser(null)
-            setRole(null)
-            setIsAuthenticated(false)
-            clearAuthState()
+          if (currentSession?.user) {
+            console.log('[Auth] Session valid, updating state')
+            setSession(currentSession)
+            setUser(currentSession.user)
+            setIsAuthenticated(true)
+            
+            // Fetch user profile for role
+            const { data } = await supabase
+              .from('users')
+              .select('role')
+              .eq('id', currentSession.user.id)
+              .single()
+            
+            if (data) {
+              setRole(data.role)
+              saveAuthState(currentSession.user, currentSession, data.role)
+            }
           } else {
-            // For INITIAL_SESSION and other events, keep cached session if available
-            // Check localStorage directly in case React state hasn't updated yet
-            const savedAuth = loadAuthState()
-            if (!savedAuth?.user) {
-              console.log('[Auth] No current session and no cached session')
+            // Only clear if this is a SIGNED_OUT event, not INITIAL_SESSION
+            if (_event === 'SIGNED_OUT') {
+              console.log('[Auth] User signed out, clearing session')
+              setSession(null)
+              setUser(null)
+              setRole(null)
               setIsAuthenticated(false)
+              clearAuthState()
             } else {
-              console.log('[Auth] Keeping cached session for:', savedAuth.user?.email)
-              // Ensure state is set from cache if it isn't already
-              if (!user) {
-                setUser(savedAuth.user)
-                setSession(savedAuth.session)
-                setRole(savedAuth.role)
-                setIsAuthenticated(true)
+              // For INITIAL_SESSION and other events, keep cached session if available
+              // Check localStorage directly in case React state hasn't updated yet
+              const savedAuth = loadAuthState()
+              if (!savedAuth?.user) {
+                console.log('[Auth] No current session and no cached session')
+                setIsAuthenticated(false)
+              } else {
+                console.log('[Auth] Keeping cached session for:', savedAuth.user?.email)
+                // Ensure state is set from cache if it isn't already
+                if (!user) {
+                  setUser(savedAuth.user)
+                  setSession(savedAuth.session)
+                  setRole(savedAuth.role)
+                  setIsAuthenticated(true)
+                }
               }
             }
+          }
+        } catch (error) {
+          // Handle AbortError and other errors gracefully
+          if (error?.name === 'AbortError') {
+            console.warn('[Auth] Request was aborted (component unmounting?)')
+          } else {
+            console.error('[Auth] Error in auth state change:', error)
           }
         }
       }
     )
 
-    return () => subscription?.unsubscribe()
+    return () => {
+      try {
+        subscription?.unsubscribe()
+      } catch (error) {
+        console.warn('[Auth] Error unsubscribing from auth changes:', error)
+      }
+    }
   }, [])
 
   const signup = async (userData, userRole) => {
