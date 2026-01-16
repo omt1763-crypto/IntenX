@@ -33,10 +33,13 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     log('STEP-3', 'Form data parsed successfully', {
       hasResume: formData.has('resume'),
+      hasFile: formData.has('file'),
+      hasResumeText: formData.has('resumeText'),
       hasJobDescription: formData.has('jobDescription'),
     });
 
-    const resumeInput = formData.get('resume') as string | File | null;
+    // Accept 'resume', 'file', or 'resumeText' from frontend
+    const resumeInput = (formData.get('resume') || formData.get('file') || formData.get('resumeText')) as string | File | null;
     const jobDescription = (formData.get('jobDescription') as string) || '';
 
     log('STEP-4', 'Extracted form fields', {
