@@ -265,7 +265,7 @@ Format your response as JSON with keys: matchScore, strengths, improvements, rec
       // Don't throw - still return the analysis even if DB save fails
     } else {
       log('STEP-21', 'Analysis saved to database', {
-        savedId: saved?.[0]?.id,
+        savedId: saved && saved.length > 0 ? saved[0].id : 'unknown',
       });
     }
 
