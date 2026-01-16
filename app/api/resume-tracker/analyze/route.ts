@@ -65,8 +65,7 @@ export async function POST(request: NextRequest) {
         log('STEP-6b', 'Detected PDF file, attempting pdf-parse...');
         try {
           // @ts-ignore - dynamic import
-          const pdfModule = await import('pdf-parse');
-          const pdfParse = pdfModule.default || pdfModule;
+          const { default: pdfParse } = await import('pdf-parse');
           const pdfData = await pdfParse(bytes);
           resumeText = pdfData.text;
           log('STEP-6c', 'PDF parsed successfully', {
