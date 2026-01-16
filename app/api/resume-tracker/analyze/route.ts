@@ -64,8 +64,9 @@ export async function POST(request: NextRequest) {
       if (resumeInput.name.toLowerCase().endsWith('.pdf')) {
         log('STEP-6b', 'Detected PDF file, attempting pdf-parse...');
         try {
-          // @ts-ignore - dynamic import
-          const { default: pdfParse } = await import('pdf-parse');
+          // Use require for pdf-parse to avoid TypeScript import issues
+          // @ts-ignore - pdf-parse CommonJS module
+          const pdfParse = require('pdf-parse');
           const pdfData = await pdfParse(bytes);
           resumeText = pdfData.text;
           log('STEP-6c', 'PDF parsed successfully', {
