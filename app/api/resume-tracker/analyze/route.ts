@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import OpenAI from 'openai';
 
 export const maxDuration = 300; // 5 minutes for Vercel
 
@@ -12,6 +13,11 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 const supabase = createClient(supabaseUrl || '', supabaseKey || '');
+
+// Initialize OpenAI
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export async function POST(request: NextRequest) {
   const requestId = Math.random().toString(36).substring(7);
@@ -110,124 +116,69 @@ export async function POST(request: NextRequest) {
       preview: resumeText.substring(0, 100),
     });
 
-    // ===== OPENAI INITIALIZATION =====
-    log('STEP-9', 'Initializing OpenAI client...', {
-      apiKeyExists: !!process.env.OPENAI_API_KEY,
-      apiKeyLength: process.env.OPENAI_API_KEY?.length || 0,
-      apiKeyPrefix: process.env.OPENAI_API_KEY?.substring(0, 10) || 'NONE',
-    });
-
-    let OpenAI;
-    try {
-      // @ts-ignore - dynamic import
-      OpenAI = (await import('openai')).default || (await import('openai')).OpenAI;
-      log('STEP-10', 'OpenAI module imported successfully');
-    } catch (importError) {
-      log('STEP-10-ERROR', 'Failed to import OpenAI module', {
-        error: String(importError),
-      });
-      throw new Error(`OpenAI import failed: ${importError}`);
-    }
-
-    if (!OpenAI) {
-      log('STEP-10a-ERROR', 'OpenAI module is null/undefined');
-      throw new Error('OpenAI module is null/undefined');
-    }
-
-    let openai;
-    try {
-      openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-      });
-      log('STEP-11', 'OpenAI client instantiated successfully', {
-        clientType: typeof openai,
-        hasChat: !!openai.chat,
-        hasCompletions: !!openai.chat?.completions,
-      });
-    } catch (clientError) {
-      log('STEP-11-ERROR', 'Failed to instantiate OpenAI client', {
-        error: String(clientError),
-      });
-      throw new Error(`OpenAI client instantiation failed: ${clientError}`);
-    }
-
-    if (!openai.chat?.completions?.create) {
-      log(
-        'STEP-11a-ERROR',
-        'OpenAI client missing chat.completions.create method'
-      );
-      throw new Error(
-        'OpenAI client missing chat.completions.create method'
-      );
-    }
-
     // ===== OPENAI API CALL =====
-    log('STEP-12', 'Building prompt and messages...');
+    log('STEP-9', 'Building analysis prompt...');
 
-    const systemPrompt = `You are an expert resume analyzer. Analyze the provided resume and job description, then provide:
-1. A match score (0-100)
-2. Key strengths
-3. Areas for improvement
-4. Specific recommendations
+    const systemPrompt = `You are an expert resume analyzer. Analyze the provided resume${
+      jobDescription ? ' against the job description' : ''
+    } and provide a detailed analysis.
 
-Format your response as JSON with keys: matchScore, strengths, improvements, recommendations`;
+Please respond with a JSON object containing:
+{
+  "matchScore": <number 0-100>,
+  "strengths": [<list of key strengths from resume>],
+  "areasForImprovement": [<areas that could be improved>],
+  "recommendations": [<specific actionable recommendations>],
+  "summary": "<brief professional summary>"
+}`;
 
-    const userMessage = `Resume:\n${resumeText}\n\nJob Description:\n${jobDescription}\n\nPlease analyze this resume against the job description.`;
+    const userContent = jobDescription
+      ? `Resume:\n${resumeText}\n\nJob Description:\n${jobDescription}\n\nPlease analyze this resume against the job description.`
+      : `Resume:\n${resumeText}\n\nPlease analyze this resume.`;
 
-    log('STEP-13', 'Messages prepared', {
-      systemPromptLength: systemPrompt.length,
-      userMessageLength: userMessage.length,
+    log('STEP-10', 'Calling OpenAI API', {
       model: 'gpt-4o-mini',
+      hasJobDescription: !!jobDescription,
+      resumeLength: resumeText.length,
     });
-
-    log('STEP-14', 'ABOUT TO CALL openai.chat.completions.create()');
 
     let response;
     try {
-      log('STEP-15', 'Inside try block, calling OpenAI API...');
-
       response = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage },
+          { role: 'user', content: userContent },
         ],
         temperature: 0.7,
-        max_tokens: 4000,
+        max_tokens: 2000,
       });
 
-      log('STEP-16', 'OpenAI API call succeeded', {
+      log('STEP-11', 'OpenAI API call succeeded', {
         hasContent: !!response.choices?.[0]?.message?.content,
-        firstContentChars: response.choices?.[0]?.message?.content?.substring(0, 50),
       });
     } catch (openaiError: any) {
-      log('STEP-15-CATCH', 'OpenAI API call threw error', {
-        errorType: openaiError?.constructor?.name,
+      log('STEP-11-ERROR', 'OpenAI API call failed', {
         errorMessage: openaiError?.message,
         errorCode: openaiError?.code,
         errorStatus: openaiError?.status,
-        fullError: JSON.stringify(openaiError, null, 2),
       });
-
-      // Log the full error for debugging
-      console.error('FULL OPENAI ERROR:', openaiError);
-
       throw new Error(
-        `OpenAI API failed: ${openaiError?.message || JSON.stringify(openaiError)}`
+        `OpenAI API failed: ${openaiError?.message || 'Unknown error'}`
       );
     }
 
     // ===== PARSE RESPONSE =====
-    log('STEP-17', 'Parsing OpenAI response...');
+    log('STEP-12', 'Parsing OpenAI response...');
 
     const analysisContent = response.choices[0]?.message?.content;
 
     if (!analysisContent) {
-      log('STEP-18-ERROR', 'No content in OpenAI response');
+      log('STEP-13-ERROR', 'No content in OpenAI response');
       throw new Error('No analysis content from OpenAI');
     }
 
-    log('STEP-18', 'Response content extracted', {
+    log('STEP-13', 'Response content extracted', {
       contentLength: analysisContent.length,
     });
 
@@ -238,67 +189,72 @@ Format your response as JSON with keys: matchScore, strengths, improvements, rec
       const jsonStr = jsonMatch ? jsonMatch[0] : analysisContent;
 
       analysis = JSON.parse(jsonStr);
-      log('STEP-19', 'JSON parsed successfully', {
+      log('STEP-14', 'JSON parsed successfully', {
         keys: Object.keys(analysis),
       });
     } catch (parseError) {
-      log('STEP-19-WARNING', 'Could not parse JSON, using raw content', {
+      log('STEP-14-WARNING', 'Could not parse JSON, returning raw response', {
         error: String(parseError),
       });
-      analysis = { rawAnalysis: analysisContent };
+      // Provide a fallback structure
+      analysis = {
+        rawAnalysis: analysisContent,
+        matchScore: 0,
+        strengths: [],
+        areasForImprovement: [],
+        recommendations: [],
+        summary: analysisContent,
+      };
     }
 
     // ===== SAVE TO DATABASE =====
-    log('STEP-20', 'Saving analysis to Supabase...');
+    log('STEP-15', 'Saving analysis to Supabase...');
 
-    const { data: saved, error: dbError } = await supabase
-      .from('resume_tracker')
-      .insert({
-        resume_text: resumeText,
-        job_description: jobDescription,
-        analysis: analysis,
-        created_at: new Date(),
-      });
+    try {
+      const { data: saved, error: dbError } = await supabase
+        .from('resume_tracker')
+        .insert({
+          resume_text: resumeText,
+          job_description: jobDescription || null,
+          analysis: analysis,
+          created_at: new Date().toISOString(),
+        })
+        .select();
 
-    if (dbError) {
-      log('STEP-20-ERROR', 'Database save failed', {
-        error: dbError.message,
-        details: dbError.details,
-      });
-      // Don't throw - still return the analysis even if DB save fails
-    } else {
-      log('STEP-21', 'Analysis saved to database', {
-        // @ts-ignore - Supabase response typing
-        savedId: saved?.[0]?.id || 'saved',
+      if (dbError) {
+        log('STEP-15-WARNING', 'Database save failed, but continuing', {
+          error: dbError.message,
+        });
+      } else {
+        log('STEP-16', 'Analysis saved to database successfully');
+      }
+    } catch (dbError) {
+      log('STEP-15-WARNING', 'Database operation error, continuing', {
+        error: String(dbError),
       });
     }
 
     // ===== SUCCESS =====
-    log('STEP-22', 'SUCCESS: Returning analysis to client');
+    log('STEP-17', 'SUCCESS: Returning analysis to client');
 
     return NextResponse.json(
       {
         success: true,
         analysis: analysis,
-        debugLogs: logs, // Return logs for debugging
       },
       { status: 200 }
     );
   } catch (error: any) {
     log('FATAL-ERROR', 'Unhandled error in POST handler', {
-      errorType: error?.constructor?.name,
       errorMessage: error?.message,
-      errorStack: error?.stack?.split('\n').slice(0, 5).join(' | '),
-      fullError: JSON.stringify(error, null, 2),
     });
 
-    console.error('FATAL ERROR in resume analyzer:', error);
-    console.error('Full logs:', logs);
+    console.error('Resume analyzer error:', error?.message);
 
     return NextResponse.json(
       {
+        success: false,
         error: error?.message || 'Failed to analyze resume',
-        debugLogs: logs, // Return logs even on error for debugging
       },
       { status: 500 }
     );
