@@ -19,23 +19,17 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Extract text from PDF using pdf-parse
+// Extract text from PDF using pdf-parse (fallback only)
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
     // @ts-ignore - pdf-parse CommonJS module
     const pdfParse = require('pdf-parse');
     const data = await pdfParse(buffer);
     const text = (data.text || '').trim();
-    
-    if (text.length === 0) {
-      console.warn('PDF extracted but text is empty');
-      return '';
-    }
-    
     return text;
   } catch (error) {
-    console.error('PDF extraction failed:', error);
-    return ''; // Return empty instead of throwing
+    console.error('PDF extraction fallback failed:', error);
+    return '';
   }
 }
 

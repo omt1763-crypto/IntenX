@@ -105,9 +105,47 @@ export default function ResumeChecker() {
   }
 
   const extractResumeText = async (file: File) => {
-    // Simply store file for upload - don't extract on client
-    setSelectedFile(file)
-    setError('')
+    try {
+      setError('')
+      const fileName = file.name.toLowerCase()
+
+      if (fileName.endsWith('.pdf')) {
+        // Extract PDF on client-side using pdfjs
+        const { getDocument } = await import('pdfjs-dist')
+        getDocument.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+
+        const arrayBuffer = await file.arrayBuffer()
+        const pdf = await getDocument({ data: arrayBuffer }).promise
+        let extractedText = ''
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i)
+          const textContent = await page.getTextContent()
+          const pageText = textContent.items
+            .map((item: any) => (item as any).str || '')
+            .join(' ')
+          extractedText += pageText + '\n'
+        }
+
+        if (extractedText.trim()) {
+          setResumeText(extractedText)
+          setSelectedFile(file)
+        } else {
+          setError('Could not extract text from PDF. Please paste your resume text directly.')
+        }
+      } else if (fileName.endsWith('.docx')) {
+        // For DOCX, just send the file to backend
+        setSelectedFile(file)
+      } else if (fileName.endsWith('.txt')) {
+        // Extract TXT on client
+        const text = await file.text()
+        setResumeText(text)
+        setSelectedFile(file)
+      }
+    } catch (err) {
+      console.error('File extraction error:', err)
+      setError('Could not extract file. Please paste your resume text directly.')
+    }
   }
 
   const handleAnalyze = async () => {
