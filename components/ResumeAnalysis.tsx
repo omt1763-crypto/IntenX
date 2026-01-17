@@ -11,7 +11,7 @@ interface AnalysisScore {
 
 interface ResumeAnalysisProps {
   results: any
-  phoneNumber: string
+  phoneNumber?: string
   onReset: () => void
 }
 
