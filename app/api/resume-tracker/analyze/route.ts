@@ -19,6 +19,42 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Extract text from PDF
+async function extractTextFromPDF(buffer: Buffer): Promise<string> {
+  try {
+    // @ts-ignore - pdf-parse CommonJS module
+    const pdfParse = require('pdf-parse');
+    const data = await pdfParse(buffer);
+    return data.text || '';
+  } catch (error) {
+    console.error('PDF extraction error:', error);
+    return '';
+  }
+}
+
+// Extract text from DOCX
+async function extractTextFromDOCX(buffer: Buffer): Promise<string> {
+  try {
+    // @ts-ignore - mammoth CommonJS module
+    const mammoth = require('mammoth');
+    const result = await mammoth.extractRawText({ arrayBuffer: buffer.buffer });
+    return result.value || '';
+  } catch (error) {
+    console.error('DOCX extraction error:', error);
+    return '';
+  }
+}
+
+// Extract text from TXT
+function extractTextFromTXT(buffer: Buffer): string {
+  try {
+    return new TextDecoder().decode(buffer);
+  } catch (error) {
+    console.error('TXT extraction error:', error);
+    return '';
+  }
+}
+
 export async function POST(request: NextRequest) {
   const requestId = Math.random().toString(36).substring(7);
   const logs: string[] = [];
@@ -65,40 +101,42 @@ export async function POST(request: NextRequest) {
 
     // Extract resume text based on type
     if (resumeInput instanceof File) {
-      log('STEP-6a', 'Processing resume as File', { fileName: resumeInput.name });
+      log('STEP-6a', 'Processing resume as File', { fileName: resumeInput.name, fileType: resumeInput.type });
       const buffer = await resumeInput.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
+      const bufferNode = Buffer.from(buffer);
+      const fileName = resumeInput.name.toLowerCase();
 
-      // Try pdf-parse for PDF files
-      if (resumeInput.name.toLowerCase().endsWith('.pdf')) {
-        log('STEP-6b', 'Detected PDF file, attempting pdf-parse...');
-        try {
-          // Use require for pdf-parse to avoid TypeScript import issues
-          // @ts-ignore - pdf-parse CommonJS module
-          const pdfParse = require('pdf-parse');
-          const pdfData = await pdfParse(bytes);
-          resumeText = pdfData.text;
-          log('STEP-6c', 'PDF parsed successfully', {
-            textLength: resumeText?.length || 0,
-          });
-        } catch (pdfError) {
-          log('STEP-6c-ERROR', 'PDF parsing failed, using empty text', {
-            error: String(pdfError),
-          });
-          resumeText = '';
-        }
+      // Try different extractors based on file type
+      if (fileName.endsWith('.pdf') || resumeInput.type === 'application/pdf') {
+        log('STEP-6b', 'Detected PDF file, extracting text...');
+        resumeText = await extractTextFromPDF(bufferNode);
+        log('STEP-6c', 'PDF extraction completed', {
+          textLength: resumeText?.length || 0,
+        });
+      } else if (fileName.endsWith('.docx') || resumeInput.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        log('STEP-6d', 'Detected DOCX file, extracting text...');
+        resumeText = await extractTextFromDOCX(bufferNode);
+        log('STEP-6e', 'DOCX extraction completed', {
+          textLength: resumeText?.length || 0,
+        });
+      } else if (fileName.endsWith('.txt') || resumeInput.type === 'text/plain') {
+        log('STEP-6f', 'Detected TXT file, extracting text...');
+        resumeText = extractTextFromTXT(bufferNode);
+        log('STEP-6g', 'TXT extraction completed', {
+          textLength: resumeText?.length || 0,
+        });
       } else {
-        // For non-PDF files, try to convert to text
-        log('STEP-6d', 'Processing non-PDF file');
-        resumeText = new TextDecoder().decode(bytes);
-        log('STEP-6e', 'File converted to text', {
+        // Try to decode as text as fallback
+        log('STEP-6h', 'Unknown file type, attempting text decode...');
+        resumeText = extractTextFromTXT(bufferNode);
+        log('STEP-6i', 'Text decode completed', {
           textLength: resumeText?.length || 0,
         });
       }
     } else {
       // resumeInput is a string
       resumeText = resumeInput;
-      log('STEP-6f', 'Resume provided as string', {
+      log('STEP-6j', 'Resume provided as string', {
         textLength: resumeText?.length || 0,
       });
     }
@@ -106,7 +144,7 @@ export async function POST(request: NextRequest) {
     if (!resumeText.trim()) {
       log('STEP-7', 'ERROR: Resume text is empty after extraction');
       return NextResponse.json(
-        { error: 'Could not extract resume text' },
+        { error: 'Could not extract resume text. Please ensure the file is readable or paste resume text directly.' },
         { status: 400 }
       );
     }
