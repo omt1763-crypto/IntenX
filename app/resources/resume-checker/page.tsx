@@ -170,7 +170,7 @@ export default function ResumeChecker() {
   if (currentStep === 'results' && analysisResults) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 dark:from-slate-950">
-        <ResumeAnalysis results={analysisResults} phoneNumber={phoneNumber} onReset={handleReset} />
+        <ResumeAnalysis results={analysisResults} onReset={handleReset} />
       </div>
     )
   }
