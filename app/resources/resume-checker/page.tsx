@@ -36,9 +36,6 @@ const resumeFAQs = [
 
 export default function ResumeChecker() {
   const [currentStep, setCurrentStep] = useState<Step>('upload')
-  const [phoneNumber, setPhoneNumber] = useState('')
-  const [isVerified, setIsVerified] = useState(false)
-  const [showPhoneModal, setShowPhoneModal] = useState(false)
   const [analysisResults, setAnalysisResults] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -135,8 +132,6 @@ export default function ResumeChecker() {
       if (jobDescription.trim()) {
         formData.append('jobDescription', jobDescription.trim())
       }
-      
-      formData.append('phoneNumber', phoneNumber || 'guest')
 
       const response = await fetch('/api/resume-tracker/analyze', {
         method: 'POST',
@@ -158,12 +153,6 @@ export default function ResumeChecker() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const handlePhoneVerified = (phone: string) => {
-    setPhoneNumber(phone)
-    setIsVerified(true)
-    setShowPhoneModal(false)
   }
 
   const handleReset = () => {
@@ -654,13 +643,7 @@ export default function ResumeChecker() {
                     className="mt-4 space-y-2"
                   >
                     <button
-                      onClick={() => {
-                        if (!isVerified) {
-                          setShowPhoneModal(true)
-                        } else {
-                          handleAnalyze()
-                        }
-                      }}
+                      onClick={handleAnalyze}
                       disabled={loading}
                       style={{ backgroundColor: '#8241FF' }}
                       className="w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 text-sm rounded-lg transition flex items-center justify-center gap-2 shadow-md"
@@ -763,35 +746,6 @@ export default function ResumeChecker() {
           </div>
         </div>
       </motion.section>
-
-      {/* Phone Verification Modal */}
-      <AnimatePresence>
-        {showPhoneModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-            onClick={() => setShowPhoneModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-md"
-            >
-              <button
-                onClick={() => setShowPhoneModal(false)}
-                className="absolute -top-10 right-0 text-white hover:text-slate-200 transition"
-              >
-                <X className="w-6 h-6" />
-              </button>
-              <div className="p-6 bg-white rounded-lg text-gray-600">Phone verification removed.</div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }
