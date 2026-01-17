@@ -24,11 +24,25 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
     // @ts-ignore - pdf-parse CommonJS module
     const pdfParse = require('pdf-parse');
-    const data = await pdfParse(buffer);
+    const data = await pdfParse(buffer, {
+      max: 50, // Max 50 pages
+      pagerender: async (pageData: any) => {
+        try {
+          const textContent = await pageData.getTextContent();
+          return textContent.items
+            .map((item: any) => item.str || '')
+            .join(' ');
+        } catch {
+          return '';
+        }
+      },
+    });
     const text = (data.text || '').trim();
-    return text;
+    // Even if we get minimal text, try to use it
+    return text || '';
   } catch (error) {
     console.error('PDF extraction fallback failed:', error);
+    // Return empty string on failure, but don't throw
     return '';
   }
 }
@@ -147,7 +161,7 @@ export async function POST(request: NextRequest) {
     if (!resumeText.trim()) {
       log('STEP-7', 'ERROR: Resume text is empty after extraction');
       return NextResponse.json(
-        { error: 'Could not extract text from file. This may be a corrupted, scanned, or image-based PDF. Please paste your resume text directly for analysis.' },
+        { error: 'Could not extract text from file. Please ensure your file is a valid resume and try again, or paste your resume text directly for analysis.' },
         { status: 400 }
       );
     }

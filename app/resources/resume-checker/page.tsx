@@ -163,7 +163,15 @@ export default function ResumeChecker() {
     } catch (error) {
       console.error('Analysis error:', error)
       setCurrentStep('upload')
-      setError(error instanceof Error ? error.message : 'Failed to analyze resume. Please try again.')
+      let errorMessage = 'Failed to analyze resume. Please try again.'
+      if (error instanceof Error) {
+        if (error.message.includes('Could not extract')) {
+          errorMessage = 'Could not read your resume file. Please try uploading again or paste your resume text directly.'
+        } else {
+          errorMessage = error.message
+        }
+      }
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
