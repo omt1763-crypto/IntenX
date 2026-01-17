@@ -136,17 +136,20 @@ export default function ResumeChecker() {
     try {
       const formData = new FormData()
       
-      // Add resume - either from text or file
-      if (selectedFile) {
-        formData.append('file', selectedFile)
-      } else {
+      // Prioritize pasted text over file
+      if (resumeText.trim()) {
+        console.log('Sending pasted resume text to API', { length: resumeText.trim().length })
         formData.append('resumeText', resumeText.trim())
+      } else if (selectedFile) {
+        console.log('Sending resume file to API', { fileName: selectedFile.name, size: selectedFile.size })
+        formData.append('file', selectedFile)
       }
       
       if (jobDescription.trim()) {
         formData.append('jobDescription', jobDescription.trim())
       }
 
+      console.log('Form data ready, calling API...')
       const response = await fetch('/api/resume-tracker/analyze', {
         method: 'POST',
         body: formData,
@@ -155,9 +158,11 @@ export default function ResumeChecker() {
       const data = await response.json()
 
       if (!response.ok) {
+        console.error('API Error:', data)
         throw new Error(data.error || 'Failed to analyze resume')
       }
 
+      console.log('API Success:', data)
       setAnalysisResults(data)
       setCurrentStep('results')
     } catch (error) {
@@ -638,6 +643,10 @@ export default function ResumeChecker() {
                     value={resumeText}
                     onChange={(e) => {
                       setResumeText(e.target.value)
+                      // Clear file when typing to prioritize text
+                      if (e.target.value.trim()) {
+                        setSelectedFile(null)
+                      }
                       setError('')
                     }}
                     placeholder="Paste your resume text here..."
