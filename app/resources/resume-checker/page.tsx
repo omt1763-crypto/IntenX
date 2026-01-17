@@ -113,8 +113,8 @@ export default function ResumeChecker() {
         // Try to extract PDF on client-side, but send file to backend if it fails
         try {
           const { getDocument, GlobalWorkerOptions } = await import('pdfjs-dist')
-          // Set worker source from CDN
-          GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`
+          // Set worker source with matching version (5.4.530)
+          GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.530/pdf.worker.min.js`
 
           const arrayBuffer = await file.arrayBuffer()
           const pdf = await getDocument({ data: arrayBuffer }).promise
