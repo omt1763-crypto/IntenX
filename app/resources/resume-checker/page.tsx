@@ -109,45 +109,8 @@ export default function ResumeChecker() {
       setError('')
       const fileName = file.name.toLowerCase()
 
-      if (fileName.endsWith('.pdf')) {
-        // Try to extract PDF on client-side, but send file to backend if it fails
-        try {
-          const { getDocument, GlobalWorkerOptions } = await import('pdfjs-dist')
-          // Set worker source with matching version (5.4.530)
-          GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.530/pdf.worker.min.js`
-
-          const arrayBuffer = await file.arrayBuffer()
-          const pdf = await getDocument({ data: arrayBuffer }).promise
-          let extractedText = ''
-
-          for (let i = 1; i <= Math.min(pdf.numPages, 50); i++) {
-            try {
-              const page = await pdf.getPage(i)
-              const textContent = await page.getTextContent()
-              const pageText = textContent.items
-                .map((item: any) => (item as any).str || '')
-                .join(' ')
-              extractedText += pageText + '\n'
-            } catch (pageErr) {
-              console.warn(`Failed to extract page ${i}`, pageErr)
-              continue
-            }
-          }
-
-          if (extractedText.trim() && extractedText.trim().length > 50) {
-            setResumeText(extractedText)
-            setSelectedFile(file)
-          } else {
-            // Fall back to sending file to backend if extraction failed
-            setSelectedFile(file)
-          }
-        } catch (extractErr) {
-          console.warn('Client-side PDF extraction failed, will extract on backend', extractErr)
-          // Just set the file, backend will extract
-          setSelectedFile(file)
-        }
-      } else if (fileName.endsWith('.docx')) {
-        // For DOCX, send to backend
+      if (fileName.endsWith('.pdf') || fileName.endsWith('.docx')) {
+        // Send PDF and DOCX files directly to backend for extraction
         setSelectedFile(file)
       } else if (fileName.endsWith('.txt')) {
         // Extract TXT on client
