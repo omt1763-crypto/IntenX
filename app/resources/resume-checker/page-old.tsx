@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FileUp, Zap, X, CheckCircle2, BarChart3, Sparkles, ArrowRight } from 'lucide-react'
-import { PhoneVerification, ResumeUpload, ResumeAnalysis } from '@/components/resume-checker'
+import { ResumeUpload, ResumeAnalysis } from '@/components/resume-checker'
 
 type Step = 'upload' | 'analyzing' | 'results'
 
@@ -243,7 +243,7 @@ export default function ResumeChecker() {
               >
                 <X className="w-6 h-6" />
               </button>
-              <PhoneVerification onPhoneVerified={handlePhoneVerified} />
+              <div className="p-6 bg-white rounded-lg text-gray-600">Phone verification removed.</div>
             </motion.div>
           </motion.div>
         )}
