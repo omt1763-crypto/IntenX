@@ -25,16 +25,17 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     // @ts-ignore - pdf-parse CommonJS module
     const pdfParse = require('pdf-parse');
     const data = await pdfParse(buffer);
-    const text = data.text || '';
+    const text = (data.text || '').trim();
     
-    if (!text || text.trim().length === 0) {
-      throw new Error('PDF text extraction returned empty');
+    if (text.length === 0) {
+      console.warn('PDF extracted but text is empty');
+      return '';
     }
     
     return text;
   } catch (error) {
-    console.error('PDF extraction error:', error);
-    throw new Error('Failed to extract text from PDF. Please try a different file or paste text directly.');
+    console.error('PDF extraction failed:', error);
+    return ''; // Return empty instead of throwing
   }
 }
 
@@ -44,20 +45,20 @@ async function extractTextFromDOCX(buffer: Buffer): Promise<string> {
     // @ts-ignore - mammoth CommonJS module
     const mammoth = require('mammoth');
     const result = await mammoth.extractRawText({ arrayBuffer: buffer });
-    return result.value || '';
+    return (result.value || '').trim();
   } catch (error) {
-    console.error('DOCX extraction error:', error);
-    throw new Error('Failed to extract text from DOCX. Please try pasting text directly.');
+    console.error('DOCX extraction failed:', error);
+    return '';
   }
 }
 
 // Extract text from TXT
 function extractTextFromTXT(buffer: Buffer): string {
   try {
-    return buffer.toString('utf-8');
+    return buffer.toString('utf-8').trim();
   } catch (error) {
-    console.error('TXT extraction error:', error);
-    throw new Error('Failed to extract text from TXT file.');
+    console.error('TXT extraction failed:', error);
+    return '';
   }
 }
 
@@ -114,42 +115,32 @@ export async function POST(request: NextRequest) {
 
       log('STEP-6b', 'Buffer created', { size: bufferNode.length });
 
-      try {
-        // Try different extractors based on file type
-        if (fileName.endsWith('.pdf') || resumeInput.type === 'application/pdf') {
-          log('STEP-6c', 'Detected PDF file, extracting text...');
-          resumeText = await extractTextFromPDF(bufferNode);
-          log('STEP-6d', 'PDF extraction completed', {
-            textLength: resumeText?.length || 0,
-          });
-        } else if (fileName.endsWith('.docx') || resumeInput.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-          log('STEP-6e', 'Detected DOCX file, extracting text...');
-          resumeText = await extractTextFromDOCX(bufferNode);
-          log('STEP-6f', 'DOCX extraction completed', {
-            textLength: resumeText?.length || 0,
-          });
-        } else if (fileName.endsWith('.txt') || resumeInput.type === 'text/plain') {
-          log('STEP-6g', 'Detected TXT file, extracting text...');
-          resumeText = extractTextFromTXT(bufferNode);
-          log('STEP-6h', 'TXT extraction completed', {
-            textLength: resumeText?.length || 0,
-          });
-        } else {
-          // Try to decode as text as fallback
-          log('STEP-6i', 'Unknown file type, attempting text decode...');
-          resumeText = extractTextFromTXT(bufferNode);
-          log('STEP-6j', 'Text decode completed', {
-            textLength: resumeText?.length || 0,
-          });
-        }
-      } catch (extractError) {
-        log('STEP-6-ERROR', 'File extraction failed', {
-          error: String(extractError),
+      // Try different extractors based on file type
+      if (fileName.endsWith('.pdf') || resumeInput.type === 'application/pdf') {
+        log('STEP-6c', 'Detected PDF file, extracting text...');
+        resumeText = await extractTextFromPDF(bufferNode);
+        log('STEP-6d', 'PDF extraction completed', {
+          textLength: resumeText?.length || 0,
         });
-        return NextResponse.json(
-          { error: String(extractError) || 'Could not extract text from file. Please paste your resume text directly.' },
-          { status: 400 }
-        );
+      } else if (fileName.endsWith('.docx') || resumeInput.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        log('STEP-6e', 'Detected DOCX file, extracting text...');
+        resumeText = await extractTextFromDOCX(bufferNode);
+        log('STEP-6f', 'DOCX extraction completed', {
+          textLength: resumeText?.length || 0,
+        });
+      } else if (fileName.endsWith('.txt') || resumeInput.type === 'text/plain') {
+        log('STEP-6g', 'Detected TXT file, extracting text...');
+        resumeText = extractTextFromTXT(bufferNode);
+        log('STEP-6h', 'TXT extraction completed', {
+          textLength: resumeText?.length || 0,
+        });
+      } else {
+        // Try to decode as text as fallback
+        log('STEP-6i', 'Unknown file type, attempting text decode...');
+        resumeText = extractTextFromTXT(bufferNode);
+        log('STEP-6j', 'Text decode completed', {
+          textLength: resumeText?.length || 0,
+        });
       }
     } else {
       // resumeInput is a string
@@ -162,7 +153,7 @@ export async function POST(request: NextRequest) {
     if (!resumeText.trim()) {
       log('STEP-7', 'ERROR: Resume text is empty after extraction');
       return NextResponse.json(
-        { error: 'Could not extract resume text. Please ensure the file is readable or paste resume text directly.' },
+        { error: 'Could not extract text from file. This may be a corrupted, scanned, or image-based PDF. Please paste your resume text directly for analysis.' },
         { status: 400 }
       );
     }
