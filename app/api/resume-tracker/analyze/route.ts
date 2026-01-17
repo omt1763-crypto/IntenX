@@ -180,11 +180,15 @@ export async function POST(request: NextRequest) {
 
 Please respond with a JSON object containing:
 {
-  "matchScore": <number 0-100>,
-  "strengths": [<list of key strengths from resume>],
-  "areasForImprovement": [<areas that could be improved>],
-  "recommendations": [<specific actionable recommendations>],
-  "summary": "<brief professional summary>"
+  "atsScore": <number 0-100 for ATS compatibility>,
+  "readabilityScore": <number 0-100 for clarity and readability>,
+  "keywordMatchScore": <number 0-100 for keyword relevance>,
+  "roleFitScore": <number 0-100 for job fit>,
+  "overallScore": <average of all scores>,
+  "strengths": [<list of 3-5 key strengths>],
+  "areasForImprovement": [<list of 3-5 areas to improve>],
+  "recommendations": [<list of 3-5 specific actionable recommendations>],
+  "summary": "<brief 2-3 sentence professional summary>"
 }`;
 
     const userContent = jobDescription
@@ -253,12 +257,16 @@ Please respond with a JSON object containing:
       });
       // Provide a fallback structure
       analysis = {
-        rawAnalysis: analysisContent,
-        matchScore: 0,
+        atsScore: 0,
+        readabilityScore: 0,
+        keywordMatchScore: 0,
+        roleFitScore: 0,
+        overallScore: 0,
         strengths: [],
         areasForImprovement: [],
         recommendations: [],
         summary: analysisContent,
+        rawAnalysis: analysisContent,
       };
     }
 
