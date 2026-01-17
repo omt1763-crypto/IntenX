@@ -110,31 +110,44 @@ export default function ResumeChecker() {
       const fileName = file.name.toLowerCase()
 
       if (fileName.endsWith('.pdf')) {
-        // Extract PDF on client-side using pdfjs
-        const { getDocument } = await import('pdfjs-dist')
-        getDocument.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+        // Try to extract PDF on client-side, but send file to backend if it fails
+        try {
+          const { getDocument, GlobalWorkerOptions } = await import('pdfjs-dist')
+          // Set worker source from CDN
+          GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`
 
-        const arrayBuffer = await file.arrayBuffer()
-        const pdf = await getDocument({ data: arrayBuffer }).promise
-        let extractedText = ''
+          const arrayBuffer = await file.arrayBuffer()
+          const pdf = await getDocument({ data: arrayBuffer }).promise
+          let extractedText = ''
 
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i)
-          const textContent = await page.getTextContent()
-          const pageText = textContent.items
-            .map((item: any) => (item as any).str || '')
-            .join(' ')
-          extractedText += pageText + '\n'
-        }
+          for (let i = 1; i <= Math.min(pdf.numPages, 50); i++) {
+            try {
+              const page = await pdf.getPage(i)
+              const textContent = await page.getTextContent()
+              const pageText = textContent.items
+                .map((item: any) => (item as any).str || '')
+                .join(' ')
+              extractedText += pageText + '\n'
+            } catch (pageErr) {
+              console.warn(`Failed to extract page ${i}`, pageErr)
+              continue
+            }
+          }
 
-        if (extractedText.trim()) {
-          setResumeText(extractedText)
+          if (extractedText.trim() && extractedText.trim().length > 50) {
+            setResumeText(extractedText)
+            setSelectedFile(file)
+          } else {
+            // Fall back to sending file to backend if extraction failed
+            setSelectedFile(file)
+          }
+        } catch (extractErr) {
+          console.warn('Client-side PDF extraction failed, will extract on backend', extractErr)
+          // Just set the file, backend will extract
           setSelectedFile(file)
-        } else {
-          setError('Could not extract text from PDF. Please paste your resume text directly.')
         }
       } else if (fileName.endsWith('.docx')) {
-        // For DOCX, just send the file to backend
+        // For DOCX, send to backend
         setSelectedFile(file)
       } else if (fileName.endsWith('.txt')) {
         // Extract TXT on client
@@ -143,8 +156,8 @@ export default function ResumeChecker() {
         setSelectedFile(file)
       }
     } catch (err) {
-      console.error('File extraction error:', err)
-      setError('Could not extract file. Please paste your resume text directly.')
+      console.error('File handling error:', err)
+      setError('Could not process file. Please paste your resume text directly or try again.')
     }
   }
 
