@@ -36,11 +36,12 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     extractedText = (data.text || '').trim();
     extractionMethods.push('pdf-parse');
     
+    console.log(`[PDF-EXTRACT] pdf-parse extracted: ${extractedText.length} characters`);
+    
     if (extractedText.length > 100) {
       console.log(`[PDF-EXTRACT] pdf-parse SUCCESS: ${extractedText.length} characters extracted`);
       return extractedText;
     }
-    console.log(`[PDF-EXTRACT] pdf-parse returned only ${extractedText.length} characters`);
   } catch (error) {
     console.warn('[PDF-EXTRACT] pdf-parse failed:', error instanceof Error ? error.message : error);
   }
@@ -55,7 +56,7 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     
     const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
     const pdf = await loadingTask.promise;
-    const pageCount = Math.min(pdf.numPages, 10); // Limit to 10 pages
+    const pageCount = Math.min(pdf.numPages, 15); // Increase from 10 to 15 pages
     
     let fullText = '';
     
@@ -68,11 +69,13 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
             if (item.str) return item.str + ' ';
             return '';
           })
-          .join(' ')
+          .join('')
           .replace(/\s+/g, ' ')
           .trim();
         
-        fullText += pageText + '\n';
+        if (pageText.length > 0) {
+          fullText += pageText + '\n';
+        }
       } catch (pageError) {
         console.warn(`[PDF-EXTRACT] Error extracting page ${i}:`, pageError);
         continue;
@@ -82,6 +85,8 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     extractedText = fullText.trim();
     extractionMethods.push('pdfjs-dist');
     
+    console.log(`[PDF-EXTRACT] pdfjs-dist extracted: ${extractedText.length} characters from ${pageCount} pages`);
+    
     if (extractedText.length > 100) {
       console.log(`[PDF-EXTRACT] pdfjs-dist SUCCESS: ${extractedText.length} characters extracted`);
       return extractedText;
@@ -90,46 +95,80 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     console.warn('[PDF-EXTRACT] pdfjs-dist failed:', error instanceof Error ? error.message : error);
   }
 
-  // Method 3: Try simple text extraction for plain text PDFs
+  // Method 3: Try raw buffer extraction with multiple approaches
   try {
     console.log('[PDF-EXTRACT] Attempting raw buffer text extraction...');
-    const text = buffer.toString('utf-8', 0, Math.min(buffer.length, 100000));
-    // Check if it contains readable text
-    const lines = text.split('\n').filter(line => line.trim().length > 0);
-    if (lines.length > 5) {
-      extractedText = lines.join('\n').trim();
-      extractionMethods.push('raw-buffer');
-      
-      if (extractedText.length > 100) {
-        console.log(`[PDF-EXTRACT] Raw buffer SUCCESS: ${extractedText.length} characters extracted`);
-        return extractedText;
-      }
+    
+    // Try UTF-8 first
+    let text = buffer.toString('utf-8', 0, Math.min(buffer.length, 500000));
+    
+    // Remove binary characters and clean up
+    text = text
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control characters
+      .replace(/[\x80-\x9F]/g, '') // Remove extended control characters
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 2)
+      .join('\n');
+    
+    extractedText = text.trim();
+    extractionMethods.push('raw-buffer');
+    
+    console.log(`[PDF-EXTRACT] Raw buffer extracted: ${extractedText.length} characters`);
+    
+    if (extractedText.length > 100) {
+      console.log(`[PDF-EXTRACT] Raw buffer SUCCESS: ${extractedText.length} characters extracted`);
+      return extractedText;
     }
   } catch (error) {
     console.warn('[PDF-EXTRACT] Raw buffer extraction failed:', error);
   }
 
-  // If all methods failed
-  if (extractedText.length === 0) {
-    throw new Error(
-      'Could not extract text from PDF. Possible reasons:\n' +
-      '1. PDF is image-based or scanned (use OCR software first)\n' +
-      '2. PDF is password protected\n' +
-      '3. PDF is corrupted\n' +
-      '4. PDF uses non-standard encoding\n\n' +
-      'Please convert to text-based PDF or paste content directly.'
-    );
+  // Method 4: Try Latin-1 encoding for PDFs with non-UTF8 text
+  try {
+    console.log('[PDF-EXTRACT] Attempting Latin-1 extraction...');
+    let text = buffer.toString('latin1', 0, Math.min(buffer.length, 500000));
+    
+    // Clean up
+    text = text
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 2 && !line.includes('PDF') && !line.includes('stream'))
+      .join('\n');
+    
+    extractedText = text.trim();
+    extractionMethods.push('latin1-buffer');
+    
+    console.log(`[PDF-EXTRACT] Latin-1 extracted: ${extractedText.length} characters`);
+    
+    if (extractedText.length > 150) {
+      return extractedText;
+    }
+  } catch (error) {
+    console.warn('[PDF-EXTRACT] Latin-1 extraction failed:', error);
   }
-  
-  if (extractedText.length < 50) {
-    throw new Error(
-      `Insufficient text extracted (${extractedText.length} characters). ` +
-      'The PDF may contain only images or be improperly formatted.'
-    );
+
+  // If we have some text from any method, return it
+  if (extractedText.length >= 50) {
+    console.log(`[PDF-EXTRACT] Using result from: ${extractionMethods.join(', ')}`);
+    return extractedText;
   }
-  
-  console.log(`[PDF-EXTRACT] Using combined result from: ${extractionMethods.join(', ')}`);
-  return extractedText;
+
+  // If all methods failed with minimal text
+  const errorMsg = `Could not extract sufficient text from PDF (only ${extractedText.length} characters found). Possible reasons:
+1. PDF is image-based or scanned (contains only images, no text)
+2. PDF is password protected or encrypted
+3. PDF is corrupted or malformed
+4. PDF uses unsupported encoding
+
+Solutions:
+• Try converting the PDF to text using an online PDF converter
+• Export the PDF as text from the original application
+• Paste your resume text directly in the text area
+• Upload a DOCX or TXT version instead`;
+
+  throw new Error(errorMsg);
 }
 
 // Extract text from DOCX
@@ -225,7 +264,7 @@ export async function POST(request: NextRequest) {
           extractedResumeText = await extractTextFromPDF(buffer);
           log('STEP-6', 'PDF extraction completed', {
             textLength: extractedResumeText.length,
-            preview: extractedResumeText.substring(0, 200) + '...',
+            preview: extractedResumeText.substring(0, 300),
           });
         } catch (pdfError: any) {
           log('STEP-6-ERROR', 'PDF extraction failed', {
@@ -234,7 +273,8 @@ export async function POST(request: NextRequest) {
           return NextResponse.json(
             { 
               error: pdfError.message,
-              suggestion: 'Please try converting your PDF to text using an online converter, or paste the text directly.',
+              suggestion: 'Your PDF could not be read. Please try: 1) Converting to DOCX/TXT format, 2) Using an online PDF converter, or 3) Pasting text directly.',
+              canPasteText: true,
             },
             { status: 400 }
           );
