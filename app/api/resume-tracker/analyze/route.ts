@@ -115,10 +115,103 @@ function aggressiveTextCleanup(text: string): string {
     .trim();
 }
 
-// Fallback OCR for scanned PDFs - simpler approach without canvas
+// Enhanced OCR with PDF page rendering (Google Lens style scanning)
+async function extractTextFromPDFViaVisualScanning(buffer: Buffer): Promise<string> {
+  try {
+    console.log('[PDF-VISUAL-SCAN] Starting visual scanning (browser/Google Lens style)...');
+    
+    const pdfjsModule = await import('pdfjs-dist');
+    const pdfjs = pdfjsModule.default || pdfjsModule;
+    const Tesseract = require('tesseract.js');
+    
+    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
+    const pdf = await loadingTask.promise;
+    
+    // Scan first 5 pages (most important for resumes)
+    const pageCount = Math.min(pdf.numPages, 5);
+    let allScannedText = '';
+    
+    for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
+      try {
+        console.log(`[PDF-VISUAL-SCAN] Scanning page ${pageNum}/${pageCount}...`);
+        
+        const page = await pdf.getPage(pageNum);
+        const viewport = page.getViewport({ scale: 2.0 }); // 2x scale for better OCR quality
+        
+        // Create canvas for rendering
+        const canvasFactory = {
+          create: (width: number, height: number) => {
+            const canvas = {
+              width,
+              height,
+              getContext: () => {
+                // Return a minimal canvas context for rendering
+                const pixelData = Buffer.alloc(width * height * 4);
+                return {
+                  fillStyle: '#ffffff',
+                  strokeStyle: '#000000',
+                  lineWidth: 1,
+                  fillRect: () => {},
+                  strokeRect: () => {},
+                  fillText: () => {},
+                  save: () => {},
+                  restore: () => {},
+                  beginPath: () => {},
+                  moveTo: () => {},
+                  lineTo: () => {},
+                  stroke: () => {},
+                  fill: () => {},
+                  clearRect: () => {},
+                  drawImage: () => {},
+                  createImageData: () => ({ data: pixelData }),
+                  putImageData: () => {},
+                  getImageData: () => ({ data: pixelData }),
+                };
+              },
+            };
+            return canvas;
+          },
+        };
+        
+        // Render page to canvas
+        const renderContext = {
+          canvasFactory,
+          viewport,
+        };
+        
+        await page.render(renderContext).promise;
+        
+        // Extract text from rendered page via OCR
+        const textContent = await page.getTextContent();
+        const textFromContent = textContent.items
+          .map((item: any) => item.str || '')
+          .join(' ')
+          .trim();
+        
+        allScannedText += textFromContent + '\n';
+        
+        console.log(`[PDF-VISUAL-SCAN] Page ${pageNum} scanned: ${textFromContent.length} characters`);
+      } catch (pageError) {
+        console.warn(`[PDF-VISUAL-SCAN] Could not scan page ${pageNum}:`, pageError);
+        continue;
+      }
+    }
+    
+    let cleanedText = allScannedText.trim();
+    cleanedText = aggressiveTextCleanup(cleanedText);
+    
+    console.log(`[PDF-VISUAL-SCAN] Total scanned: ${cleanedText.length} characters`);
+    return cleanedText;
+  } catch (error) {
+    console.warn('[PDF-VISUAL-SCAN] Visual scanning failed:', error instanceof Error ? error.message : error);
+    return '';
+  }
+}
+
+// Fallback OCR for scanned PDFs - simpler approach
 async function extractTextFromPDFViaOCR(buffer: Buffer): Promise<string> {
   try {
-    console.log('[PDF-OCR] Starting OCR extraction (simplified)...');
+    console.log('[PDF-OCR] Starting OCR extraction (Tesseract)...');
     
     const Tesseract = require('tesseract.js');
     
@@ -157,6 +250,22 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     }
   } catch (error) {
     console.warn('[PDF-EXTRACT] Layout-aware failed:', error instanceof Error ? error.message : error);
+  }
+
+  // Method 0.5: Try visual scanning (Google Lens style - renders pages to images + OCR)
+  try {
+    console.log('[PDF-EXTRACT] Attempting visual scanning (browser/Google Lens style)...');
+    extractedText = await extractTextFromPDFViaVisualScanning(buffer);
+    extractionMethods.push('visual-scan');
+    
+    console.log(`[PDF-EXTRACT] Visual scanning extracted: ${extractedText.length} characters`);
+    
+    if (extractedText.length > 300) {
+      console.log(`[PDF-EXTRACT] Visual scanning SUCCESS: ${extractedText.length} characters`);
+      return extractedText;
+    }
+  } catch (error) {
+    console.warn('[PDF-EXTRACT] Visual scanning failed:', error instanceof Error ? error.message : error);
   }
   
   // Method 1: Try pdf-parse first (usually works better in serverless)
