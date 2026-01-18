@@ -27,19 +27,10 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   // Method 1: Try pdf-parse first (usually works better in serverless)
   try {
     console.log('[PDF-EXTRACT] Attempting pdf-parse extraction...');
-    const pdfParse = (await import('pdf-parse')).default;
+    // pdf-parse exports itself directly, not as default
+    const pdfParse = await import('pdf-parse');
     const data = await pdfParse(buffer, {
       max: 20, // Limit pages for performance
-      pagerender: pageData => {
-        // Simple text extraction
-        let textContent = '';
-        if (pageData.texts && pageData.texts.length > 0) {
-          textContent = pageData.texts
-            .map((text: any) => text.text || '')
-            .join(' ');
-        }
-        return textContent;
-      }
     });
     
     extractedText = (data.text || '').trim();
@@ -58,13 +49,8 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
     console.log('[PDF-EXTRACT] Attempting pdfjs-dist extraction...');
     
-    // Dynamically import pdfjs-dist with webpack configuration
-    const pdfjsLib = await import('pdfjs-dist');
-    const pdfjs = pdfjsLib.default || pdfjsLib;
-    
-    // Set worker
-    const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.min.mjs');
-    pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+    // Import pdfjs-dist correctly
+    const pdfjs = await import('pdfjs-dist');
     
     const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
     const pdf = await loadingTask.promise;
@@ -150,7 +136,7 @@ async function extractTextFromDOCX(buffer: Buffer): Promise<string> {
   try {
     console.log('[DOCX-EXTRACT] Starting DOCX extraction...');
     const mammoth = await import('mammoth');
-    const result = await mammoth.extractRawText({ buffer });
+    const result = await mammoth.extractRawText({ arrayBuffer: buffer.buffer });
     const text = (result.value || '').trim();
     console.log(`[DOCX-EXTRACT] Extracted ${text.length} characters from DOCX`);
     return text;
