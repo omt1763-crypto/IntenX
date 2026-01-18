@@ -171,6 +171,26 @@ Solutions:
   throw new Error(errorMsg);
 }
 
+// Validate that extracted text is actually meaningful
+function isValidResumeText(text: string): boolean {
+  // Check minimum length
+  if (text.length < 100) return false;
+  
+  // Check for common resume keywords (at least some should be present)
+  const resumeKeywords = [
+    'experience', 'skill', 'education', 'project', 'work',
+    'professional', 'employment', 'responsibility', 'achievement',
+    'years', 'company', 'university', 'degree', 'certification',
+    'technical', 'programming', 'development'
+  ];
+  
+  const lowerText = text.toLowerCase();
+  const foundKeywords = resumeKeywords.filter(kw => lowerText.includes(kw)).length;
+  
+  // Need at least 2 resume keywords to consider it valid
+  return foundKeywords >= 2;
+}
+
 // Extract text from DOCX
 async function extractTextFromDOCX(buffer: Buffer): Promise<string> {
   try {
@@ -355,6 +375,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate that extracted text is actually a resume
+    if (!isValidResumeText(extractedResumeText)) {
+      log('STEP-15b-ERROR', 'Extracted text does not appear to be a resume', {
+        textLength: extractedResumeText.length,
+        preview: extractedResumeText.substring(0, 200),
+      });
+      return NextResponse.json(
+        { 
+          error: 'The extracted content does not appear to be a valid resume',
+          suggestion: 'The file may be image-based, encrypted, or corrupted. Please: 1) Try a different PDF file, 2) Convert to DOCX/TXT format, 3) Paste the text directly.',
+          details: 'No resume keywords (skills, experience, education, etc.) were found.',
+        },
+        { status: 400 }
+      );
+    }
+
     // ===== OPENAI API CALL =====
     log('STEP-16', 'Building analysis prompt...');
 
@@ -479,7 +515,21 @@ Return EXACTLY this JSON structure (no other text):
 
       analysis = JSON.parse(jsonStr);
       
-      log('STEP-21', 'JSON parsed successfully', {
+      // Validate that we got real scores, not defaults
+      const hasDefaultScores = analysis.overallScore === 50 && 
+                               analysis.metrics?.impact === 50 && 
+                               analysis.metrics?.brevity === 50 && 
+                               analysis.metrics?.style === 50 && 
+                               analysis.metrics?.skills === 50;
+      
+      if (hasDefaultScores) {
+        log('STEP-21-WARNING', 'Received default/fallback scores from OpenAI', {
+          allScores: 50,
+        });
+        throw new Error('OpenAI returned only default scores');
+      }
+      
+      log('STEP-21', 'JSON parsed successfully with real analysis', {
         keys: Object.keys(analysis),
         overallScore: analysis.overallScore,
         experienceLevel: analysis.experienceLevel,
@@ -489,42 +539,15 @@ Return EXACTLY this JSON structure (no other text):
         skillsScore: analysis.metrics?.skills,
       });
     } catch (parseError) {
-      log('STEP-21-WARNING', 'Could not parse JSON, returning raw response', {
+      log('STEP-21-ERROR', 'Failed to parse valid analysis from OpenAI', {
         error: String(parseError),
-        attemptedContent: analysisContent.substring(0, 500),
+        content: analysisContent.substring(0, 300),
       });
-      // Provide a complete fallback structure matching expected format
-      analysis = {
-        overallScore: 50,
-        experienceLevel: 'Fresher',
-        hiringRecommendation: 'Review',
-        metrics: {
-          impact: 50,
-          brevity: 50,
-          style: 50,
-          skills: 50,
-        },
-        atsScore: 50,
-        technicalSkills: [],
-        missingSkills: [],
-        strengths: ['Resume submitted', 'Unique background'],
-        weaknesses: ['Minimal formatting', 'Limited detail', 'Unclear structure'],
-        contentQuality: {
-          bulletPointQuality: 'Average',
-          useOfMetrics: 'Average',
-          actionVerbUsage: 'Average',
-        },
-        interviewFocusTopics: ['Background', 'Skills', 'Motivation'],
-        improvements: [
-          'Add more specific achievements with metrics',
-          'Use action verbs to start bullet points',
-          'Improve formatting and structure',
-          'Add measurable results and impact',
-          'Highlight relevant technical skills',
-        ],
-        summary: analysisContent,
-        rawAnalysis: analysisContent,
-      };
+      
+      throw new Error(
+        `Could not analyze resume: OpenAI returned invalid data. ` +
+        `Please try again or contact support if the problem persists.`
+      );
     }
 
     // ===== SAVE TO DATABASE =====
