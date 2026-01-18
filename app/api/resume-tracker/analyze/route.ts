@@ -19,8 +19,11 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Extract text from PDF using pdf-parse (fallback only)
+// Extract text from PDF using pdf-parse with fallback to pdfjs-dist
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
+  let extractedText = '';
+
+  // Try pdf-parse first (faster for simple PDFs)
   try {
     // @ts-ignore - pdf-parse CommonJS module
     const pdfParse = require('pdf-parse');
@@ -32,19 +35,62 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
           return textContent.items
             .map((item: any) => item.str || '')
             .join(' ');
-        } catch {
+        } catch (error) {
+          console.warn('Error rendering page:', error);
           return '';
         }
       },
     });
-    const text = (data.text || '').trim();
-    // Even if we get minimal text, try to use it
-    return text || '';
+    extractedText = (data.text || '').trim();
+    
+    if (extractedText.length > 50) {
+      // Successfully extracted sufficient text
+      return extractedText;
+    }
   } catch (error) {
-    console.error('PDF extraction fallback failed:', error);
-    // Return empty string on failure, but don't throw
-    return '';
+    console.warn('pdf-parse extraction failed, trying pdfjs-dist:', error);
   }
+
+  // Fallback to pdfjs-dist for better compatibility
+  try {
+    const pdfjs = require('pdfjs-dist');
+    // Set up worker for pdfjs
+    const pdfjsWorker = require('pdfjs-dist/build/pdf.worker');
+    pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+    
+    const pdf = await pdfjs.getDocument({ data: buffer }).promise;
+    const pageCount = pdf.numPages;
+    let fullText = '';
+    
+    for (let i = 1; i <= Math.min(pageCount, 50); i++) {
+      try {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str || '')
+          .join(' ');
+        fullText += ' ' + pageText;
+      } catch (pageError) {
+        console.warn(`Error extracting page ${i}:`, pageError);
+        continue;
+      }
+    }
+    
+    extractedText = fullText.trim();
+    
+    if (extractedText.length > 50) {
+      return extractedText;
+    }
+  } catch (error) {
+    console.error('pdfjs-dist extraction also failed:', error);
+  }
+
+  // If both methods failed or returned too little text
+  if (extractedText.length === 0) {
+    throw new Error('Could not extract text from PDF. The file may be corrupted, image-based, or encrypted.');
+  }
+  
+  return extractedText;
 }
 
 // Extract text from DOCX
@@ -126,16 +172,30 @@ export async function POST(request: NextRequest) {
       // Try different extractors based on file type
       if (fileName.endsWith('.pdf') || resumeInput.type === 'application/pdf') {
         log('STEP-6c', 'Detected PDF file, extracting text...');
-        resumeText = await extractTextFromPDF(bufferNode);
-        log('STEP-6d', 'PDF extraction completed', {
-          textLength: resumeText?.length || 0,
-        });
+        try {
+          resumeText = await extractTextFromPDF(bufferNode);
+          log('STEP-6d', 'PDF extraction completed', {
+            textLength: resumeText?.length || 0,
+          });
+        } catch (pdfError: any) {
+          log('STEP-6d-ERROR', 'PDF extraction failed', {
+            error: pdfError?.message,
+          });
+          throw new Error(`Failed to extract PDF: ${pdfError?.message || 'Unknown error'}`);
+        }
       } else if (fileName.endsWith('.docx') || resumeInput.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
         log('STEP-6e', 'Detected DOCX file, extracting text...');
-        resumeText = await extractTextFromDOCX(bufferNode);
-        log('STEP-6f', 'DOCX extraction completed', {
-          textLength: resumeText?.length || 0,
-        });
+        try {
+          resumeText = await extractTextFromDOCX(bufferNode);
+          log('STEP-6f', 'DOCX extraction completed', {
+            textLength: resumeText?.length || 0,
+          });
+        } catch (docxError: any) {
+          log('STEP-6f-ERROR', 'DOCX extraction failed', {
+            error: docxError?.message,
+          });
+          throw new Error(`Failed to extract DOCX: ${docxError?.message || 'Unknown error'}`);
+        }
       } else if (fileName.endsWith('.txt') || resumeInput.type === 'text/plain') {
         log('STEP-6g', 'Detected TXT file, extracting text...');
         resumeText = extractTextFromTXT(bufferNode);
@@ -161,7 +221,7 @@ export async function POST(request: NextRequest) {
     if (!resumeText.trim()) {
       log('STEP-7', 'ERROR: Resume text is empty after extraction');
       return NextResponse.json(
-        { error: 'Could not extract text from file. Please ensure your file is a valid resume and try again, or paste your resume text directly for analysis.' },
+        { error: 'Could not extract text from your file. This may happen if: (1) The PDF is image-based or scanned, (2) The file is corrupted, or (3) The file format is not supported. Please try uploading a text-based PDF or paste your resume text directly.' },
         { status: 400 }
       );
     }
