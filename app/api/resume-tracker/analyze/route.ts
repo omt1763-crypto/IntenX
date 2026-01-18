@@ -27,8 +27,8 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   // Method 1: Try pdf-parse first (usually works better in serverless)
   try {
     console.log('[PDF-EXTRACT] Attempting pdf-parse extraction...');
-    // pdf-parse exports itself directly, not as default
-    const pdfParse = await import('pdf-parse');
+    // pdf-parse exports a default function
+    const pdfParse = (await import('pdf-parse')).default;
     const data = await pdfParse(buffer, {
       max: 20, // Limit pages for performance
     });
@@ -49,8 +49,9 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
     console.log('[PDF-EXTRACT] Attempting pdfjs-dist extraction...');
     
-    // Import pdfjs-dist correctly
-    const pdfjs = await import('pdfjs-dist');
+    // Import pdfjs-dist correctly - it exports as default
+    const pdfjsModule = await import('pdfjs-dist');
+    const pdfjs = pdfjsModule.default || pdfjsModule;
     
     const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
     const pdf = await loadingTask.promise;
