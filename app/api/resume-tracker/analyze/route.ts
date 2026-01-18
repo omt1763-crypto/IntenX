@@ -174,21 +174,34 @@ export async function POST(request: NextRequest) {
     // ===== OPENAI API CALL =====
     log('STEP-9', 'Building analysis prompt...');
 
-    const systemPrompt = `You are an expert resume analyzer. Analyze the provided resume${
-      jobDescription ? ' against the job description' : ''
-    } and provide a detailed analysis.
+    const systemPrompt = `You are an expert technical recruiter and ATS resume evaluator with 15+ years of hiring experience.
 
-Please respond with a JSON object containing:
+Analyze the provided resume${jobDescription ? ' against the job description' : ''} and provide a comprehensive, recruiter-focused analysis.
+
+CRITICAL RULES:
+- Base analysis ONLY on provided resume text
+- Do NOT hallucinate personal information
+- Be concise and action-oriented
+- Return ONLY valid JSON, no markdown
+
+Respond with this exact JSON structure (no additional text):
 {
+  "overallScore": <number 0-100, average of all component scores>,
+  "experienceLevel": "<Fresher|Junior|Mid|Senior>",
+  "hiringRecommendation": "<Reject|Review|Interview|Strong Hire>",
   "atsScore": <number 0-100 for ATS compatibility>,
-  "readabilityScore": <number 0-100 for clarity and readability>,
-  "keywordMatchScore": <number 0-100 for keyword relevance>,
-  "roleFitScore": <number 0-100 for job fit>,
-  "overallScore": <average of all scores>,
-  "strengths": [<list of 3-5 key strengths>],
-  "areasForImprovement": [<list of 3-5 areas to improve>],
-  "recommendations": [<list of 3-5 specific actionable recommendations>],
-  "summary": "<brief 2-3 sentence professional summary>"
+  "technicalSkills": [<extracted skills from resume as strings>],
+  "missingSkills": [<3-5 important skills missing for typical industry standards>],
+  "strengths": [<3-5 key strengths as bullet points>],
+  "weaknesses": [<3-5 areas to improve as bullet points>],
+  "contentQuality": {
+    "bulletPointQuality": "<Poor|Average|Good>",
+    "useOfMetrics": "<Poor|Average|Good>",
+    "actionVerbUsage": "<Poor|Average|Good>"
+  },
+  "interviewFocusTopics": [<5-7 topics to discuss in interview>],
+  "improvements": [<5-7 specific, actionable improvement suggestions>],
+  "summary": "<2-3 sentence professional recruiter summary>"
 }`;
 
     const userContent = jobDescription
