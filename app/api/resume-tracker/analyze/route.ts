@@ -49,7 +49,8 @@ async function extractTextFromPDFViaOCR(buffer: Buffer): Promise<string> {
         const context = canvas.getContext('2d');
         
         await page.render({
-          canvasContext: context,
+          canvas: canvas,
+          context: context,
           viewport: viewport,
         }).promise;
         
