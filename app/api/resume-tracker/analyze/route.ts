@@ -320,55 +320,53 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = `You are an expert technical recruiter and ATS resume evaluator with 15+ years of hiring experience.
 
-IMPORTANT: You MUST analyze the actual resume content provided and give REAL scores based on what's actually in the resume.
-Do NOT give generic or default scores. Each resume is unique and deserves unique analysis.
+CRITICAL INSTRUCTIONS:
+1. Analyze the ACTUAL resume content provided - not generic template
+2. Return ONLY valid JSON in the exact format shown - no markdown, no explanations
+3. ALL numeric scores MUST be realistic numbers (0-100), NOT zeros or defaults
+4. Each metric should have different scores based on what you observe
+5. Skills array MUST contain actual skills from the resume
+6. Strengths/Weaknesses MUST be specific to THIS resume, not generic
 
-Your analysis must be based ONLY on the actual content of the resume:
-- Extract REAL technical skills mentioned in the resume
-- Identify REAL strengths from actual accomplishments
-- Point out REAL weaknesses from what's missing or poorly presented
-- Score based on actual content quality, not defaults
+SCORING GUIDELINES:
+- Impact (0-100): How well achievements demonstrate business value. Higher if quantified results present.
+- Brevity (0-100): Writing efficiency and conciseness. Higher for punchy bullets, lower for verbose text.
+- Style (0-100): Professional formatting, grammar, consistency. Higher for clean presentation.
+- Skills (0-100): Technical skill relevance and demand. Higher for in-demand tech skills.
+- Overall Score: Average of metrics with 10-20 point adjustment for experience level.
 
-${jobDescription ? `You should also match the resume against the job description and score how well it aligns.` : ''}
+IMPORTANT RULES:
+- Extract skills from what's explicitly written in resume
+- Do NOT hallucinate or assume skills not mentioned
+- Point out missing skills relative to experience level
+- Provide honest assessment, not inflated scores
+- If resume is weak, scores should be lower (20-40 range)
+- If resume is strong, scores should be higher (70-95 range)
 
-CRITICAL SCORING RULES:
-- Impact (0-100): Rate how well the resume demonstrates value and achievements. Look for quantified results, metrics, and business impact.
-- Brevity (0-100): Rate how concise and efficient the writing is. Penalize verbose descriptions, reward punchy bullet points.
-- Style (0-100): Rate the professionalism, formatting, and presentation. Check for consistent formatting, proper grammar.
-- Skills (0-100): Rate how relevant and specific the technical skills are. Award higher scores for in-demand skills.
-- Overall Score: Average of the four metrics above, adjusted by experience level and how well it matches job description.
-
-MANDATORY RULES:
-- Return ONLY valid JSON, no markdown, no extra text
-- All scores must be different and based on actual resume content
-- Do NOT return default values (50, 50, 50, 50)
-- Analyze what IS in the resume, not what SHOULD be there
-- If skills are missing, note them in missingSkills array
-
-Return EXACTLY this JSON structure:
+Return EXACTLY this JSON structure (no other text):
 {
-  "overallScore": <0-100, based on actual content>,
+  "overallScore": <realistic 0-100 number based on full analysis>,
   "experienceLevel": "<Fresher|Junior|Mid|Senior>",
   "hiringRecommendation": "<Reject|Review|Interview|Strong Hire>",
   "metrics": {
-    "impact": <0-100, based on achievement demonstrations>,
-    "brevity": <0-100, based on writing efficiency>,
-    "style": <0-100, based on formatting and presentation>,
-    "skills": <0-100, based on technical relevance>
+    "impact": <realistic 0-100>,
+    "brevity": <realistic 0-100>,
+    "style": <realistic 0-100>,
+    "skills": <realistic 0-100>
   },
-  "atsScore": <0-100, ATS keyword matching and formatting>,
-  "technicalSkills": [<ONLY skills explicitly mentioned in resume>],
-  "missingSkills": [<important skills not mentioned for this experience level>],
-  "strengths": [<ONLY strengths evident from actual resume content>],
-  "weaknesses": [<ONLY weaknesses from actual resume analysis>],
+  "atsScore": <0-100 for ATS compatibility>,
+  "technicalSkills": [<skill1>, <skill2>, <skill3>, ...],
+  "missingSkills": [<important skill1>, <important skill2>, ...],
+  "strengths": [<specific strength from resume>, <strength2>, ...],
+  "weaknesses": [<specific weakness found>, <weakness2>, ...],
   "contentQuality": {
     "bulletPointQuality": "<Poor|Average|Good>",
     "useOfMetrics": "<Poor|Average|Good>",
     "actionVerbUsage": "<Poor|Average|Good>"
   },
-  "interviewFocusTopics": [<topics to explore based on actual resume>],
-  "improvements": [<specific improvements based on what's in the resume>],
-  "summary": "<professional recruiter summary of the actual candidate>"
+  "interviewFocusTopics": [<topic based on resume>, <topic2>, ...],
+  "improvements": [<specific improvement for this resume>, <improvement2>, ...],
+  "summary": "<honest 2-3 sentence assessment of this candidate>"
 }`;
 
     const userContent = jobDescription
@@ -379,6 +377,8 @@ Return EXACTLY this JSON structure:
       model: 'gpt-4o-mini',
       hasJobDescription: !!jobDescription,
       resumeLength: extractedResumeText.length,
+      resumePreview: extractedResumeText.substring(0, 500),
+      totalUserContentLength: userContent.length,
     });
 
     let response;
@@ -395,7 +395,11 @@ Return EXACTLY this JSON structure:
 
       log('STEP-18', 'OpenAI API call succeeded', {
         hasContent: !!response.choices?.[0]?.message?.content,
+        contentLength: response.choices?.[0]?.message?.content?.length || 0,
       });
+      
+      // Log the actual response for debugging
+      console.log('[OPENAI-RESPONSE]', response.choices[0]?.message?.content);
     } catch (openaiError: any) {
       log('STEP-18-ERROR', 'OpenAI API call failed', {
         errorMessage: openaiError?.message,
@@ -430,6 +434,7 @@ Return EXACTLY this JSON structure:
 
       log('STEP-20b', 'Attempting JSON parse', {
         extractedJsonLength: jsonStr.length,
+        jsonPreview: jsonStr.substring(0, 500),
       });
 
       analysis = JSON.parse(jsonStr);
@@ -438,11 +443,15 @@ Return EXACTLY this JSON structure:
         keys: Object.keys(analysis),
         overallScore: analysis.overallScore,
         experienceLevel: analysis.experienceLevel,
+        impactScore: analysis.metrics?.impact,
+        brevityScore: analysis.metrics?.brevity,
+        styleScore: analysis.metrics?.style,
+        skillsScore: analysis.metrics?.skills,
       });
     } catch (parseError) {
       log('STEP-21-WARNING', 'Could not parse JSON, returning raw response', {
         error: String(parseError),
-        attemptedContent: analysisContent.substring(0, 200),
+        attemptedContent: analysisContent.substring(0, 500),
       });
       // Provide a complete fallback structure matching expected format
       analysis = {
