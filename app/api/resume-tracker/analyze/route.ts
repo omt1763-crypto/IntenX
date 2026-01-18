@@ -72,11 +72,13 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     });
     
     extractedText = (data.text || '').trim();
+    // Apply cleanup immediately after extraction
+    extractedText = aggressiveTextCleanup(extractedText);
     extractionMethods.push('pdf-parse');
     
-    console.log(`[PDF-EXTRACT] pdf-parse extracted: ${extractedText.length} characters`);
+    console.log(`[PDF-EXTRACT] pdf-parse extracted: ${extractedText.length} characters (after cleanup)`);
     
-    if (extractedText.length > 500) {
+    if (extractedText.length > 300) {
       console.log(`[PDF-EXTRACT] pdf-parse SUCCESS: ${extractedText.length} characters extracted`);
       return extractedText;
     }
@@ -121,11 +123,13 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     }
     
     extractedText = fullText.trim();
+    // Apply cleanup after extraction
+    extractedText = aggressiveTextCleanup(extractedText);
     extractionMethods.push('pdfjs-dist');
     
-    console.log(`[PDF-EXTRACT] pdfjs-dist extracted: ${extractedText.length} characters from ${pageCount} pages`);
+    console.log(`[PDF-EXTRACT] pdfjs-dist extracted: ${extractedText.length} characters from ${pageCount} pages (after cleanup)`);
     
-    if (extractedText.length > 500) {
+    if (extractedText.length > 300) {
       console.log(`[PDF-EXTRACT] pdfjs-dist SUCCESS: ${extractedText.length} characters extracted`);
       return extractedText;
     }
@@ -150,11 +154,13 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
       .join('\n');
     
     extractedText = text.trim();
+    // Apply cleanup after extraction
+    extractedText = aggressiveTextCleanup(extractedText);
     extractionMethods.push('raw-buffer');
     
-    console.log(`[PDF-EXTRACT] Raw buffer extracted: ${extractedText.length} characters`);
+    console.log(`[PDF-EXTRACT] Raw buffer extracted: ${extractedText.length} characters (after cleanup)`);
     
-    if (extractedText.length > 500) {
+    if (extractedText.length > 300) {
       console.log(`[PDF-EXTRACT] Raw buffer SUCCESS: ${extractedText.length} characters extracted`);
       return extractedText;
     }
@@ -176,11 +182,13 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
       .join('\n');
     
     extractedText = text.trim();
+    // Apply cleanup after extraction
+    extractedText = aggressiveTextCleanup(extractedText);
     extractionMethods.push('latin1-buffer');
     
-    console.log(`[PDF-EXTRACT] Latin-1 extracted: ${extractedText.length} characters`);
+    console.log(`[PDF-EXTRACT] Latin-1 extracted: ${extractedText.length} characters (after cleanup)`);
     
-    if (extractedText.length > 500) {
+    if (extractedText.length > 300) {
       return extractedText;
     }
   } catch (error) {
@@ -188,11 +196,11 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   }
 
   // Method 5: OCR for scanned/image-based PDFs (like Google Lens)
-  if (extractedText.length < 500) {
+  if (extractedText.length < 300) {
     console.log('[PDF-EXTRACT] Text extraction insufficient, trying OCR (Google Lens style)...');
     try {
       const ocrText = await extractTextFromPDFViaOCR(buffer);
-      if (ocrText.length > 200) {
+      if (ocrText.length > 150) {
         extractedText = ocrText;
         extractionMethods.push('ocr');
         console.log(`[PDF-EXTRACT] OCR SUCCESS: ${extractedText.length} characters extracted`);
@@ -204,7 +212,7 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   }
 
   // If we have some text from any method, return it
-  if (extractedText.length >= 100) {
+  if (extractedText.length >= 80) {
     console.log(`[PDF-EXTRACT] Using result from: ${extractionMethods.join(', ')}`);
     return extractedText;
   }
@@ -484,6 +492,19 @@ Return EXACTLY this JSON (no other text):
 
     // Aggressive cleanup of extracted resume text to reduce tokens
     let cleanedResumeText = aggressiveTextCleanup(extractedResumeText);
+    
+    log('STEP-16a', 'Text cleanup results', {
+      originalLength: extractedResumeText.length,
+      cleanedLength: cleanedResumeText.length,
+      reduction: Math.round((1 - cleanedResumeText.length / extractedResumeText.length) * 100) + '%',
+      cleanedPreview: cleanedResumeText.substring(0, 200),
+    });
+    
+    // If cleanup removed too much, use original
+    if (cleanedResumeText.length < 100 && extractedResumeText.length > 100) {
+      log('STEP-16b', 'Cleanup too aggressive, reverting to original text');
+      cleanedResumeText = extractedResumeText;
+    }
     
     // Limit resume text to first 5000 characters after cleanup to avoid token limits
     const maxResumeLength = 5000;
