@@ -19,6 +19,68 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// OCR extraction for scanned/image-based PDFs
+async function extractTextFromPDFViaOCR(buffer: Buffer): Promise<string> {
+  try {
+    console.log('[PDF-OCR] Starting OCR extraction (like Google Lens)...');
+    
+    // Use pdf2image + tesseract.js approach
+    const pdfParse = require('pdf-parse');
+    const Tesseract = require('tesseract.js');
+    
+    // First, get PDF images using pdfjs
+    const pdfjsModule = await import('pdfjs-dist');
+    const pdfjs = pdfjsModule.default || pdfjsModule;
+    
+    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
+    const pdf = await loadingTask.promise;
+    const pageCount = Math.min(pdf.numPages, 3); // Limit to first 3 pages for OCR (performance)
+    
+    let ocrText = '';
+    
+    for (let i = 1; i <= pageCount; i++) {
+      try {
+        console.log(`[PDF-OCR] Processing page ${i} with OCR...`);
+        const page = await pdf.getPage(i);
+        
+        // Render page to canvas
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = require('canvas').createCanvas(viewport.width, viewport.height);
+        const context = canvas.getContext('2d');
+        
+        await page.render({
+          canvasContext: context,
+          viewport: viewport,
+        }).promise;
+        
+        // Convert canvas to image and run OCR
+        const imageData = canvas.toBuffer('image/png');
+        const { data: result } = await Tesseract.recognize(imageData, 'eng');
+        
+        if (result?.text) {
+          ocrText += result.text + '\n';
+        }
+      } catch (pageError) {
+        console.warn(`[PDF-OCR] OCR failed on page ${i}:`, pageError);
+        continue;
+      }
+    }
+    
+    const cleanedText = ocrText
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 2)
+      .join('\n')
+      .trim();
+    
+    console.log(`[PDF-OCR] OCR extracted: ${cleanedText.length} characters from ${pageCount} pages`);
+    return cleanedText;
+  } catch (error) {
+    console.warn('[PDF-OCR] OCR extraction failed:', error instanceof Error ? error.message : error);
+    return ''; // Return empty string to allow fallback
+  }
+}
+
 // Enhanced PDF extraction with better error handling
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   let extractedText = '';
@@ -38,7 +100,7 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     
     console.log(`[PDF-EXTRACT] pdf-parse extracted: ${extractedText.length} characters`);
     
-    if (extractedText.length > 100) {
+    if (extractedText.length > 500) {
       console.log(`[PDF-EXTRACT] pdf-parse SUCCESS: ${extractedText.length} characters extracted`);
       return extractedText;
     }
@@ -56,7 +118,7 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     
     const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
     const pdf = await loadingTask.promise;
-    const pageCount = Math.min(pdf.numPages, 15); // Increase from 10 to 15 pages
+    const pageCount = Math.min(pdf.numPages, 15);
     
     let fullText = '';
     
@@ -87,7 +149,7 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     
     console.log(`[PDF-EXTRACT] pdfjs-dist extracted: ${extractedText.length} characters from ${pageCount} pages`);
     
-    if (extractedText.length > 100) {
+    if (extractedText.length > 500) {
       console.log(`[PDF-EXTRACT] pdfjs-dist SUCCESS: ${extractedText.length} characters extracted`);
       return extractedText;
     }
@@ -116,7 +178,7 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     
     console.log(`[PDF-EXTRACT] Raw buffer extracted: ${extractedText.length} characters`);
     
-    if (extractedText.length > 100) {
+    if (extractedText.length > 500) {
       console.log(`[PDF-EXTRACT] Raw buffer SUCCESS: ${extractedText.length} characters extracted`);
       return extractedText;
     }
@@ -142,15 +204,31 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     
     console.log(`[PDF-EXTRACT] Latin-1 extracted: ${extractedText.length} characters`);
     
-    if (extractedText.length > 150) {
+    if (extractedText.length > 500) {
       return extractedText;
     }
   } catch (error) {
     console.warn('[PDF-EXTRACT] Latin-1 extraction failed:', error);
   }
 
+  // Method 5: OCR for scanned/image-based PDFs (like Google Lens)
+  if (extractedText.length < 500) {
+    console.log('[PDF-EXTRACT] Text extraction insufficient, trying OCR (Google Lens style)...');
+    try {
+      const ocrText = await extractTextFromPDFViaOCR(buffer);
+      if (ocrText.length > 200) {
+        extractedText = ocrText;
+        extractionMethods.push('ocr');
+        console.log(`[PDF-EXTRACT] OCR SUCCESS: ${extractedText.length} characters extracted`);
+        return extractedText;
+      }
+    } catch (ocrError) {
+      console.warn('[PDF-EXTRACT] OCR extraction failed:', ocrError);
+    }
+  }
+
   // If we have some text from any method, return it
-  if (extractedText.length >= 50) {
+  if (extractedText.length >= 100) {
     console.log(`[PDF-EXTRACT] Using result from: ${extractionMethods.join(', ')}`);
     return extractedText;
   }
@@ -159,9 +237,9 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   const errorMsg = `Could not extract sufficient text from PDF (only ${extractedText.length} characters found). 
 
 Possible reasons:
-1. PDF is image-based or scanned (contains only images, no text)
+1. PDF is corrupted or malformed
 2. PDF is password protected or encrypted
-3. PDF is corrupted or malformed
+3. File is not a valid PDF
 
 Solutions:
 • Try uploading a different version of the file
