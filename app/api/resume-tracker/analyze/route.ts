@@ -247,19 +247,122 @@ function isValidResumeText(text: string): boolean {
   return true;
 }
 
-// Extract text from DOCX
+// Extract text from DOCX with multiple fallback methods
 async function extractTextFromDOCX(buffer: Buffer): Promise<string> {
+  let extractedText = '';
+  
+  // Method 1: Try Mammoth (best for modern DOCX)
   try {
-    console.log('[DOCX-EXTRACT] Starting DOCX extraction...');
+    console.log('[DOCX-EXTRACT] Method 1: Trying Mammoth extraction...');
     const mammoth = require('mammoth');
     const result = await mammoth.extractRawText({ arrayBuffer: buffer.buffer });
-    const text = (result.value || '').trim();
-    console.log(`[DOCX-EXTRACT] Extracted ${text.length} characters from DOCX`);
-    return text;
+    extractedText = (result.value || '').trim();
+    
+    if (extractedText.length > 50) {
+      console.log(`[DOCX-EXTRACT] Mammoth success: ${extractedText.length} characters`);
+      return extractedText;
+    }
   } catch (error) {
-    console.error('[DOCX-EXTRACT] Failed:', error instanceof Error ? error.message : error);
-    throw new Error(`Failed to extract text from DOCX: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.warn('[DOCX-EXTRACT] Mammoth failed:', error instanceof Error ? error.message : error);
   }
+
+  // Method 2: Try extracting from ZIP entries (DOCX is a ZIP file)
+  try {
+    console.log('[DOCX-EXTRACT] Method 2: Trying ZIP-based extraction...');
+    const AdmZip = require('adm-zip');
+    const zip = new AdmZip(buffer);
+    const entries = zip.getEntries();
+    
+    let foundText = '';
+    
+    // Look for document.xml which contains the actual content
+    for (const entry of entries) {
+      if (entry.entryName === 'word/document.xml' || entry.entryName.includes('document.xml')) {
+        const xmlContent = entry.getData().toString('utf-8');
+        // Extract text between tags, removing XML markup
+        const textMatches = xmlContent.match(/<w:t[^>]*>([^<]*)<\/w:t>/g);
+        if (textMatches) {
+          foundText = textMatches
+            .map(match => match.replace(/<w:t[^>]*>|<\/w:t>/g, ''))
+            .join(' ');
+          break;
+        }
+      }
+    }
+    
+    if (foundText.length > 50) {
+      extractedText = foundText.trim();
+      console.log(`[DOCX-EXTRACT] ZIP extraction success: ${extractedText.length} characters`);
+      return extractedText;
+    }
+  } catch (error) {
+    console.warn('[DOCX-EXTRACT] ZIP extraction failed:', error instanceof Error ? error.message : error);
+  }
+
+  // Method 3: Try raw text extraction (for corrupted/unusual DOCX files)
+  try {
+    console.log('[DOCX-EXTRACT] Method 3: Trying raw buffer extraction...');
+    let text = buffer.toString('utf-8');
+    
+    // Remove XML tags and control characters
+    text = text
+      .replace(/<[^>]+>/g, '') // Remove XML tags
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control chars
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 2)
+      .join('\n');
+    
+    if (text.length > 50) {
+      extractedText = text.trim();
+      console.log(`[DOCX-EXTRACT] Raw extraction success: ${extractedText.length} characters`);
+      return extractedText;
+    }
+  } catch (error) {
+    console.warn('[DOCX-EXTRACT] Raw extraction failed:', error instanceof Error ? error.message : error);
+  }
+
+  // Method 4: Try Latin-1 encoding for older DOC formats
+  try {
+    console.log('[DOCX-EXTRACT] Method 4: Trying Latin-1 encoding...');
+    let text = buffer.toString('latin1');
+    
+    text = text
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 2 && /[a-zA-Z0-9]/.test(line))
+      .join('\n');
+    
+    if (text.length > 50) {
+      extractedText = text.trim();
+      console.log(`[DOCX-EXTRACT] Latin-1 success: ${extractedText.length} characters`);
+      return extractedText;
+    }
+  } catch (error) {
+    console.warn('[DOCX-EXTRACT] Latin-1 failed:', error instanceof Error ? error.message : error);
+  }
+
+  // If we got some text from any method
+  if (extractedText.length > 30) {
+    console.log(`[DOCX-EXTRACT] Using extracted text: ${extractedText.length} characters`);
+    return extractedText;
+  }
+
+  // All methods failed
+  const errorMsg = `Could not extract text from Word document. 
+
+Possible reasons:
+1. Document is corrupted or in an unsupported format
+2. Document is password protected
+3. File is not a valid DOCX/DOC file
+
+Solutions:
+• Try saving the document again in Microsoft Word
+• Save as PDF and upload that instead
+• Copy and paste the text directly (most reliable)`;
+
+  throw new Error(errorMsg);
 }
 
 // Extract text from TXT
@@ -373,8 +476,14 @@ export async function POST(request: NextRequest) {
           });
           return NextResponse.json(
             { 
-              error: 'Failed to extract text from Word document',
-              suggestion: 'Please save as PDF or copy the text directly.',
+              error: docxError.message,
+              disclaimer: 'The Word document could not be read.',
+              solutions: [
+                'Try saving the document again in Microsoft Word',
+                'Save as PDF and upload that instead',
+                'Copy and paste the text directly (most reliable)',
+              ],
+              canPasteText: true,
             },
             { status: 400 }
           );
