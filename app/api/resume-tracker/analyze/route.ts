@@ -19,83 +19,54 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Intelligent PDF extraction with layout reconstruction
-async function extractTextFromPDFWithLayout(buffer: Buffer): Promise<string> {
+// Main PDF text extraction - scan all pages and collect text
+async function extractAllTextFromPDF(buffer: Buffer): Promise<string> {
   try {
-    console.log('[PDF-LAYOUT] Starting layout-aware PDF extraction...');
+    console.log('[PDF-EXTRACT-ALL] Starting full PDF text extraction...');
     
     const pdfjsModule = await import('pdfjs-dist');
     const pdfjs = pdfjsModule.default || pdfjsModule;
     
     const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
     const pdf = await loadingTask.promise;
-    const pageCount = Math.min(pdf.numPages, 10);
+    
+    console.log(`[PDF-EXTRACT-ALL] PDF has ${pdf.numPages} pages, extracting all...`);
     
     let fullText = '';
+    let successCount = 0;
     
-    for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
+    // Extract from ALL pages (not limited)
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       try {
         const page = await pdf.getPage(pageNum);
         const textContent = await page.getTextContent();
         
-        // Group text items by their position for layout reconstruction
-        const items = textContent.items as any[];
+        // Collect all text items from page
+        const pageText = textContent.items
+          .map((item: any) => item.str || '')
+          .join(' ')
+          .trim();
         
-        if (!items || items.length === 0) continue;
-        
-        // Sort items by vertical position (top to bottom) then horizontal (left to right)
-        const sortedItems = items.sort((a, b) => {
-          // Group by Y position (with tolerance for same line)
-          const yDiff = Math.abs(b.y - a.y);
-          if (yDiff > 5) return b.y - a.y; // Different lines
-          return a.x - b.x; // Same line, sort left to right
-        });
-        
-        // Reconstruct layout with proper grouping
-        let currentY = sortedItems[0]?.y ?? 0;
-        let lineText = '';
-        
-        for (const item of sortedItems) {
-          const text = item.str || '';
-          const itemY = item.y;
-          
-          // Check if we've moved to a new line (Y position changed significantly)
-          if (Math.abs(itemY - currentY) > 3) {
-            if (lineText.trim()) {
-              fullText += lineText.trim() + '\n';
-            }
-            lineText = text;
-            currentY = itemY;
-          } else {
-            // Same line - add space if needed
-            if (lineText && !lineText.endsWith(' ') && !text.startsWith(' ')) {
-              lineText += ' ';
-            }
-            lineText += text;
-          }
+        if (pageText.length > 0) {
+          fullText += pageText + '\n';
+          successCount++;
         }
-        
-        // Add remaining text
-        if (lineText.trim()) {
-          fullText += lineText.trim() + '\n';
-        }
-        
-        fullText += '\n'; // Page break
-        
       } catch (pageError) {
-        console.warn(`[PDF-LAYOUT] Error extracting page ${pageNum}:`, pageError);
+        console.warn(`[PDF-EXTRACT-ALL] Could not extract page ${pageNum}, skipping...`);
         continue;
       }
     }
     
+    console.log(`[PDF-EXTRACT-ALL] Successfully extracted from ${successCount}/${pdf.numPages} pages`);
+    
+    // Clean up the extracted text
     let cleanedText = fullText.trim();
-    // Apply aggressive cleanup after layout reconstruction
     cleanedText = aggressiveTextCleanup(cleanedText);
     
-    console.log(`[PDF-LAYOUT] Layout-aware extraction: ${cleanedText.length} characters`);
+    console.log(`[PDF-EXTRACT-ALL] Raw: ${fullText.length} chars → Cleaned: ${cleanedText.length} chars`);
     return cleanedText;
   } catch (error) {
-    console.warn('[PDF-LAYOUT] Layout extraction failed:', error instanceof Error ? error.message : error);
+    console.warn('[PDF-EXTRACT-ALL] Extraction failed:', error instanceof Error ? error.message : error);
     return '';
   }
 }
@@ -115,55 +86,7 @@ function aggressiveTextCleanup(text: string): string {
     .trim();
 }
 
-// Enhanced multi-page text extraction (visual scanning style)
-async function extractTextFromPDFViaVisualScanning(buffer: Buffer): Promise<string> {
-  try {
-    console.log('[PDF-VISUAL-SCAN] Starting visual scanning (enhanced multi-page extraction)...');
-    
-    const pdfjsModule = await import('pdfjs-dist');
-    const pdfjs = pdfjsModule.default || pdfjsModule;
-    
-    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
-    const pdf = await loadingTask.promise;
-    
-    // Scan first 5 pages (most important for resumes)
-    const pageCount = Math.min(pdf.numPages, 5);
-    let allScannedText = '';
-    
-    for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
-      try {
-        console.log(`[PDF-VISUAL-SCAN] Scanning page ${pageNum}/${pageCount}...`);
-        
-        const page = await pdf.getPage(pageNum);
-        
-        // Extract text content from page - comprehensive method
-        const textContent = await page.getTextContent();
-        const textFromContent = textContent.items
-          .map((item: any) => item.str || '')
-          .join(' ')
-          .trim();
-        
-        allScannedText += textFromContent + '\n';
-        
-        console.log(`[PDF-VISUAL-SCAN] Page ${pageNum} scanned: ${textFromContent.length} characters`);
-      } catch (pageError) {
-        console.warn(`[PDF-VISUAL-SCAN] Could not scan page ${pageNum}:`, pageError);
-        continue;
-      }
-    }
-    
-    let cleanedText = allScannedText.trim();
-    cleanedText = aggressiveTextCleanup(cleanedText);
-    
-    console.log(`[PDF-VISUAL-SCAN] Total scanned: ${cleanedText.length} characters`);
-    return cleanedText;
-  } catch (error) {
-    console.warn('[PDF-VISUAL-SCAN] Visual scanning failed:', error instanceof Error ? error.message : error);
-    return '';
-  }
-}
-
-// Fallback OCR for scanned PDFs - simpler approach
+// Fallback OCR for scanned PDFs
 async function extractTextFromPDFViaOCR(buffer: Buffer): Promise<string> {
   try {
     console.log('[PDF-OCR] Starting OCR extraction (Tesseract)...');
@@ -182,159 +105,77 @@ async function extractTextFromPDFViaOCR(buffer: Buffer): Promise<string> {
     return cleanedText;
   } catch (error) {
     console.warn('[PDF-OCR] OCR extraction failed:', error instanceof Error ? error.message : error);
-    return ''; // Return empty string to allow fallback
+    return '';
   }
 }
 
 // Enhanced PDF extraction with better error handling
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   let extractedText = '';
-  const extractionMethods = [];
   
-  // Method 0: Try layout-aware extraction first (handles columns, sidebars, hierarchies)
+  // Method 1: Try main extraction - scan all pages and get all text
   try {
-    console.log('[PDF-EXTRACT] Attempting layout-aware extraction...');
-    extractedText = await extractTextFromPDFWithLayout(buffer);
-    extractionMethods.push('layout-aware');
+    console.log('[PDF-EXTRACT] Attempting to extract all text from PDF...');
+    extractedText = await extractAllTextFromPDF(buffer);
     
-    console.log(`[PDF-EXTRACT] Layout-aware extracted: ${extractedText.length} characters`);
+    console.log(`[PDF-EXTRACT] Main extraction result: ${extractedText.length} characters`);
     
-    if (extractedText.length > 300) {
-      console.log(`[PDF-EXTRACT] Layout-aware SUCCESS: ${extractedText.length} characters`);
+    if (extractedText.length > 100) {
+      console.log(`[PDF-EXTRACT] SUCCESS: Got ${extractedText.length} characters from PDF`);
       return extractedText;
     }
   } catch (error) {
-    console.warn('[PDF-EXTRACT] Layout-aware failed:', error instanceof Error ? error.message : error);
+    console.warn('[PDF-EXTRACT] Main extraction failed:', error instanceof Error ? error.message : error);
   }
 
-  // Method 0.5: Try visual scanning (Google Lens style - renders pages to images + OCR)
+  // Method 2: Try pdf-parse fallback (usually works well in serverless)
   try {
-    console.log('[PDF-EXTRACT] Attempting visual scanning (browser/Google Lens style)...');
-    extractedText = await extractTextFromPDFViaVisualScanning(buffer);
-    extractionMethods.push('visual-scan');
-    
-    console.log(`[PDF-EXTRACT] Visual scanning extracted: ${extractedText.length} characters`);
-    
-    if (extractedText.length > 300) {
-      console.log(`[PDF-EXTRACT] Visual scanning SUCCESS: ${extractedText.length} characters`);
-      return extractedText;
-    }
-  } catch (error) {
-    console.warn('[PDF-EXTRACT] Visual scanning failed:', error instanceof Error ? error.message : error);
-  }
-  
-  // Method 1: Try pdf-parse first (usually works better in serverless)
-  try {
-    console.log('[PDF-EXTRACT] Attempting pdf-parse extraction...');
-    // pdf-parse is a CommonJS module, use require
+    console.log('[PDF-EXTRACT] Trying pdf-parse fallback...');
     const pdfParse = require('pdf-parse');
-    const data = await pdfParse(buffer, {
-      max: 20, // Limit pages for performance
-    });
+    const data = await pdfParse(buffer, { max: 20 });
     
     extractedText = (data.text || '').trim();
-    // Apply cleanup immediately after extraction
     extractedText = aggressiveTextCleanup(extractedText);
-    extractionMethods.push('pdf-parse');
     
-    console.log(`[PDF-EXTRACT] pdf-parse extracted: ${extractedText.length} characters (after cleanup)`);
+    console.log(`[PDF-EXTRACT] pdf-parse result: ${extractedText.length} characters`);
     
-    if (extractedText.length > 300) {
-      console.log(`[PDF-EXTRACT] pdf-parse SUCCESS: ${extractedText.length} characters extracted`);
+    if (extractedText.length > 100) {
       return extractedText;
     }
   } catch (error) {
     console.warn('[PDF-EXTRACT] pdf-parse failed:', error instanceof Error ? error.message : error);
   }
 
-  // Method 2: Try pdfjs-dist as fallback
+  // Method 3: Try raw buffer extraction
   try {
-    console.log('[PDF-EXTRACT] Attempting pdfjs-dist extraction...');
-    
-    // Import pdfjs-dist correctly - it exports as default
-    const pdfjsModule = await import('pdfjs-dist');
-    const pdfjs = pdfjsModule.default || pdfjsModule;
-    
-    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
-    const pdf = await loadingTask.promise;
-    const pageCount = Math.min(pdf.numPages, 15);
-    
-    let fullText = '';
-    
-    for (let i = 1; i <= pageCount; i++) {
-      try {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => {
-            if (item.str) return item.str + ' ';
-            return '';
-          })
-          .join('')
-          .replace(/\s+/g, ' ')
-          .trim();
-        
-        if (pageText.length > 0) {
-          fullText += pageText + '\n';
-        }
-      } catch (pageError) {
-        console.warn(`[PDF-EXTRACT] Error extracting page ${i}:`, pageError);
-        continue;
-      }
-    }
-    
-    extractedText = fullText.trim();
-    // Apply cleanup after extraction
-    extractedText = aggressiveTextCleanup(extractedText);
-    extractionMethods.push('pdfjs-dist');
-    
-    console.log(`[PDF-EXTRACT] pdfjs-dist extracted: ${extractedText.length} characters from ${pageCount} pages (after cleanup)`);
-    
-    if (extractedText.length > 300) {
-      console.log(`[PDF-EXTRACT] pdfjs-dist SUCCESS: ${extractedText.length} characters extracted`);
-      return extractedText;
-    }
-  } catch (error) {
-    console.warn('[PDF-EXTRACT] pdfjs-dist failed:', error instanceof Error ? error.message : error);
-  }
-
-  // Method 3: Try raw buffer extraction with multiple approaches
-  try {
-    console.log('[PDF-EXTRACT] Attempting raw buffer text extraction...');
-    
-    // Try UTF-8 first
+    console.log('[PDF-EXTRACT] Trying raw buffer extraction...');
     let text = buffer.toString('utf-8', 0, Math.min(buffer.length, 500000));
     
-    // Remove binary characters and clean up
     text = text
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control characters
-      .replace(/[\x80-\x9F]/g, '') // Remove extended control characters
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+      .replace(/[\x80-\x9F]/g, '')
       .split('\n')
       .map(line => line.trim())
       .filter(line => line.length > 2)
       .join('\n');
     
     extractedText = text.trim();
-    // Apply cleanup after extraction
     extractedText = aggressiveTextCleanup(extractedText);
-    extractionMethods.push('raw-buffer');
     
-    console.log(`[PDF-EXTRACT] Raw buffer extracted: ${extractedText.length} characters (after cleanup)`);
+    console.log(`[PDF-EXTRACT] Raw buffer result: ${extractedText.length} characters`);
     
-    if (extractedText.length > 300) {
-      console.log(`[PDF-EXTRACT] Raw buffer SUCCESS: ${extractedText.length} characters extracted`);
+    if (extractedText.length > 100) {
       return extractedText;
     }
   } catch (error) {
-    console.warn('[PDF-EXTRACT] Raw buffer extraction failed:', error);
+    console.warn('[PDF-EXTRACT] Raw buffer failed:', error);
   }
 
-  // Method 4: Try Latin-1 encoding for PDFs with non-UTF8 text
+  // Method 4: Try Latin-1 encoding
   try {
-    console.log('[PDF-EXTRACT] Attempting Latin-1 extraction...');
+    console.log('[PDF-EXTRACT] Trying Latin-1 encoding...');
     let text = buffer.toString('latin1', 0, Math.min(buffer.length, 500000));
     
-    // Clean up
     text = text
       .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
       .split('\n')
@@ -343,53 +184,48 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
       .join('\n');
     
     extractedText = text.trim();
-    // Apply cleanup after extraction
     extractedText = aggressiveTextCleanup(extractedText);
-    extractionMethods.push('latin1-buffer');
     
-    console.log(`[PDF-EXTRACT] Latin-1 extracted: ${extractedText.length} characters (after cleanup)`);
+    console.log(`[PDF-EXTRACT] Latin-1 result: ${extractedText.length} characters`);
     
-    if (extractedText.length > 300) {
+    if (extractedText.length > 100) {
       return extractedText;
     }
   } catch (error) {
-    console.warn('[PDF-EXTRACT] Latin-1 extraction failed:', error);
+    console.warn('[PDF-EXTRACT] Latin-1 failed:', error);
   }
 
-  // Method 5: OCR for scanned/image-based PDFs (like Google Lens)
-  if (extractedText.length < 300) {
-    console.log('[PDF-EXTRACT] Text extraction insufficient, trying OCR (Google Lens style)...');
+  // Method 5: Try OCR for scanned PDFs
+  if (extractedText.length < 100) {
+    console.log('[PDF-EXTRACT] Text too minimal, trying OCR...');
     try {
       const ocrText = await extractTextFromPDFViaOCR(buffer);
-      if (ocrText.length > 150) {
-        extractedText = ocrText;
-        extractionMethods.push('ocr');
-        console.log(`[PDF-EXTRACT] OCR SUCCESS: ${extractedText.length} characters extracted`);
-        return extractedText;
+      if (ocrText.length > 80) {
+        return ocrText;
       }
     } catch (ocrError) {
-      console.warn('[PDF-EXTRACT] OCR extraction failed:', ocrError);
+      console.warn('[PDF-EXTRACT] OCR failed:', ocrError);
     }
   }
 
-  // If we have some text from any method, return it
+  // If we got some text, return it
   if (extractedText.length >= 80) {
-    console.log(`[PDF-EXTRACT] Using result from: ${extractionMethods.join(', ')}`);
+    console.log(`[PDF-EXTRACT] Using extracted text: ${extractedText.length} characters`);
     return extractedText;
   }
 
-  // If all methods failed with minimal text
-  const errorMsg = `Could not extract sufficient text from PDF (only ${extractedText.length} characters found). 
+  // All methods failed
+  const errorMsg = `Could not extract text from PDF (only ${extractedText.length} characters found). 
 
 Possible reasons:
 1. PDF is corrupted or malformed
-2. PDF is password protected or encrypted
+2. PDF is password protected
 3. File is not a valid PDF
 
 Solutions:
-• Try uploading a different version of the file
-• Save the PDF as DOCX in Microsoft Word, then upload that version
-• Copy and paste the resume text directly (most reliable)`;
+• Try uploading a different PDF version
+• Save as DOCX in Microsoft Word and upload that
+• Copy and paste the resume text directly`;
 
   throw new Error(errorMsg);
 }
