@@ -19,60 +19,31 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// OCR extraction for scanned/image-based PDFs
+// Fallback OCR for scanned PDFs - simpler approach without canvas
 async function extractTextFromPDFViaOCR(buffer: Buffer): Promise<string> {
   try {
-    console.log('[PDF-OCR] Starting OCR extraction (like Google Lens)...');
+    console.log('[PDF-OCR] Starting OCR extraction (simplified)...');
     
-    // Use pdf2image + tesseract.js approach
-    const pdfParse = require('pdf-parse');
     const Tesseract = require('tesseract.js');
     
-    // First, get PDF images using pdfjs
-    const pdfjsModule = await import('pdfjs-dist');
-    const pdfjs = pdfjsModule.default || pdfjsModule;
+    // Convert PDF buffer to base64 for OCR
+    const base64 = buffer.toString('base64');
     
-    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
-    const pdf = await loadingTask.promise;
-    const pageCount = Math.min(pdf.numPages, 3); // Limit to first 3 pages for OCR (performance)
+    // Try OCR directly on the buffer
+    const { data: result } = await Tesseract.recognize(buffer, 'eng', {
+      logger: (m: any) => console.log('[PDF-OCR] Progress:', m.status, m.progress),
+    });
     
-    let ocrText = '';
+    const text = (result?.text || '').trim();
     
-    for (let i = 1; i <= pageCount; i++) {
-      try {
-        console.log(`[PDF-OCR] Processing page ${i} with OCR...`);
-        const page = await pdf.getPage(i);
-        
-        // Render page to canvas
-        const viewport = page.getViewport({ scale: 2 });
-        const canvas = require('canvas').createCanvas(viewport.width, viewport.height);
-        
-        await page.render({
-          canvas: canvas,
-          viewport: viewport,
-        }).promise;
-        
-        // Convert canvas to image and run OCR
-        const imageData = canvas.toBuffer('image/png');
-        const { data: result } = await Tesseract.recognize(imageData, 'eng');
-        
-        if (result?.text) {
-          ocrText += result.text + '\n';
-        }
-      } catch (pageError) {
-        console.warn(`[PDF-OCR] OCR failed on page ${i}:`, pageError);
-        continue;
-      }
-    }
-    
-    const cleanedText = ocrText
+    const cleanedText = text
       .split('\n')
       .map(line => line.trim())
       .filter(line => line.length > 2)
       .join('\n')
       .trim();
     
-    console.log(`[PDF-OCR] OCR extracted: ${cleanedText.length} characters from ${pageCount} pages`);
+    console.log(`[PDF-OCR] OCR extracted: ${cleanedText.length} characters`);
     return cleanedText;
   } catch (error) {
     console.warn('[PDF-OCR] OCR extraction failed:', error instanceof Error ? error.message : error);
