@@ -348,8 +348,13 @@ export async function POST(request: NextRequest) {
           });
           return NextResponse.json(
             { 
-              error: pdfError.message,
-              suggestion: 'Your PDF could not be read. Please try: 1) Converting to DOCX/TXT format, 2) Using an online PDF converter, or 3) Pasting text directly.',
+              error: 'I tried to read your PDF, but the text could not be extracted from it (it looks like a scanned/image-based or protected PDF).',
+              disclaimer: 'Because of this, I can\'t calculate a reliable ATS score yet.',
+              solutions: [
+                'Re-upload the resume as a text-based PDF or DOCX file',
+                'Copy and paste the resume text directly into the text area (most reliable)',
+                'Try using an online PDF converter to convert it to a standard PDF',
+              ],
               canPasteText: true,
             },
             { status: 400 }
@@ -439,9 +444,14 @@ export async function POST(request: NextRequest) {
       });
       return NextResponse.json(
         { 
-          error: 'The extracted text is too minimal or corrupted to analyze.',
-          suggestion: 'Please try: 1) Use a different PDF file, 2) Save the PDF as DOCX in Microsoft Word and upload that, 3) Copy and paste the resume text directly into the text area (most reliable method)',
-          details: 'If you have a scanned PDF (image-based), please try taking a screenshot or using a different file format.',
+          error: 'I tried to read your PDF, but the text could not be extracted from it (it looks like a scanned/image-based or protected PDF).',
+          disclaimer: 'Because of this, I can\'t calculate a reliable ATS score yet.',
+          solutions: [
+            'Re-upload the resume as a text-based PDF or DOCX file',
+            'Copy and paste the resume text directly into the text area (most reliable)',
+            'Try using an online PDF converter to convert it to a standard PDF',
+          ],
+          canPasteText: true,
         },
         { status: 400 }
       );
