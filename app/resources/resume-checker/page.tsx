@@ -142,7 +142,7 @@ export default function ResumeChecker() {
         formData.append('resumeText', resumeText.trim())
       } else if (selectedFile) {
         console.log('Sending resume file to API', { fileName: selectedFile.name, size: selectedFile.size })
-        formData.append('file', selectedFile)
+        formData.append('resume', selectedFile)
       }
       
       if (jobDescription.trim()) {
