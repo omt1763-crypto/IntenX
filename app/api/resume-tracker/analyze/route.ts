@@ -320,43 +320,55 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = `You are an expert technical recruiter and ATS resume evaluator with 15+ years of hiring experience.
 
-Analyze the provided resume${jobDescription ? ' against the job description' : ''} and provide a comprehensive, recruiter-focused analysis with detailed metrics.
+IMPORTANT: You MUST analyze the actual resume content provided and give REAL scores based on what's actually in the resume.
+Do NOT give generic or default scores. Each resume is unique and deserves unique analysis.
 
-CRITICAL RULES:
-- Base analysis ONLY on provided resume text
-- Do NOT hallucinate personal information
-- Be concise and action-oriented
-- Return ONLY valid JSON, no markdown, no extra text before or after
-- All numeric scores must be 0-100
-- Impact: How well achievements communicate value
-- Brevity: Conciseness and word efficiency
-- Style: Professional presentation and formatting
-- Skills: Technical relevance and industry alignment
+Your analysis must be based ONLY on the actual content of the resume:
+- Extract REAL technical skills mentioned in the resume
+- Identify REAL strengths from actual accomplishments
+- Point out REAL weaknesses from what's missing or poorly presented
+- Score based on actual content quality, not defaults
 
-Return EXACTLY this JSON structure with no additional text:
+${jobDescription ? `You should also match the resume against the job description and score how well it aligns.` : ''}
+
+CRITICAL SCORING RULES:
+- Impact (0-100): Rate how well the resume demonstrates value and achievements. Look for quantified results, metrics, and business impact.
+- Brevity (0-100): Rate how concise and efficient the writing is. Penalize verbose descriptions, reward punchy bullet points.
+- Style (0-100): Rate the professionalism, formatting, and presentation. Check for consistent formatting, proper grammar.
+- Skills (0-100): Rate how relevant and specific the technical skills are. Award higher scores for in-demand skills.
+- Overall Score: Average of the four metrics above, adjusted by experience level and how well it matches job description.
+
+MANDATORY RULES:
+- Return ONLY valid JSON, no markdown, no extra text
+- All scores must be different and based on actual resume content
+- Do NOT return default values (50, 50, 50, 50)
+- Analyze what IS in the resume, not what SHOULD be there
+- If skills are missing, note them in missingSkills array
+
+Return EXACTLY this JSON structure:
 {
-  "overallScore": <number 0-100>,
+  "overallScore": <0-100, based on actual content>,
   "experienceLevel": "<Fresher|Junior|Mid|Senior>",
   "hiringRecommendation": "<Reject|Review|Interview|Strong Hire>",
   "metrics": {
-    "impact": <0-100>,
-    "brevity": <0-100>,
-    "style": <0-100>,
-    "skills": <0-100>
+    "impact": <0-100, based on achievement demonstrations>,
+    "brevity": <0-100, based on writing efficiency>,
+    "style": <0-100, based on formatting and presentation>,
+    "skills": <0-100, based on technical relevance>
   },
-  "atsScore": <0-100>,
-  "technicalSkills": [<skill1>, <skill2>, ...],
-  "missingSkills": [<skill1>, <skill2>, ...],
-  "strengths": [<strength1>, <strength2>, ...],
-  "weaknesses": [<weakness1>, <weakness2>, ...],
+  "atsScore": <0-100, ATS keyword matching and formatting>,
+  "technicalSkills": [<ONLY skills explicitly mentioned in resume>],
+  "missingSkills": [<important skills not mentioned for this experience level>],
+  "strengths": [<ONLY strengths evident from actual resume content>],
+  "weaknesses": [<ONLY weaknesses from actual resume analysis>],
   "contentQuality": {
     "bulletPointQuality": "<Poor|Average|Good>",
     "useOfMetrics": "<Poor|Average|Good>",
     "actionVerbUsage": "<Poor|Average|Good>"
   },
-  "interviewFocusTopics": [<topic1>, <topic2>, ...],
-  "improvements": [<improvement1>, <improvement2>, ...],
-  "summary": "<2-3 sentence professional recruiter summary>"
+  "interviewFocusTopics": [<topics to explore based on actual resume>],
+  "improvements": [<specific improvements based on what's in the resume>],
+  "summary": "<professional recruiter summary of the actual candidate>"
 }`;
 
     const userContent = jobDescription
@@ -419,12 +431,18 @@ Return EXACTLY this JSON structure with no additional text:
       log('STEP-20b', 'Attempting JSON parse', {
         extractedJsonLength: jsonStr.length,
       });
+
+      analysis = JSON.parse(jsonStr);
+      
       log('STEP-21', 'JSON parsed successfully', {
         keys: Object.keys(analysis),
+        overallScore: analysis.overallScore,
+        experienceLevel: analysis.experienceLevel,
       });
     } catch (parseError) {
       log('STEP-21-WARNING', 'Could not parse JSON, returning raw response', {
         error: String(parseError),
+        attemptedContent: analysisContent.substring(0, 200),
       });
       // Provide a complete fallback structure matching expected format
       analysis = {
