@@ -19,6 +19,21 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Aggressive text cleaning for token reduction
+function aggressiveTextCleanup(text: string): string {
+  return text
+    // Collapse multiple newlines
+    .replace(/\n{3,}/g, '\n\n')
+    // Remove excessive spaces
+    .replace(/  +/g, ' ')
+    // Remove lines with only spaces/special chars
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 2 && /[a-zA-Z0-9]/.test(line))
+    .join('\n')
+    .trim();
+}
+
 // Fallback OCR for scanned PDFs - simpler approach without canvas
 async function extractTextFromPDFViaOCR(buffer: Buffer): Promise<string> {
   try {
@@ -26,22 +41,13 @@ async function extractTextFromPDFViaOCR(buffer: Buffer): Promise<string> {
     
     const Tesseract = require('tesseract.js');
     
-    // Convert PDF buffer to base64 for OCR
-    const base64 = buffer.toString('base64');
-    
     // Try OCR directly on the buffer
     const { data: result } = await Tesseract.recognize(buffer, 'eng', {
       logger: (m: any) => console.log('[PDF-OCR] Progress:', m.status, m.progress),
     });
     
     const text = (result?.text || '').trim();
-    
-    const cleanedText = text
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 2)
-      .join('\n')
-      .trim();
+    const cleanedText = aggressiveTextCleanup(text);
     
     console.log(`[PDF-OCR] OCR extracted: ${cleanedText.length} characters`);
     return cleanedText;
@@ -476,11 +482,14 @@ Return EXACTLY this JSON (no other text):
   "summary": "<2-3 sentence assessment>"
 }`;
 
-    // Limit resume text to first 8000 characters to avoid token limits
-    const maxResumeLength = 8000;
-    const trimmedResumeText = extractedResumeText.length > maxResumeLength 
-      ? extractedResumeText.substring(0, maxResumeLength) + '\n[Resume truncated...]'
-      : extractedResumeText;
+    // Aggressive cleanup of extracted resume text to reduce tokens
+    let cleanedResumeText = aggressiveTextCleanup(extractedResumeText);
+    
+    // Limit resume text to first 5000 characters after cleanup to avoid token limits
+    const maxResumeLength = 5000;
+    const trimmedResumeText = cleanedResumeText.length > maxResumeLength 
+      ? cleanedResumeText.substring(0, maxResumeLength) + '\n[Resume truncated...]'
+      : cleanedResumeText;
 
     // Limit job description to first 2000 characters
     const maxJobDescLength = 2000;
