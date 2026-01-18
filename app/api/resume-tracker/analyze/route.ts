@@ -27,8 +27,8 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   // Method 1: Try pdf-parse first (usually works better in serverless)
   try {
     console.log('[PDF-EXTRACT] Attempting pdf-parse extraction...');
-    // pdf-parse exports a default function
-    const pdfParse = (await import('pdf-parse')).default;
+    // pdf-parse is a CommonJS module, use require
+    const pdfParse = require('pdf-parse');
     const data = await pdfParse(buffer, {
       max: 20, // Limit pages for performance
     });
@@ -136,7 +136,7 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
 async function extractTextFromDOCX(buffer: Buffer): Promise<string> {
   try {
     console.log('[DOCX-EXTRACT] Starting DOCX extraction...');
-    const mammoth = await import('mammoth');
+    const mammoth = require('mammoth');
     const result = await mammoth.extractRawText({ arrayBuffer: buffer.buffer });
     const text = (result.value || '').trim();
     console.log(`[DOCX-EXTRACT] Extracted ${text.length} characters from DOCX`);
