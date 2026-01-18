@@ -115,14 +115,13 @@ function aggressiveTextCleanup(text: string): string {
     .trim();
 }
 
-// Enhanced OCR with PDF page rendering (Google Lens style scanning)
+// Enhanced multi-page text extraction (visual scanning style)
 async function extractTextFromPDFViaVisualScanning(buffer: Buffer): Promise<string> {
   try {
-    console.log('[PDF-VISUAL-SCAN] Starting visual scanning (browser/Google Lens style)...');
+    console.log('[PDF-VISUAL-SCAN] Starting visual scanning (enhanced multi-page extraction)...');
     
     const pdfjsModule = await import('pdfjs-dist');
     const pdfjs = pdfjsModule.default || pdfjsModule;
-    const Tesseract = require('tesseract.js');
     
     const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
     const pdf = await loadingTask.promise;
@@ -136,52 +135,8 @@ async function extractTextFromPDFViaVisualScanning(buffer: Buffer): Promise<stri
         console.log(`[PDF-VISUAL-SCAN] Scanning page ${pageNum}/${pageCount}...`);
         
         const page = await pdf.getPage(pageNum);
-        const viewport = page.getViewport({ scale: 2.0 }); // 2x scale for better OCR quality
         
-        // Create canvas for rendering
-        const canvasFactory = {
-          create: (width: number, height: number) => {
-            const canvas = {
-              width,
-              height,
-              getContext: () => {
-                // Return a minimal canvas context for rendering
-                const pixelData = Buffer.alloc(width * height * 4);
-                return {
-                  fillStyle: '#ffffff',
-                  strokeStyle: '#000000',
-                  lineWidth: 1,
-                  fillRect: () => {},
-                  strokeRect: () => {},
-                  fillText: () => {},
-                  save: () => {},
-                  restore: () => {},
-                  beginPath: () => {},
-                  moveTo: () => {},
-                  lineTo: () => {},
-                  stroke: () => {},
-                  fill: () => {},
-                  clearRect: () => {},
-                  drawImage: () => {},
-                  createImageData: () => ({ data: pixelData }),
-                  putImageData: () => {},
-                  getImageData: () => ({ data: pixelData }),
-                };
-              },
-            };
-            return canvas;
-          },
-        };
-        
-        // Render page to canvas
-        const renderContext = {
-          canvasFactory,
-          viewport,
-        };
-        
-        await page.render(renderContext).promise;
-        
-        // Extract text from rendered page via OCR
+        // Extract text content from page - comprehensive method
         const textContent = await page.getTextContent();
         const textFromContent = textContent.items
           .map((item: any) => item.str || '')
