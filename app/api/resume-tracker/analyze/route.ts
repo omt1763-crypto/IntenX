@@ -176,20 +176,31 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = `You are an expert technical recruiter and ATS resume evaluator with 15+ years of hiring experience.
 
-Analyze the provided resume${jobDescription ? ' against the job description' : ''} and provide a comprehensive, recruiter-focused analysis.
+Analyze the provided resume${jobDescription ? ' against the job description' : ''} and provide a comprehensive, recruiter-focused analysis with detailed metrics.
 
 CRITICAL RULES:
 - Base analysis ONLY on provided resume text
 - Do NOT hallucinate personal information
 - Be concise and action-oriented
 - Return ONLY valid JSON, no markdown
+- All numeric scores 0-100
+- Impact: How well achievements are communicated
+- Brevity: Conciseness and word efficiency
+- Style: Professional presentation and formatting
+- Skills: Technical relevance and industry alignment
 
 Respond with this exact JSON structure (no additional text):
 {
-  "overallScore": <number 0-100, average of all component scores>,
+  "overallScore": <number 0-100>,
   "experienceLevel": "<Fresher|Junior|Mid|Senior>",
   "hiringRecommendation": "<Reject|Review|Interview|Strong Hire>",
-  "atsScore": <number 0-100 for ATS compatibility>,
+  "metrics": {
+    "impact": <0-100, how well achievements communicate value>,
+    "brevity": <0-100, conciseness and efficiency>,
+    "style": <0-100, professional presentation and formatting>,
+    "skills": <0-100, technical relevance and alignment>
+  },
+  "atsScore": <0-100 for ATS compatibility>,
   "technicalSkills": [<extracted skills from resume as strings>],
   "missingSkills": [<3-5 important skills missing for typical industry standards>],
   "strengths": [<3-5 key strengths as bullet points>],
