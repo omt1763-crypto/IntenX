@@ -19,47 +19,20 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Extract text from PDF using pdf-parse with fallback to pdfjs-dist
+// Extract text from PDF using pdfjs-dist with fallback to pdf-parse
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   let extractedText = '';
+  let extractionMethod = '';
 
-  // Try pdf-parse first (faster for simple PDFs)
+  // Try pdfjs-dist first (more reliable)
   try {
-    // @ts-ignore - pdf-parse CommonJS module
-    const pdfParse = require('pdf-parse');
-    const data = await pdfParse(buffer, {
-      max: 50, // Max 50 pages
-      pagerender: async (pageData: any) => {
-        try {
-          const textContent = await pageData.getTextContent();
-          return textContent.items
-            .map((item: any) => item.str || '')
-            .join(' ');
-        } catch (error) {
-          console.warn('Error rendering page:', error);
-          return '';
-        }
-      },
-    });
-    extractedText = (data.text || '').trim();
-    
-    if (extractedText.length > 50) {
-      // Successfully extracted sufficient text
-      return extractedText;
-    }
-  } catch (error) {
-    console.warn('pdf-parse extraction failed, trying pdfjs-dist:', error);
-  }
-
-  // Fallback to pdfjs-dist for better compatibility
-  try {
-    const pdfjs = require('pdfjs-dist');
-    // Set up worker for pdfjs
-    const pdfjsWorker = require('pdfjs-dist/build/pdf.worker');
-    pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+    console.log('[PDF-EXTRACT] Attempting pdfjs-dist extraction...');
+    const pdfjs = require('pdfjs-dist/legacy/build/pdf');
     
     const pdf = await pdfjs.getDocument({ data: buffer }).promise;
     const pageCount = pdf.numPages;
+    console.log(`[PDF-EXTRACT] PDF has ${pageCount} pages`);
+    
     let fullText = '';
     
     for (let i = 1; i <= Math.min(pageCount, 50); i++) {
@@ -67,52 +40,88 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
         const pageText = textContent.items
-          .map((item: any) => item.str || '')
+          .map((item: any) => {
+            if (typeof item.str === 'string') {
+              return item.str;
+            }
+            return '';
+          })
           .join(' ');
         fullText += ' ' + pageText;
       } catch (pageError) {
-        console.warn(`Error extracting page ${i}:`, pageError);
+        console.warn(`[PDF-EXTRACT] Error extracting page ${i}:`, pageError);
         continue;
       }
     }
     
     extractedText = fullText.trim();
+    extractionMethod = 'pdfjs-dist';
     
     if (extractedText.length > 50) {
+      console.log(`[PDF-EXTRACT] pdfjs-dist SUCCESS: ${extractedText.length} characters extracted`);
+      return extractedText;
+    }
+    console.log(`[PDF-EXTRACT] pdfjs-dist returned only ${extractedText.length} characters, trying fallback`);
+  } catch (error) {
+    console.warn('[PDF-EXTRACT] pdfjs-dist failed:', error instanceof Error ? error.message : error);
+  }
+
+  // Fallback to pdf-parse
+  try {
+    console.log('[PDF-EXTRACT] Attempting pdf-parse extraction as fallback...');
+    // @ts-ignore - pdf-parse CommonJS module
+    const pdfParse = require('pdf-parse');
+    const data = await pdfParse(buffer, {
+      max: 50, // Max 50 pages
+    });
+    
+    extractedText = (data.text || '').trim();
+    extractionMethod = 'pdf-parse';
+    
+    console.log(`[PDF-EXTRACT] pdf-parse result: ${extractedText.length} characters`);
+    
+    if (extractedText.length > 50) {
+      console.log(`[PDF-EXTRACT] pdf-parse SUCCESS: ${extractedText.length} characters extracted`);
       return extractedText;
     }
   } catch (error) {
-    console.error('pdfjs-dist extraction also failed:', error);
+    console.error('[PDF-EXTRACT] pdf-parse also failed:', error instanceof Error ? error.message : error);
   }
 
   // If both methods failed or returned too little text
   if (extractedText.length === 0) {
-    throw new Error('Could not extract text from PDF. The file may be corrupted, image-based, or encrypted.');
+    throw new Error('Could not extract text from PDF - file may be image-based, corrupted, or encrypted. Please use a text-based PDF or paste the content directly.');
   }
   
-  return extractedText;
+  throw new Error(`Insufficient text extracted from PDF (${extractedText.length} chars). Please ensure the PDF contains readable text.`);
 }
 
 // Extract text from DOCX
 async function extractTextFromDOCX(buffer: Buffer): Promise<string> {
   try {
+    console.log('[DOCX-EXTRACT] Starting DOCX extraction...');
     // @ts-ignore - mammoth CommonJS module
     const mammoth = require('mammoth');
     const result = await mammoth.extractRawText({ arrayBuffer: buffer });
-    return (result.value || '').trim();
+    const text = (result.value || '').trim();
+    console.log(`[DOCX-EXTRACT] Extracted ${text.length} characters from DOCX`);
+    return text;
   } catch (error) {
-    console.error('DOCX extraction failed:', error);
-    return '';
+    console.error('[DOCX-EXTRACT] Failed:', error instanceof Error ? error.message : error);
+    throw new Error(`Failed to extract DOCX: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
 // Extract text from TXT
 function extractTextFromTXT(buffer: Buffer): string {
   try {
-    return buffer.toString('utf-8').trim();
+    console.log('[TXT-EXTRACT] Starting TXT extraction...');
+    const text = buffer.toString('utf-8').trim();
+    console.log(`[TXT-EXTRACT] Extracted ${text.length} characters from TXT`);
+    return text;
   } catch (error) {
-    console.error('TXT extraction failed:', error);
-    return '';
+    console.error('[TXT-EXTRACT] Failed:', error instanceof Error ? error.message : error);
+    throw new Error(`Failed to extract TXT: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -176,12 +185,14 @@ export async function POST(request: NextRequest) {
           resumeText = await extractTextFromPDF(bufferNode);
           log('STEP-6d', 'PDF extraction completed', {
             textLength: resumeText?.length || 0,
+            preview: resumeText?.substring(0, 100),
           });
         } catch (pdfError: any) {
           log('STEP-6d-ERROR', 'PDF extraction failed', {
-            error: pdfError?.message,
+            error: pdfError?.message || String(pdfError),
+            fileSize: bufferNode.length,
           });
-          throw new Error(`Failed to extract PDF: ${pdfError?.message || 'Unknown error'}`);
+          throw pdfError;
         }
       } else if (fileName.endsWith('.docx') || resumeInput.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
         log('STEP-6e', 'Detected DOCX file, extracting text...');
@@ -189,26 +200,46 @@ export async function POST(request: NextRequest) {
           resumeText = await extractTextFromDOCX(bufferNode);
           log('STEP-6f', 'DOCX extraction completed', {
             textLength: resumeText?.length || 0,
+            preview: resumeText?.substring(0, 100),
           });
         } catch (docxError: any) {
           log('STEP-6f-ERROR', 'DOCX extraction failed', {
-            error: docxError?.message,
+            error: docxError?.message || String(docxError),
+            fileSize: bufferNode.length,
           });
-          throw new Error(`Failed to extract DOCX: ${docxError?.message || 'Unknown error'}`);
+          throw docxError;
         }
       } else if (fileName.endsWith('.txt') || resumeInput.type === 'text/plain') {
         log('STEP-6g', 'Detected TXT file, extracting text...');
-        resumeText = extractTextFromTXT(bufferNode);
-        log('STEP-6h', 'TXT extraction completed', {
-          textLength: resumeText?.length || 0,
-        });
+        try {
+          resumeText = extractTextFromTXT(bufferNode);
+          log('STEP-6h', 'TXT extraction completed', {
+            textLength: resumeText?.length || 0,
+            preview: resumeText?.substring(0, 100),
+          });
+        } catch (txtError: any) {
+          log('STEP-6h-ERROR', 'TXT extraction failed', {
+            error: txtError?.message || String(txtError),
+            fileSize: bufferNode.length,
+          });
+          throw txtError;
+        }
       } else {
-        // Try to decode as text as fallback
-        log('STEP-6i', 'Unknown file type, attempting text decode...');
-        resumeText = extractTextFromTXT(bufferNode);
-        log('STEP-6j', 'Text decode completed', {
-          textLength: resumeText?.length || 0,
-        });
+        // Try pdf-parse as a fallback for unknown types
+        log('STEP-6i', 'Unknown file type, attempting PDF extraction...');
+        try {
+          resumeText = await extractTextFromPDF(bufferNode);
+          log('STEP-6j', 'Fallback PDF extraction completed', {
+            textLength: resumeText?.length || 0,
+            preview: resumeText?.substring(0, 100),
+          });
+        } catch (fallbackError: any) {
+          log('STEP-6j-ERROR', 'Fallback extraction failed', {
+            error: fallbackError?.message || String(fallbackError),
+            fileSize: bufferNode.length,
+          });
+          throw fallbackError;
+        }
       }
     } else {
       // resumeInput is a string
@@ -221,7 +252,9 @@ export async function POST(request: NextRequest) {
     if (!resumeText.trim()) {
       log('STEP-7', 'ERROR: Resume text is empty after extraction');
       return NextResponse.json(
-        { error: 'Could not extract text from your file. This may happen if: (1) The PDF is image-based or scanned, (2) The file is corrupted, or (3) The file format is not supported. Please try uploading a text-based PDF or paste your resume text directly.' },
+        { 
+          error: 'Could not extract text from your resume file. This usually happens if: (1) PDF is image-based or scanned - try exporting as text-based PDF, (2) File is corrupted or password-protected, or (3) Format not supported. Please try a different PDF or paste your resume text directly.' 
+        },
         { status: 400 }
       );
     }
