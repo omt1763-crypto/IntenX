@@ -174,21 +174,50 @@ Solutions:
 // Validate that extracted text is actually meaningful
 function isValidResumeText(text: string): boolean {
   // Check minimum length
-  if (text.length < 100) return false;
+  if (text.length < 80) return false;
   
-  // Check for common resume keywords (at least some should be present)
+  const lowerText = text.toLowerCase();
+  
+  // Check for common resume keywords
   const resumeKeywords = [
     'experience', 'skill', 'education', 'project', 'work',
     'professional', 'employment', 'responsibility', 'achievement',
     'years', 'company', 'university', 'degree', 'certification',
-    'technical', 'programming', 'development'
+    'technical', 'programming', 'development', 'role', 'position',
+    'worked', 'designed', 'developed', 'managed', 'led', 'created',
+    'implemented', 'built', 'engineered', 'architect'
   ];
   
-  const lowerText = text.toLowerCase();
+  // Check for contact/identifying information
+  const hasEmail = /@[\w.-]+\.\w+/.test(text);
+  const hasPhone = /[\+]?[(]?[0-9]{3}[)\s.-]?[0-9]{3}[-\s.]?[0-9]{4,6}/.test(text);
+  const hasDate = /20\d{2}|19\d{2}|\d{1,2}\/\d{1,2}|\d{1,2}-\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec/.test(text);
+  
+  // Count resume keywords found
   const foundKeywords = resumeKeywords.filter(kw => lowerText.includes(kw)).length;
   
-  // Need at least 2 resume keywords to consider it valid
-  return foundKeywords >= 2;
+  // Accept if:
+  // 1. Has at least 1 resume keyword + contact info
+  // 2. Has at least 3 resume keywords
+  // 3. Has email or phone + date pattern (likely a real resume)
+  const hasKeywords = foundKeywords >= 1;
+  const hasContactInfo = hasEmail || hasPhone;
+  const hasTemporalInfo = hasDate;
+  
+  // More lenient validation
+  if (foundKeywords >= 3) return true; // Strong signal: multiple keywords
+  if (hasKeywords && hasContactInfo) return true; // Has keywords + contact info
+  if (hasEmail && hasTemporalInfo) return true; // Has email + dates
+  if (hasPhone && hasTemporalInfo) return true; // Has phone + dates
+  
+  // Fallback: if text has reasonable length and found at least 1 keyword + some structure
+  if (foundKeywords >= 1 && text.length > 150) {
+    // Check if text has some structure (multiple lines with content)
+    const lines = text.split('\n').filter(line => line.trim().length > 10);
+    if (lines.length >= 3) return true; // At least 3 substantial lines
+  }
+  
+  return false;
 }
 
 // Extract text from DOCX
@@ -379,13 +408,13 @@ export async function POST(request: NextRequest) {
     if (!isValidResumeText(extractedResumeText)) {
       log('STEP-15b-ERROR', 'Extracted text does not appear to be a resume', {
         textLength: extractedResumeText.length,
-        preview: extractedResumeText.substring(0, 200),
+        preview: extractedResumeText.substring(0, 300),
       });
       return NextResponse.json(
         { 
-          error: 'The extracted content does not appear to be a valid resume',
-          suggestion: 'The file may be image-based, encrypted, or corrupted. Please: 1) Try a different PDF file, 2) Convert to DOCX/TXT format, 3) Paste the text directly.',
-          details: 'No resume keywords (skills, experience, education, etc.) were found.',
+          error: 'The extracted content does not appear to be a valid resume. The text looks like it may be corrupted or from an image-based PDF.',
+          suggestion: 'Please try one of these options:\n1) Convert your PDF to text using an online converter (try: ilovepdf.com, smallpdf.com, or pdf2go.com)\n2) Save the PDF as DOCX in Microsoft Word, then upload that\n3) Copy and paste the resume text directly into the text area',
+          details: 'Your PDF appears to be image-based (scanned) or corrupted. Text extraction found some content but it does not match a typical resume format.',
         },
         { status: 400 }
       );
