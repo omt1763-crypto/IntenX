@@ -391,67 +391,65 @@ export async function POST(request: NextRequest) {
     // ===== OPENAI API CALL =====
     log('STEP-16', 'Building analysis prompt...');
 
-    const systemPrompt = `You are an expert technical recruiter and ATS resume evaluator with 15+ years of hiring experience.
+    const systemPrompt = `You are an expert technical recruiter and ATS resume evaluator.
 
-CRITICAL INSTRUCTIONS:
-1. Analyze the ACTUAL resume content provided - not generic template
-2. Return ONLY valid JSON in the exact format shown - no markdown, no explanations
-3. ALL numeric scores MUST be realistic numbers (0-100), NOT zeros or defaults
-4. Each metric should have different scores based on what you observe
-5. Skills array MUST contain actual skills from the resume
-6. Strengths/Weaknesses MUST be specific to THIS resume, not generic
+Analyze the resume and return ONLY valid JSON - no markdown or explanations.
 
-SCORING GUIDELINES:
-- Impact (0-100): How well achievements demonstrate business value. Higher if quantified results present.
-- Brevity (0-100): Writing efficiency and conciseness. Higher for punchy bullets, lower for verbose text.
-- Style (0-100): Professional formatting, grammar, consistency. Higher for clean presentation.
-- Skills (0-100): Technical skill relevance and demand. Higher for in-demand tech skills.
-- Overall Score: Average of metrics with 10-20 point adjustment for experience level.
+SCORING (0-100, must be realistic, not defaults):
+- Impact: How well achievements show business value
+- Brevity: Writing efficiency and conciseness  
+- Style: Professional presentation and grammar
+- Skills: Technical relevance and demand
+- Overall: Average of metrics ±10-20 points for experience
 
-IMPORTANT RULES:
-- Extract skills from what's explicitly written in resume
-- Do NOT hallucinate or assume skills not mentioned
-- Point out missing skills relative to experience level
-- Provide honest assessment, not inflated scores
-- If resume is weak, scores should be lower (20-40 range)
-- If resume is strong, scores should be higher (70-95 range)
-
-Return EXACTLY this JSON structure (no other text):
+Return EXACTLY this JSON (no other text):
 {
-  "overallScore": <realistic 0-100 number based on full analysis>,
+  "overallScore": <0-100>,
   "experienceLevel": "<Fresher|Junior|Mid|Senior>",
   "hiringRecommendation": "<Reject|Review|Interview|Strong Hire>",
   "metrics": {
-    "impact": <realistic 0-100>,
-    "brevity": <realistic 0-100>,
-    "style": <realistic 0-100>,
-    "skills": <realistic 0-100>
+    "impact": <0-100>,
+    "brevity": <0-100>,
+    "style": <0-100>,
+    "skills": <0-100>
   },
-  "atsScore": <0-100 for ATS compatibility>,
-  "technicalSkills": [<skill1>, <skill2>, <skill3>, ...],
-  "missingSkills": [<important skill1>, <important skill2>, ...],
-  "strengths": [<specific strength from resume>, <strength2>, ...],
-  "weaknesses": [<specific weakness found>, <weakness2>, ...],
+  "atsScore": <0-100>,
+  "technicalSkills": [<skills from resume>],
+  "missingSkills": [<important missing skills>],
+  "strengths": [<specific strengths>],
+  "weaknesses": [<specific weaknesses>],
   "contentQuality": {
     "bulletPointQuality": "<Poor|Average|Good>",
     "useOfMetrics": "<Poor|Average|Good>",
     "actionVerbUsage": "<Poor|Average|Good>"
   },
-  "interviewFocusTopics": [<topic based on resume>, <topic2>, ...],
-  "improvements": [<specific improvement for this resume>, <improvement2>, ...],
-  "summary": "<honest 2-3 sentence assessment of this candidate>"
+  "interviewFocusTopics": [<interview topics>],
+  "improvements": [<actionable improvements>],
+  "summary": "<2-3 sentence assessment>"
 }`;
 
-    const userContent = jobDescription
-      ? `Resume:\n${extractedResumeText}\n\nJob Description:\n${jobDescription}\n\nPlease analyze this resume against the job description.`
-      : `Resume:\n${extractedResumeText}\n\nPlease analyze this resume.`;
+    // Limit resume text to first 8000 characters to avoid token limits
+    const maxResumeLength = 8000;
+    const trimmedResumeText = extractedResumeText.length > maxResumeLength 
+      ? extractedResumeText.substring(0, maxResumeLength) + '\n[Resume truncated...]'
+      : extractedResumeText;
+
+    // Limit job description to first 2000 characters
+    const maxJobDescLength = 2000;
+    const trimmedJobDesc = jobDescription.length > maxJobDescLength
+      ? jobDescription.substring(0, maxJobDescLength) + '\n[Job description truncated...]'
+      : jobDescription;
+
+    const userContent = trimmedJobDesc
+      ? `Resume:\n${trimmedResumeText}\n\nJob Description:\n${trimmedJobDesc}\n\nAnalyze this resume.`
+      : `Resume:\n${trimmedResumeText}\n\nAnalyze this resume.`;
 
     log('STEP-17', 'Calling OpenAI API', {
       model: 'gpt-4o-mini',
       hasJobDescription: !!jobDescription,
-      resumeLength: extractedResumeText.length,
-      resumePreview: extractedResumeText.substring(0, 500),
-      totalUserContentLength: userContent.length,
+      resumeLength: trimmedResumeText.length,
+      jobDescLength: trimmedJobDesc.length,
+      totalContentLength: userContent.length,
     });
 
     let response;
