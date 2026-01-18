@@ -19,35 +19,73 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Extract text from PDF using pdfjs-dist with fallback to pdf-parse
+// Enhanced PDF extraction with better error handling
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   let extractedText = '';
-  let extractionMethod = '';
+  const extractionMethods = [];
+  
+  // Method 1: Try pdf-parse first (usually works better in serverless)
+  try {
+    console.log('[PDF-EXTRACT] Attempting pdf-parse extraction...');
+    const pdfParse = (await import('pdf-parse')).default;
+    const data = await pdfParse(buffer, {
+      max: 20, // Limit pages for performance
+      pagerender: pageData => {
+        // Simple text extraction
+        let textContent = '';
+        if (pageData.texts && pageData.texts.length > 0) {
+          textContent = pageData.texts
+            .map((text: any) => text.text || '')
+            .join(' ');
+        }
+        return textContent;
+      }
+    });
+    
+    extractedText = (data.text || '').trim();
+    extractionMethods.push('pdf-parse');
+    
+    if (extractedText.length > 100) {
+      console.log(`[PDF-EXTRACT] pdf-parse SUCCESS: ${extractedText.length} characters extracted`);
+      return extractedText;
+    }
+    console.log(`[PDF-EXTRACT] pdf-parse returned only ${extractedText.length} characters`);
+  } catch (error) {
+    console.warn('[PDF-EXTRACT] pdf-parse failed:', error instanceof Error ? error.message : error);
+  }
 
-  // Try pdfjs-dist first (more reliable)
+  // Method 2: Try pdfjs-dist as fallback
   try {
     console.log('[PDF-EXTRACT] Attempting pdfjs-dist extraction...');
-    const pdfjs = require('pdfjs-dist/legacy/build/pdf');
     
-    const pdf = await pdfjs.getDocument({ data: buffer }).promise;
-    const pageCount = pdf.numPages;
-    console.log(`[PDF-EXTRACT] PDF has ${pageCount} pages`);
+    // Dynamically import pdfjs-dist with webpack configuration
+    const pdfjsLib = await import('pdfjs-dist');
+    const pdfjs = pdfjsLib.default || pdfjsLib;
+    
+    // Set worker
+    const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.min.mjs');
+    pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+    
+    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
+    const pdf = await loadingTask.promise;
+    const pageCount = Math.min(pdf.numPages, 10); // Limit to 10 pages
     
     let fullText = '';
     
-    for (let i = 1; i <= Math.min(pageCount, 50); i++) {
+    for (let i = 1; i <= pageCount; i++) {
       try {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
         const pageText = textContent.items
           .map((item: any) => {
-            if (typeof item.str === 'string') {
-              return item.str;
-            }
+            if (item.str) return item.str + ' ';
             return '';
           })
-          .join(' ');
-        fullText += ' ' + pageText;
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        fullText += pageText + '\n';
       } catch (pageError) {
         console.warn(`[PDF-EXTRACT] Error extracting page ${i}:`, pageError);
         continue;
@@ -55,60 +93,70 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     }
     
     extractedText = fullText.trim();
-    extractionMethod = 'pdfjs-dist';
+    extractionMethods.push('pdfjs-dist');
     
-    if (extractedText.length > 50) {
+    if (extractedText.length > 100) {
       console.log(`[PDF-EXTRACT] pdfjs-dist SUCCESS: ${extractedText.length} characters extracted`);
       return extractedText;
     }
-    console.log(`[PDF-EXTRACT] pdfjs-dist returned only ${extractedText.length} characters, trying fallback`);
   } catch (error) {
     console.warn('[PDF-EXTRACT] pdfjs-dist failed:', error instanceof Error ? error.message : error);
   }
 
-  // Fallback to pdf-parse
+  // Method 3: Try simple text extraction for plain text PDFs
   try {
-    console.log('[PDF-EXTRACT] Attempting pdf-parse extraction as fallback...');
-    // @ts-ignore - pdf-parse CommonJS module
-    const pdfParse = require('pdf-parse');
-    const data = await pdfParse(buffer, {
-      max: 50, // Max 50 pages
-    });
-    
-    extractedText = (data.text || '').trim();
-    extractionMethod = 'pdf-parse';
-    
-    console.log(`[PDF-EXTRACT] pdf-parse result: ${extractedText.length} characters`);
-    
-    if (extractedText.length > 50) {
-      console.log(`[PDF-EXTRACT] pdf-parse SUCCESS: ${extractedText.length} characters extracted`);
-      return extractedText;
+    console.log('[PDF-EXTRACT] Attempting raw buffer text extraction...');
+    const text = buffer.toString('utf-8', 0, Math.min(buffer.length, 100000));
+    // Check if it contains readable text
+    const lines = text.split('\n').filter(line => line.trim().length > 0);
+    if (lines.length > 5) {
+      extractedText = lines.join('\n').trim();
+      extractionMethods.push('raw-buffer');
+      
+      if (extractedText.length > 100) {
+        console.log(`[PDF-EXTRACT] Raw buffer SUCCESS: ${extractedText.length} characters extracted`);
+        return extractedText;
+      }
     }
   } catch (error) {
-    console.error('[PDF-EXTRACT] pdf-parse also failed:', error instanceof Error ? error.message : error);
+    console.warn('[PDF-EXTRACT] Raw buffer extraction failed:', error);
   }
 
-  // If both methods failed or returned too little text
+  // If all methods failed
   if (extractedText.length === 0) {
-    throw new Error('Could not extract text from PDF - file may be image-based, corrupted, or encrypted. Please use a text-based PDF or paste the content directly.');
+    throw new Error(
+      'Could not extract text from PDF. Possible reasons:\n' +
+      '1. PDF is image-based or scanned (use OCR software first)\n' +
+      '2. PDF is password protected\n' +
+      '3. PDF is corrupted\n' +
+      '4. PDF uses non-standard encoding\n\n' +
+      'Please convert to text-based PDF or paste content directly.'
+    );
   }
   
-  throw new Error(`Insufficient text extracted from PDF (${extractedText.length} chars). Please ensure the PDF contains readable text.`);
+  if (extractedText.length < 50) {
+    throw new Error(
+      `Insufficient text extracted (${extractedText.length} characters). ` +
+      'The PDF may contain only images or be improperly formatted.'
+    );
+  }
+  
+  console.log(`[PDF-EXTRACT] Using combined result from: ${extractionMethods.join(', ')}`);
+  return extractedText;
 }
 
 // Extract text from DOCX
 async function extractTextFromDOCX(buffer: Buffer): Promise<string> {
   try {
     console.log('[DOCX-EXTRACT] Starting DOCX extraction...');
-    // @ts-ignore - mammoth CommonJS module
-    const mammoth = require('mammoth');
-    const result = await mammoth.extractRawText({ arrayBuffer: buffer });
+    const mammoth = await import('mammoth');
+    const result = await mammoth.extractRawText({ buffer });
     const text = (result.value || '').trim();
     console.log(`[DOCX-EXTRACT] Extracted ${text.length} characters from DOCX`);
     return text;
   } catch (error) {
     console.error('[DOCX-EXTRACT] Failed:', error instanceof Error ? error.message : error);
-    throw new Error(`Failed to extract DOCX: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`Failed to extract text from DOCX: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -116,12 +164,28 @@ async function extractTextFromDOCX(buffer: Buffer): Promise<string> {
 function extractTextFromTXT(buffer: Buffer): string {
   try {
     console.log('[TXT-EXTRACT] Starting TXT extraction...');
+    // Try different encodings
+    const encodings = ['utf-8', 'utf16le', 'latin1'];
+    
+    for (const encoding of encodings) {
+      try {
+        const text = buffer.toString(encoding as BufferEncoding).trim();
+        if (text.length > 10 && !text.includes('�')) { // Check for valid text
+          console.log(`[TXT-EXTRACT] Success with ${encoding}: ${text.length} characters`);
+          return text;
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+    
+    // Fallback to utf-8
     const text = buffer.toString('utf-8').trim();
     console.log(`[TXT-EXTRACT] Extracted ${text.length} characters from TXT`);
     return text;
   } catch (error) {
     console.error('[TXT-EXTRACT] Failed:', error instanceof Error ? error.message : error);
-    throw new Error(`Failed to extract TXT: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`Failed to extract text from TXT: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -143,129 +207,129 @@ export async function POST(request: NextRequest) {
     // ===== FORM PARSING =====
     log('STEP-2', 'Parsing form data...');
     const formData = await request.formData();
+    
+    const resumeFile = formData.get('resume') as File | null;
+    const resumeText = formData.get('resumeText') as string | null;
+    const jobDescription = formData.get('jobDescription') as string || '';
+    
     log('STEP-3', 'Form data parsed successfully', {
-      hasResume: formData.has('resume'),
-      hasFile: formData.has('file'),
-      hasResumeText: formData.has('resumeText'),
-      hasJobDescription: formData.has('jobDescription'),
+      hasResumeFile: !!resumeFile,
+      hasResumeText: !!resumeText,
+      jobDescriptionLength: jobDescription.length,
     });
 
-    // Accept 'resume', 'file', or 'resumeText' from frontend
-    const resumeInput = (formData.get('resume') || formData.get('file') || formData.get('resumeText')) as string | File | null;
-    const jobDescription = (formData.get('jobDescription') as string) || '';
+    let extractedResumeText = '';
 
-    log('STEP-4', 'Extracted form fields', {
-      resumeType: resumeInput instanceof File ? 'File' : 'String',
-      jobDescriptionLength: jobDescription?.length || 0,
-    });
+    // Process resume based on input type
+    if (resumeFile && resumeFile.size > 0) {
+      log('STEP-4', 'Processing resume file', {
+        fileName: resumeFile.name,
+        fileType: resumeFile.type,
+        fileSize: resumeFile.size,
+      });
 
-    if (!resumeInput) {
-      log('STEP-5', 'ERROR: No resume provided');
+      const buffer = Buffer.from(await resumeFile.arrayBuffer());
+      const fileName = resumeFile.name.toLowerCase();
+
+      // Determine file type and extract text
+      if (fileName.endsWith('.pdf') || resumeFile.type === 'application/pdf') {
+        log('STEP-5', 'Detected PDF file');
+        try {
+          extractedResumeText = await extractTextFromPDF(buffer);
+          log('STEP-6', 'PDF extraction completed', {
+            textLength: extractedResumeText.length,
+            preview: extractedResumeText.substring(0, 200) + '...',
+          });
+        } catch (pdfError: any) {
+          log('STEP-6-ERROR', 'PDF extraction failed', {
+            error: pdfError.message,
+          });
+          return NextResponse.json(
+            { 
+              error: pdfError.message,
+              suggestion: 'Please try converting your PDF to text using an online converter, or paste the text directly.',
+            },
+            { status: 400 }
+          );
+        }
+      } else if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
+        log('STEP-7', 'Detected DOCX/DOC file');
+        try {
+          extractedResumeText = await extractTextFromDOCX(buffer);
+          log('STEP-8', 'DOCX extraction completed', {
+            textLength: extractedResumeText.length,
+          });
+        } catch (docxError: any) {
+          log('STEP-8-ERROR', 'DOCX extraction failed', {
+            error: docxError.message,
+          });
+          return NextResponse.json(
+            { 
+              error: 'Failed to extract text from Word document',
+              suggestion: 'Please save as PDF or copy the text directly.',
+            },
+            { status: 400 }
+          );
+        }
+      } else if (fileName.endsWith('.txt') || fileName.endsWith('.rtf') || fileName.endsWith('.md')) {
+        log('STEP-9', 'Detected text file');
+        try {
+          extractedResumeText = extractTextFromTXT(buffer);
+          log('STEP-10', 'Text extraction completed', {
+            textLength: extractedResumeText.length,
+          });
+        } catch (txtError: any) {
+          log('STEP-10-ERROR', 'Text extraction failed', {
+            error: txtError.message,
+          });
+          return NextResponse.json(
+            { error: 'Failed to read text file' },
+            { status: 400 }
+          );
+        }
+      } else {
+        log('STEP-11-ERROR', 'Unsupported file type', {
+          fileName: resumeFile.name,
+          fileType: resumeFile.type,
+        });
+        return NextResponse.json(
+          { 
+            error: 'Unsupported file type',
+            supportedTypes: 'PDF, DOCX, DOC, TXT, RTF, MD',
+          },
+          { status: 400 }
+        );
+      }
+    } else if (resumeText && resumeText.trim().length > 0) {
+      log('STEP-12', 'Using direct text input');
+      extractedResumeText = resumeText.trim();
+      log('STEP-13', 'Text input ready', {
+        textLength: extractedResumeText.length,
+      });
+    } else {
+      log('STEP-14-ERROR', 'No resume input provided');
       return NextResponse.json(
-        { error: 'No resume provided' },
+        { error: 'Please provide a resume file or paste the text' },
         { status: 400 }
       );
     }
 
-    let resumeText: string = '';
-
-    // Extract resume text based on type
-    if (resumeInput instanceof File) {
-      log('STEP-6a', 'Processing resume as File', { fileName: resumeInput.name, fileType: resumeInput.type, fileSize: resumeInput.size });
-      const buffer = await resumeInput.arrayBuffer();
-      const bufferNode = Buffer.from(buffer);
-      const fileName = resumeInput.name.toLowerCase();
-
-      log('STEP-6b', 'Buffer created', { size: bufferNode.length });
-
-      // Try different extractors based on file type
-      if (fileName.endsWith('.pdf') || resumeInput.type === 'application/pdf') {
-        log('STEP-6c', 'Detected PDF file, extracting text...');
-        try {
-          resumeText = await extractTextFromPDF(bufferNode);
-          log('STEP-6d', 'PDF extraction completed', {
-            textLength: resumeText?.length || 0,
-            preview: resumeText?.substring(0, 100),
-          });
-        } catch (pdfError: any) {
-          log('STEP-6d-ERROR', 'PDF extraction failed', {
-            error: pdfError?.message || String(pdfError),
-            fileSize: bufferNode.length,
-          });
-          throw pdfError;
-        }
-      } else if (fileName.endsWith('.docx') || resumeInput.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        log('STEP-6e', 'Detected DOCX file, extracting text...');
-        try {
-          resumeText = await extractTextFromDOCX(bufferNode);
-          log('STEP-6f', 'DOCX extraction completed', {
-            textLength: resumeText?.length || 0,
-            preview: resumeText?.substring(0, 100),
-          });
-        } catch (docxError: any) {
-          log('STEP-6f-ERROR', 'DOCX extraction failed', {
-            error: docxError?.message || String(docxError),
-            fileSize: bufferNode.length,
-          });
-          throw docxError;
-        }
-      } else if (fileName.endsWith('.txt') || resumeInput.type === 'text/plain') {
-        log('STEP-6g', 'Detected TXT file, extracting text...');
-        try {
-          resumeText = extractTextFromTXT(bufferNode);
-          log('STEP-6h', 'TXT extraction completed', {
-            textLength: resumeText?.length || 0,
-            preview: resumeText?.substring(0, 100),
-          });
-        } catch (txtError: any) {
-          log('STEP-6h-ERROR', 'TXT extraction failed', {
-            error: txtError?.message || String(txtError),
-            fileSize: bufferNode.length,
-          });
-          throw txtError;
-        }
-      } else {
-        // Try pdf-parse as a fallback for unknown types
-        log('STEP-6i', 'Unknown file type, attempting PDF extraction...');
-        try {
-          resumeText = await extractTextFromPDF(bufferNode);
-          log('STEP-6j', 'Fallback PDF extraction completed', {
-            textLength: resumeText?.length || 0,
-            preview: resumeText?.substring(0, 100),
-          });
-        } catch (fallbackError: any) {
-          log('STEP-6j-ERROR', 'Fallback extraction failed', {
-            error: fallbackError?.message || String(fallbackError),
-            fileSize: bufferNode.length,
-          });
-          throw fallbackError;
-        }
-      }
-    } else {
-      // resumeInput is a string
-      resumeText = resumeInput;
-      log('STEP-6k', 'Resume provided as string', {
-        textLength: resumeText?.length || 0,
+    // Validate extracted text
+    if (!extractedResumeText || extractedResumeText.trim().length < 50) {
+      log('STEP-15-ERROR', 'Insufficient text extracted', {
+        textLength: extractedResumeText?.length || 0,
       });
-    }
-
-    if (!resumeText.trim()) {
-      log('STEP-7', 'ERROR: Resume text is empty after extraction');
       return NextResponse.json(
         { 
-          error: 'Could not extract text from your resume file. This usually happens if: (1) PDF is image-based or scanned - try exporting as text-based PDF, (2) File is corrupted or password-protected, or (3) Format not supported. Please try a different PDF or paste your resume text directly.' 
+          error: 'Could not extract sufficient text from resume',
+          suggestion: 'Please ensure your file contains readable text, not just images.',
         },
         { status: 400 }
       );
     }
 
-    log('STEP-8', 'Resume text successfully extracted', {
-      textLength: resumeText.length,
-      preview: resumeText.substring(0, 100),
-    });
-
     // ===== OPENAI API CALL =====
-    log('STEP-9', 'Building analysis prompt...');
+    log('STEP-16', 'Building analysis prompt...');
 
     const systemPrompt = `You are an expert technical recruiter and ATS resume evaluator with 15+ years of hiring experience.
 
@@ -309,13 +373,13 @@ Respond with this exact JSON structure (no additional text):
 }`;
 
     const userContent = jobDescription
-      ? `Resume:\n${resumeText}\n\nJob Description:\n${jobDescription}\n\nPlease analyze this resume against the job description.`
-      : `Resume:\n${resumeText}\n\nPlease analyze this resume.`;
+      ? `Resume:\n${extractedResumeText}\n\nJob Description:\n${jobDescription}\n\nPlease analyze this resume against the job description.`
+      : `Resume:\n${extractedResumeText}\n\nPlease analyze this resume.`;
 
-    log('STEP-10', 'Calling OpenAI API', {
+    log('STEP-17', 'Calling OpenAI API', {
       model: 'gpt-4o-mini',
       hasJobDescription: !!jobDescription,
-      resumeLength: resumeText.length,
+      resumeLength: extractedResumeText.length,
     });
 
     let response;
@@ -330,11 +394,11 @@ Respond with this exact JSON structure (no additional text):
         max_tokens: 2000,
       });
 
-      log('STEP-11', 'OpenAI API call succeeded', {
+      log('STEP-18', 'OpenAI API call succeeded', {
         hasContent: !!response.choices?.[0]?.message?.content,
       });
     } catch (openaiError: any) {
-      log('STEP-11-ERROR', 'OpenAI API call failed', {
+      log('STEP-18-ERROR', 'OpenAI API call failed', {
         errorMessage: openaiError?.message,
         errorCode: openaiError?.code,
         errorStatus: openaiError?.status,
@@ -345,16 +409,16 @@ Respond with this exact JSON structure (no additional text):
     }
 
     // ===== PARSE RESPONSE =====
-    log('STEP-12', 'Parsing OpenAI response...');
+    log('STEP-19', 'Parsing OpenAI response...');
 
     const analysisContent = response.choices[0]?.message?.content;
 
     if (!analysisContent) {
-      log('STEP-13-ERROR', 'No content in OpenAI response');
+      log('STEP-20-ERROR', 'No content in OpenAI response');
       throw new Error('No analysis content from OpenAI');
     }
 
-    log('STEP-13', 'Response content extracted', {
+    log('STEP-20', 'Response content extracted', {
       contentLength: analysisContent.length,
     });
 
@@ -365,11 +429,11 @@ Respond with this exact JSON structure (no additional text):
       const jsonStr = jsonMatch ? jsonMatch[0] : analysisContent;
 
       analysis = JSON.parse(jsonStr);
-      log('STEP-14', 'JSON parsed successfully', {
+      log('STEP-21', 'JSON parsed successfully', {
         keys: Object.keys(analysis),
       });
     } catch (parseError) {
-      log('STEP-14-WARNING', 'Could not parse JSON, returning raw response', {
+      log('STEP-21-WARNING', 'Could not parse JSON, returning raw response', {
         error: String(parseError),
       });
       // Provide a fallback structure
@@ -388,13 +452,13 @@ Respond with this exact JSON structure (no additional text):
     }
 
     // ===== SAVE TO DATABASE =====
-    log('STEP-15', 'Saving analysis to Supabase...');
+    log('STEP-22', 'Saving analysis to Supabase...');
 
     try {
       const { data: saved, error: dbError } = await supabase
         .from('resume_tracker')
         .insert({
-          resume_text: resumeText,
+          resume_text: extractedResumeText,
           job_description: jobDescription || null,
           analysis: analysis,
           created_at: new Date().toISOString(),
@@ -402,20 +466,20 @@ Respond with this exact JSON structure (no additional text):
         .select();
 
       if (dbError) {
-        log('STEP-15-WARNING', 'Database save failed, but continuing', {
+        log('STEP-22-WARNING', 'Database save failed, but continuing', {
           error: dbError.message,
         });
       } else {
-        log('STEP-16', 'Analysis saved to database successfully');
+        log('STEP-23', 'Analysis saved to database successfully');
       }
     } catch (dbError) {
-      log('STEP-15-WARNING', 'Database operation error, continuing', {
+      log('STEP-22-WARNING', 'Database operation error, continuing', {
         error: String(dbError),
       });
     }
 
     // ===== SUCCESS =====
-    log('STEP-17', 'SUCCESS: Returning analysis to client');
+    log('STEP-24', 'SUCCESS: Returning analysis to client');
 
     return NextResponse.json(
       {
