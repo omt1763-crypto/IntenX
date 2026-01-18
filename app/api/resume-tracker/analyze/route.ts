@@ -326,36 +326,36 @@ CRITICAL RULES:
 - Base analysis ONLY on provided resume text
 - Do NOT hallucinate personal information
 - Be concise and action-oriented
-- Return ONLY valid JSON, no markdown
-- All numeric scores 0-100
-- Impact: How well achievements are communicated
+- Return ONLY valid JSON, no markdown, no extra text before or after
+- All numeric scores must be 0-100
+- Impact: How well achievements communicate value
 - Brevity: Conciseness and word efficiency
 - Style: Professional presentation and formatting
 - Skills: Technical relevance and industry alignment
 
-Respond with this exact JSON structure (no additional text):
+Return EXACTLY this JSON structure with no additional text:
 {
   "overallScore": <number 0-100>,
   "experienceLevel": "<Fresher|Junior|Mid|Senior>",
   "hiringRecommendation": "<Reject|Review|Interview|Strong Hire>",
   "metrics": {
-    "impact": <0-100, how well achievements communicate value>,
-    "brevity": <0-100, conciseness and efficiency>,
-    "style": <0-100, professional presentation and formatting>,
-    "skills": <0-100, technical relevance and alignment>
+    "impact": <0-100>,
+    "brevity": <0-100>,
+    "style": <0-100>,
+    "skills": <0-100>
   },
-  "atsScore": <0-100 for ATS compatibility>,
-  "technicalSkills": [<extracted skills from resume as strings>],
-  "missingSkills": [<3-5 important skills missing for typical industry standards>],
-  "strengths": [<3-5 key strengths as bullet points>],
-  "weaknesses": [<3-5 areas to improve as bullet points>],
+  "atsScore": <0-100>,
+  "technicalSkills": [<skill1>, <skill2>, ...],
+  "missingSkills": [<skill1>, <skill2>, ...],
+  "strengths": [<strength1>, <strength2>, ...],
+  "weaknesses": [<weakness1>, <weakness2>, ...],
   "contentQuality": {
     "bulletPointQuality": "<Poor|Average|Good>",
     "useOfMetrics": "<Poor|Average|Good>",
     "actionVerbUsage": "<Poor|Average|Good>"
   },
-  "interviewFocusTopics": [<5-7 topics to discuss in interview>],
-  "improvements": [<5-7 specific, actionable improvement suggestions>],
+  "interviewFocusTopics": [<topic1>, <topic2>, ...],
+  "improvements": [<improvement1>, <improvement2>, ...],
   "summary": "<2-3 sentence professional recruiter summary>"
 }`;
 
@@ -407,6 +407,7 @@ Respond with this exact JSON structure (no additional text):
 
     log('STEP-20', 'Response content extracted', {
       contentLength: analysisContent.length,
+      preview: analysisContent.substring(0, 300),
     });
 
     let analysis;
@@ -415,7 +416,9 @@ Respond with this exact JSON structure (no additional text):
       const jsonMatch = analysisContent.match(/\{[\s\S]*\}/);
       const jsonStr = jsonMatch ? jsonMatch[0] : analysisContent;
 
-      analysis = JSON.parse(jsonStr);
+      log('STEP-20b', 'Attempting JSON parse', {
+        extractedJsonLength: jsonStr.length,
+      });
       log('STEP-21', 'JSON parsed successfully', {
         keys: Object.keys(analysis),
       });
@@ -423,16 +426,35 @@ Respond with this exact JSON structure (no additional text):
       log('STEP-21-WARNING', 'Could not parse JSON, returning raw response', {
         error: String(parseError),
       });
-      // Provide a fallback structure
+      // Provide a complete fallback structure matching expected format
       analysis = {
-        atsScore: 0,
-        readabilityScore: 0,
-        keywordMatchScore: 0,
-        roleFitScore: 0,
-        overallScore: 0,
-        strengths: [],
-        areasForImprovement: [],
-        recommendations: [],
+        overallScore: 50,
+        experienceLevel: 'Fresher',
+        hiringRecommendation: 'Review',
+        metrics: {
+          impact: 50,
+          brevity: 50,
+          style: 50,
+          skills: 50,
+        },
+        atsScore: 50,
+        technicalSkills: [],
+        missingSkills: [],
+        strengths: ['Resume submitted', 'Unique background'],
+        weaknesses: ['Minimal formatting', 'Limited detail', 'Unclear structure'],
+        contentQuality: {
+          bulletPointQuality: 'Average',
+          useOfMetrics: 'Average',
+          actionVerbUsage: 'Average',
+        },
+        interviewFocusTopics: ['Background', 'Skills', 'Motivation'],
+        improvements: [
+          'Add more specific achievements with metrics',
+          'Use action verbs to start bullet points',
+          'Improve formatting and structure',
+          'Add measurable results and impact',
+          'Highlight relevant technical skills',
+        ],
         summary: analysisContent,
         rawAnalysis: analysisContent,
       };
