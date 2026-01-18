@@ -156,68 +156,36 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   }
 
   // If all methods failed with minimal text
-  const errorMsg = `Could not extract sufficient text from PDF (only ${extractedText.length} characters found). Possible reasons:
+  const errorMsg = `Could not extract sufficient text from PDF (only ${extractedText.length} characters found). 
+
+Possible reasons:
 1. PDF is image-based or scanned (contains only images, no text)
 2. PDF is password protected or encrypted
 3. PDF is corrupted or malformed
-4. PDF uses unsupported encoding
 
 Solutions:
-• Try converting the PDF to text using an online PDF converter
-• Export the PDF as text from the original application
-• Paste your resume text directly in the text area
-• Upload a DOCX or TXT version instead`;
+• Try uploading a different version of the file
+• Save the PDF as DOCX in Microsoft Word, then upload that version
+• Copy and paste the resume text directly (most reliable)`;
 
   throw new Error(errorMsg);
 }
 
-// Validate that extracted text is actually meaningful
+// Validate that extracted text has minimum meaningful content
 function isValidResumeText(text: string): boolean {
-  // Check minimum length
+  // Very lenient validation - just check minimum length
+  // Let OpenAI handle the actual analysis
   if (text.length < 80) return false;
   
-  const lowerText = text.toLowerCase();
+  // Check if text has some reasonable structure (not just garbage)
+  const lines = text.split('\n').filter(line => line.trim().length > 5);
+  if (lines.length < 2) return false; // At least 2 substantial lines
   
-  // Check for common resume keywords
-  const resumeKeywords = [
-    'experience', 'skill', 'education', 'project', 'work',
-    'professional', 'employment', 'responsibility', 'achievement',
-    'years', 'company', 'university', 'degree', 'certification',
-    'technical', 'programming', 'development', 'role', 'position',
-    'worked', 'designed', 'developed', 'managed', 'led', 'created',
-    'implemented', 'built', 'engineered', 'architect'
-  ];
+  // Check for at least some alphanumeric content (not just symbols)
+  const alphanumeric = text.replace(/[^a-zA-Z0-9]/g, '').length;
+  if (alphanumeric < 30) return false; // At least 30 letters/numbers
   
-  // Check for contact/identifying information
-  const hasEmail = /@[\w.-]+\.\w+/.test(text);
-  const hasPhone = /[\+]?[(]?[0-9]{3}[)\s.-]?[0-9]{3}[-\s.]?[0-9]{4,6}/.test(text);
-  const hasDate = /20\d{2}|19\d{2}|\d{1,2}\/\d{1,2}|\d{1,2}-\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec/.test(text);
-  
-  // Count resume keywords found
-  const foundKeywords = resumeKeywords.filter(kw => lowerText.includes(kw)).length;
-  
-  // Accept if:
-  // 1. Has at least 1 resume keyword + contact info
-  // 2. Has at least 3 resume keywords
-  // 3. Has email or phone + date pattern (likely a real resume)
-  const hasKeywords = foundKeywords >= 1;
-  const hasContactInfo = hasEmail || hasPhone;
-  const hasTemporalInfo = hasDate;
-  
-  // More lenient validation
-  if (foundKeywords >= 3) return true; // Strong signal: multiple keywords
-  if (hasKeywords && hasContactInfo) return true; // Has keywords + contact info
-  if (hasEmail && hasTemporalInfo) return true; // Has email + dates
-  if (hasPhone && hasTemporalInfo) return true; // Has phone + dates
-  
-  // Fallback: if text has reasonable length and found at least 1 keyword + some structure
-  if (foundKeywords >= 1 && text.length > 150) {
-    // Check if text has some structure (multiple lines with content)
-    const lines = text.split('\n').filter(line => line.trim().length > 10);
-    if (lines.length >= 3) return true; // At least 3 substantial lines
-  }
-  
-  return false;
+  return true;
 }
 
 // Extract text from DOCX
@@ -404,17 +372,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate that extracted text is actually a resume
+    // Validate that extracted text has meaningful content
     if (!isValidResumeText(extractedResumeText)) {
-      log('STEP-15b-ERROR', 'Extracted text does not appear to be a resume', {
+      log('STEP-15b-ERROR', 'Extracted text does not have minimum meaningful content', {
         textLength: extractedResumeText.length,
-        preview: extractedResumeText.substring(0, 300),
+        preview: extractedResumeText.substring(0, 200),
       });
       return NextResponse.json(
         { 
-          error: 'The extracted content does not appear to be a valid resume. The text looks like it may be corrupted or from an image-based PDF.',
-          suggestion: 'Please try one of these options:\n1) Convert your PDF to text using an online converter (try: ilovepdf.com, smallpdf.com, or pdf2go.com)\n2) Save the PDF as DOCX in Microsoft Word, then upload that\n3) Copy and paste the resume text directly into the text area',
-          details: 'Your PDF appears to be image-based (scanned) or corrupted. Text extraction found some content but it does not match a typical resume format.',
+          error: 'The extracted text is too minimal or corrupted to analyze.',
+          suggestion: 'Please try: 1) Use a different PDF file, 2) Save the PDF as DOCX in Microsoft Word and upload that, 3) Copy and paste the resume text directly into the text area (most reliable method)',
+          details: 'If you have a scanned PDF (image-based), please try taking a screenshot or using a different file format.',
         },
         { status: 400 }
       );
