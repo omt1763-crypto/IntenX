@@ -19,6 +19,87 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Intelligent PDF extraction with layout reconstruction
+async function extractTextFromPDFWithLayout(buffer: Buffer): Promise<string> {
+  try {
+    console.log('[PDF-LAYOUT] Starting layout-aware PDF extraction...');
+    
+    const pdfjsModule = await import('pdfjs-dist');
+    const pdfjs = pdfjsModule.default || pdfjsModule;
+    
+    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
+    const pdf = await loadingTask.promise;
+    const pageCount = Math.min(pdf.numPages, 10);
+    
+    let fullText = '';
+    
+    for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
+      try {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        
+        // Group text items by their position for layout reconstruction
+        const items = textContent.items as any[];
+        
+        if (!items || items.length === 0) continue;
+        
+        // Sort items by vertical position (top to bottom) then horizontal (left to right)
+        const sortedItems = items.sort((a, b) => {
+          // Group by Y position (with tolerance for same line)
+          const yDiff = Math.abs(b.y - a.y);
+          if (yDiff > 5) return b.y - a.y; // Different lines
+          return a.x - b.x; // Same line, sort left to right
+        });
+        
+        // Reconstruct layout with proper grouping
+        let currentY = sortedItems[0]?.y ?? 0;
+        let lineText = '';
+        
+        for (const item of sortedItems) {
+          const text = item.str || '';
+          const itemY = item.y;
+          
+          // Check if we've moved to a new line (Y position changed significantly)
+          if (Math.abs(itemY - currentY) > 3) {
+            if (lineText.trim()) {
+              fullText += lineText.trim() + '\n';
+            }
+            lineText = text;
+            currentY = itemY;
+          } else {
+            // Same line - add space if needed
+            if (lineText && !lineText.endsWith(' ') && !text.startsWith(' ')) {
+              lineText += ' ';
+            }
+            lineText += text;
+          }
+        }
+        
+        // Add remaining text
+        if (lineText.trim()) {
+          fullText += lineText.trim() + '\n';
+        }
+        
+        fullText += '\n'; // Page break
+        
+      } catch (pageError) {
+        console.warn(`[PDF-LAYOUT] Error extracting page ${pageNum}:`, pageError);
+        continue;
+      }
+    }
+    
+    let cleanedText = fullText.trim();
+    // Apply aggressive cleanup after layout reconstruction
+    cleanedText = aggressiveTextCleanup(cleanedText);
+    
+    console.log(`[PDF-LAYOUT] Layout-aware extraction: ${cleanedText.length} characters`);
+    return cleanedText;
+  } catch (error) {
+    console.warn('[PDF-LAYOUT] Layout extraction failed:', error instanceof Error ? error.message : error);
+    return '';
+  }
+}
+
 // Aggressive text cleaning for token reduction
 function aggressiveTextCleanup(text: string): string {
   return text
@@ -61,6 +142,22 @@ async function extractTextFromPDFViaOCR(buffer: Buffer): Promise<string> {
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   let extractedText = '';
   const extractionMethods = [];
+  
+  // Method 0: Try layout-aware extraction first (handles columns, sidebars, hierarchies)
+  try {
+    console.log('[PDF-EXTRACT] Attempting layout-aware extraction...');
+    extractedText = await extractTextFromPDFWithLayout(buffer);
+    extractionMethods.push('layout-aware');
+    
+    console.log(`[PDF-EXTRACT] Layout-aware extracted: ${extractedText.length} characters`);
+    
+    if (extractedText.length > 300) {
+      console.log(`[PDF-EXTRACT] Layout-aware SUCCESS: ${extractedText.length} characters`);
+      return extractedText;
+    }
+  } catch (error) {
+    console.warn('[PDF-EXTRACT] Layout-aware failed:', error instanceof Error ? error.message : error);
+  }
   
   // Method 1: Try pdf-parse first (usually works better in serverless)
   try {
