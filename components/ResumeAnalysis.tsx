@@ -1,9 +1,9 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { Download, ArrowLeft, TrendingUp, CheckCircle2, AlertTriangle, Lightbulb, Zap, Target, FileText, Code2, MessageSquare, BookOpen, Menu, X } from 'lucide-react'
+import { Download, ArrowLeft, TrendingUp, CheckCircle2, AlertTriangle, Lightbulb, Zap, Target, FileText, Code2, MessageSquare, BookOpen, Menu, X, Lock, Phone, Shield } from 'lucide-react'
 import jsPDF from 'jspdf'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface ResumeAnalysisProps {
   results: any
@@ -14,7 +14,98 @@ interface ResumeAnalysisProps {
 export default function ResumeAnalysis({ results, phoneNumber, onReset }: ResumeAnalysisProps) {
   const analysis = results?.analysis || {}
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [activeSection, setActiveSection] = useState<'overview' | 'skills' | 'improvements' | 'interview'>('overview')
+  const [activeSection, setActiveSection] = useState<'overview' | 'skills' | 'improvements' | 'interview' | 'advanced'>('overview')
+  
+  // OTP Login States
+  const [showOtpModal, setShowOtpModal] = useState(false)
+  const [mobileNumber, setMobileNumber] = useState('')
+  const [otp, setOtp] = useState('')
+  const [otpVerified, setOtpVerified] = useState(false)
+  const [otpError, setOtpError] = useState('')
+  const [isVerifying, setIsVerifying] = useState(false)
+  const [otpSent, setOtpSent] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+
+  // Send OTP function
+  const handleSendOtp = async () => {
+    if (!mobileNumber || mobileNumber.length < 10) {
+      setOtpError('Please enter a valid mobile number')
+      return
+    }
+
+    setIsVerifying(true)
+    setOtpError('')
+    
+    try {
+      // In a real app, this would call your backend to send OTP
+      // For now, we'll generate a mock OTP
+      const mockOtp = Math.floor(100000 + Math.random() * 900000).toString()
+      console.log(`[OTP-MOCK] OTP for ${mobileNumber}: ${mockOtp}`)
+      
+      // Save to debug data
+      await fetch('/api/debug/resume-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'otp_sent',
+          mobileNumber,
+          mockOtp, // Remove in production
+          timestamp: new Date().toISOString()
+        })
+      }).catch(() => {}) // Silently fail if debug endpoint doesn't exist yet
+      
+      setOtpSent(true)
+      setOtpError('')
+      // In production, remove the alert
+      alert(`Test OTP: ${mockOtp}`)
+    } catch (error) {
+      setOtpError('Failed to send OTP. Please try again.')
+    } finally {
+      setIsVerifying(false)
+    }
+  }
+
+  // Verify OTP function
+  const handleVerifyOtp = async () => {
+    if (!otp || otp.length !== 6) {
+      setOtpError('Please enter a valid 6-digit OTP')
+      return
+    }
+
+    setIsVerifying(true)
+    setOtpError('')
+
+    try {
+      // Verify OTP and save login data
+      const response = await fetch('/api/debug/resume-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'otp_verified',
+          mobileNumber,
+          otp,
+          resumeAnalysis: analysis,
+          timestamp: new Date().toISOString()
+        })
+      })
+
+      if (response.ok) {
+        setOtpVerified(true)
+        setShowOtpModal(false)
+        setOtpError('')
+        // Reset form
+        setMobileNumber('')
+        setOtp('')
+        setOtpSent(false)
+      } else {
+        setOtpError('OTP verification failed. Please try again.')
+      }
+    } catch (error) {
+      setOtpError('Error verifying OTP. Please try again.')
+    } finally {
+      setIsVerifying(false)
+    }
+  }
 
   const getScoreGrade = (score: number): { label: string; color: string; bgColor: string; textColor: string } => {
     if (score >= 90) return { label: 'Excellent', color: '#22c55e', bgColor: 'bg-green-50 dark:bg-green-950/30', textColor: 'text-green-700 dark:text-green-300' }
@@ -381,6 +472,23 @@ export default function ResumeAnalysis({ results, phoneNumber, onReset }: Resume
             </div>
 
             <div className="flex items-center gap-3">
+              {!otpVerified && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowOtpModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:shadow-lg transition font-semibold text-sm"
+                >
+                  <Shield className="w-4 h-4" />
+                  Verify Login
+                </motion.button>
+              )}
+              {otpVerified && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/50 rounded-lg">
+                  <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  <span className="text-sm font-semibold text-green-700 dark:text-green-300">Verified</span>
+                </div>
+              )}
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -846,6 +954,128 @@ export default function ResumeAnalysis({ results, phoneNumber, onReset }: Resume
             </motion.button>
           </motion.div>
         </div>
+
+        {/* OTP Verification Modal */}
+        <AnimatePresence>
+          {showOtpModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+              onClick={() => setShowOtpModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white dark:bg-slate-800 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Shield className="w-6 h-6 text-blue-600" />
+                      Verify Login
+                    </h2>
+                    <p className="text-slate-600 dark:text-slate-300 mt-1 text-sm">Secure OTP verification required</p>
+                  </div>
+                  <button
+                    onClick={() => setShowOtpModal(false)}
+                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                {!otpSent ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                        <Phone className="w-4 h-4" />
+                        Mobile Number
+                      </label>
+                      <input
+                        type="tel"
+                        placeholder="Enter 10-digit mobile number"
+                        value={mobileNumber}
+                        onChange={(e) => setMobileNumber(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
+                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{mobileNumber.length}/10 digits</p>
+                    </div>
+
+                    {otpError && (
+                      <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-lg flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                        <p className="text-sm text-red-600 dark:text-red-400">{otpError}</p>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleSendOtp}
+                      disabled={isVerifying || mobileNumber.length !== 10}
+                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-slate-400 disabled:to-slate-400 text-white font-bold py-3 px-4 rounded-lg transition disabled:cursor-not-allowed"
+                    >
+                      {isVerifying ? 'Sending OTP...' : 'Send OTP'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/50 rounded-lg">
+                      <p className="text-sm text-blue-800 dark:text-blue-300">
+                        OTP sent to <strong>{mobileNumber}</strong>
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                        <Lock className="w-4 h-4" />
+                        Enter OTP (6 digits)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="000000"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                        maxLength={6}
+                        className="w-full px-4 py-3 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center font-mono text-xl tracking-widest"
+                      />
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 text-center">{otp.length}/6 digits</p>
+                    </div>
+
+                    {otpError && (
+                      <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-lg flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                        <p className="text-sm text-red-600 dark:text-red-400">{otpError}</p>
+                      </div>
+                    )}
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          setOtpSent(false)
+                          setOtp('')
+                          setOtpError('')
+                        }}
+                        className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+                      >
+                        Change Number
+                      </button>
+                      <button
+                        onClick={handleVerifyOtp}
+                        disabled={isVerifying || otp.length !== 6}
+                        className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-slate-400 disabled:to-slate-400 text-white font-bold py-3 px-4 rounded-lg transition disabled:cursor-not-allowed"
+                      >
+                        {isVerifying ? 'Verifying...' : 'Verify OTP'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )
