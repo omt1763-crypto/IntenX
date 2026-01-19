@@ -1312,13 +1312,13 @@ export default function AdminDebugPage() {
                       <p className="text-gray-700 text-sm font-semibold mb-2">Total Sessions</p>
                       <p className="text-4xl font-bold text-blue-600">{resumeData.data?.sessions?.length || 0}</p>
                     </DashboardCard>
-                    <DashboardCard gradient="green" hover>
+                    <DashboardCard gradient="purple" hover>
                       <p className="text-gray-700 text-sm font-semibold mb-2">Verified</p>
-                      <p className="text-4xl font-bold text-green-600">{resumeData.data?.sessions?.filter((s: any) => s.status === 'verified')?.length || 0}</p>
+                      <p className="text-4xl font-bold text-purple-600">{resumeData.data?.sessions?.filter((s: any) => s.status === 'verified')?.length || 0}</p>
                     </DashboardCard>
-                    <DashboardCard gradient="yellow" hover>
+                    <DashboardCard gradient="pink" hover>
                       <p className="text-gray-700 text-sm font-semibold mb-2">OTP Sent</p>
-                      <p className="text-4xl font-bold text-yellow-600">{resumeData.data?.sessions?.filter((s: any) => s.status === 'otp_sent')?.length || 0}</p>
+                      <p className="text-4xl font-bold text-pink-600">{resumeData.data?.sessions?.filter((s: any) => s.status === 'otp_sent')?.length || 0}</p>
                     </DashboardCard>
                   </div>
 
