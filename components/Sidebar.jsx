@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
-import { LayoutGrid, User, Briefcase, Users, CreditCard, LogOut, BarChart3, Users2, FileText, Mic2, AlertCircle, Menu, X } from 'lucide-react'
+import { LayoutGrid, User, Briefcase, Users, CreditCard, LogOut, BarChart3, Users2, FileText, Mic2, AlertCircle, Menu, X, Database } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useSidebar } from '@/context/SidebarContext'
 
@@ -134,6 +134,12 @@ export default function Sidebar({role='company'}) {
               <div className='flex items-center gap-3 px-4 py-2 rounded-lg text-xs text-blue-100 hover:bg-white/10 transition-all cursor-pointer group'>
                 <AlertCircle className='w-4 h-4 text-blue-200 group-hover:text-white transition-colors' />
                 <span className='group-hover:text-white transition-colors'>🚨 Activity Logs</span>
+              </div>
+            </Link>
+            <Link href='/debug/data?tab=resume-data'>
+              <div className='flex items-center gap-3 px-4 py-2 rounded-lg text-xs text-blue-100 hover:bg-white/10 transition-all cursor-pointer group'>
+                <Database className='w-4 h-4 text-blue-200 group-hover:text-white transition-colors' />
+                <span className='group-hover:text-white transition-colors'>💾 Resume Data</span>
               </div>
             </Link>
           </nav>

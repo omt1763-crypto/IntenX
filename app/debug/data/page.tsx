@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Trash2, RefreshCw, CheckSquare, Square, BarChart3, Users2, Briefcase, MessageSquare, CreditCard, Lock, Menu, X, Home, Settings, LogOut, Plus, TrendingUp, Activity, Globe, Smartphone, Monitor } from 'lucide-react'
+import { Trash2, RefreshCw, CheckSquare, Square, BarChart3, Users2, Briefcase, MessageSquare, CreditCard, Lock, Menu, X, Home, Settings, LogOut, Plus, TrendingUp, Activity, Globe, Smartphone, Monitor, AlertCircle } from 'lucide-react'
 import DashboardCard from '@/components/dashboard/DashboardCard'
 import WorldVisitorMap from '@/components/WorldVisitorMap'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts'
@@ -50,7 +50,7 @@ export default function AdminDebugPage() {
   const [loading, setLoading] = useState(false)
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
   const [selectAll, setSelectAll] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'jobs' | 'applications' | 'interviews' | 'subscriptions' | 'logs' | 'visitors' | 'control'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'jobs' | 'applications' | 'interviews' | 'subscriptions' | 'logs' | 'visitors' | 'control' | 'resume-data'>('overview')
   const [activityLogs, setActivityLogs] = useState<any[]>([])
   const [filterAction, setFilterAction] = useState('all')
   const [filterLogUser, setFilterLogUser] = useState('all')
@@ -62,6 +62,7 @@ export default function AdminDebugPage() {
   const [analyticsData, setAnalyticsData] = useState<any>(null)
   const [analyticsLoading, setAnalyticsLoading] = useState(false)
   const [analyticsRefresh, setAnalyticsRefresh] = useState(0)
+  const [resumeData, setResumeData] = useState<any>(null)
 
   // Check authentication on mount
   useEffect(() => {
@@ -217,6 +218,20 @@ export default function AdminDebugPage() {
       console.error('Error loading analytics:', error)
     } finally {
       setAnalyticsLoading(false)
+    }
+  }
+
+  const fetchResumeData = async () => {
+    try {
+      const response = await fetch('/api/debug/resume-data', {
+        method: 'GET',
+        cache: 'no-store'
+      })
+      const data = await response.json()
+      setResumeData(data)
+    } catch (error) {
+      console.error('Error loading resume data:', error)
+      setResumeData({ success: false, error: 'Failed to fetch resume data' })
     }
   }
 
@@ -423,6 +438,7 @@ export default function AdminDebugPage() {
             { id: 'applications', label: 'Applications', icon: MessageSquare },
             { id: 'interviews', label: 'Interviews', icon: BarChart3 },
             { id: 'logs', label: 'Activity Logs', icon: Activity },
+            { id: 'resume-data', label: 'Resume Data', icon: CreditCard },
             { id: 'control', label: 'Control', icon: Settings }
           ].map(item => {
             const Icon = item.icon
@@ -436,6 +452,9 @@ export default function AdminDebugPage() {
                   }
                   if (item.id === 'visitors') {
                     loadAnalyticsData()
+                  }
+                  if (item.id === 'resume-data') {
+                    fetchResumeData()
                   }
                 }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
@@ -1262,6 +1281,123 @@ export default function AdminDebugPage() {
                   </button>
                 </div>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Resume Data Tab */}
+        {activeTab === 'resume-data' && (
+          <div className="space-y-8 pb-12">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">📊 Resume Data</h1>
+                <p className="text-gray-600 mt-2">OTP verification and resume analysis records</p>
+              </div>
+              <button
+                onClick={fetchResumeData}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition"
+              >
+                <RefreshCw size={20} />
+                Refresh
+              </button>
+            </div>
+
+            {resumeData ? (
+              resumeData.success ? (
+                <>
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <DashboardCard gradient="blue" hover>
+                      <p className="text-gray-700 text-sm font-semibold mb-2">Total Sessions</p>
+                      <p className="text-4xl font-bold text-blue-600">{resumeData.data?.sessions?.length || 0}</p>
+                    </DashboardCard>
+                    <DashboardCard gradient="green" hover>
+                      <p className="text-gray-700 text-sm font-semibold mb-2">Verified</p>
+                      <p className="text-4xl font-bold text-green-600">{resumeData.data?.sessions?.filter((s: any) => s.status === 'verified')?.length || 0}</p>
+                    </DashboardCard>
+                    <DashboardCard gradient="yellow" hover>
+                      <p className="text-gray-700 text-sm font-semibold mb-2">OTP Sent</p>
+                      <p className="text-4xl font-bold text-yellow-600">{resumeData.data?.sessions?.filter((s: any) => s.status === 'otp_sent')?.length || 0}</p>
+                    </DashboardCard>
+                  </div>
+
+                  {/* Sessions Table */}
+                  <DashboardCard>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left px-4 py-3 font-semibold text-gray-700 text-sm">Event</th>
+                            <th className="text-left px-4 py-3 font-semibold text-gray-700 text-sm">Mobile</th>
+                            <th className="text-left px-4 py-3 font-semibold text-gray-700 text-sm">Status</th>
+                            <th className="text-left px-4 py-3 font-semibold text-gray-700 text-sm">OTP Score</th>
+                            <th className="text-left px-4 py-3 font-semibold text-gray-700 text-sm">Timestamp</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {resumeData.data?.sessions && resumeData.data.sessions.length > 0 ? (
+                            resumeData.data.sessions.map((session: any, index: number) => (
+                              <tr key={session.id || index} className="border-b border-gray-100 hover:bg-gray-50">
+                                <td className="px-4 py-3">
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium" style={{
+                                    backgroundColor: session.event === 'otp_sent' ? '#fef3c7' : '#d1fae5',
+                                    color: session.event === 'otp_sent' ? '#92400e' : '#065f46'
+                                  }}>
+                                    {session.event === 'otp_sent' ? '📤 OTP Sent' : '✅ Verified'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 font-mono text-sm text-gray-600">{session.mobileNumber}</td>
+                                <td className="px-4 py-3">
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium" style={{
+                                    backgroundColor: session.status === 'verified' ? '#d1fae5' : '#fef3c7',
+                                    color: session.status === 'verified' ? '#065f46' : '#92400e'
+                                  }}>
+                                    {session.status === 'verified' ? '✓ Verified' : '⏳ Pending'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-600">
+                                  {session.resumeAnalysis?.overallScore ? `${session.resumeAnalysis.overallScore}/100` : '—'}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-500">{new Date(session.timestamp).toLocaleString()}</td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                                No resume data recorded yet
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </DashboardCard>
+
+                  {/* Data URL */}
+                  <DashboardCard>
+                    <p className="text-sm font-semibold text-gray-700 mb-3">🔗 Remote Data URL</p>
+                    <p className="font-mono text-xs text-gray-600 bg-gray-100 p-3 rounded break-all border border-gray-200">
+                      {resumeData.dataUrl || 'https://www.aiinterviewx.com/debug/data/resume-data.json'}
+                    </p>
+                  </DashboardCard>
+                </>
+              ) : (
+                <DashboardCard>
+                  <div className="text-center py-12">
+                    <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
+                    <p className="text-red-600 font-medium">Failed to load resume data</p>
+                    {resumeData.error && <p className="text-red-500 text-sm mt-2">{resumeData.error}</p>}
+                  </div>
+                </DashboardCard>
+              )
+            ) : (
+              <DashboardCard>
+                <div className="text-center py-12">
+                  <RefreshCw className="animate-spin text-blue-600 mx-auto" size={32} />
+                  <p className="text-gray-600 mt-4">Loading resume data...</p>
+                </div>
+              </DashboardCard>
             )}
           </div>
         )}

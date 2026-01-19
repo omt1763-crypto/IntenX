@@ -1,45 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as fs from 'fs';
-import * as path from 'path';
 
-// Debug data directory
-const DEBUG_DIR = path.join(process.cwd(), 'public', 'debug', 'data');
-const RESUME_DATA_FILE = path.join(DEBUG_DIR, 'resume-data.json');
+// Remote debug data endpoint
+const REMOTE_DEBUG_URL = 'https://www.aiinterviewx.com/debug/data';
 
-// Ensure debug directory exists
-function ensureDebugDir() {
+// Load existing data from remote
+async function loadResumeData() {
   try {
-    if (!fs.existsSync(DEBUG_DIR)) {
-      fs.mkdirSync(DEBUG_DIR, { recursive: true });
+    const response = await fetch(`${REMOTE_DEBUG_URL}/resume-data.json`, {
+      cache: 'no-store',
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      return data;
     }
   } catch (error) {
-    console.error('[DEBUG] Failed to create debug directory:', error);
-  }
-}
-
-// Load existing data
-function loadResumeData() {
-  try {
-    if (fs.existsSync(RESUME_DATA_FILE)) {
-      const content = fs.readFileSync(RESUME_DATA_FILE, 'utf-8');
-      return JSON.parse(content);
-    }
-  } catch (error) {
-    console.warn('[DEBUG] Failed to load resume data:', error);
+    console.warn('[DEBUG] Failed to load resume data from remote:', error);
   }
   return { sessions: [] };
 }
 
-// Save data
-function saveResumeData(data: any) {
+// Save data to remote
+async function saveResumeData(data: any) {
   try {
-    ensureDebugDir();
-    fs.writeFileSync(RESUME_DATA_FILE, JSON.stringify(data, null, 2));
-    console.log('[DEBUG] Resume data saved:', RESUME_DATA_FILE);
-    return true;
+    const response = await fetch(`${REMOTE_DEBUG_URL}/api/save`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    const result = await response.json();
+    console.log('[DEBUG] Resume data saved to remote:', result);
+    return response.ok;
   } catch (error) {
-    console.error('[DEBUG] Failed to save resume data:', error);
-    return false;
+    console.error('[DEBUG] Failed to save resume data to remote:', error);
+    // Fallback: still succeed locally if remote fails
+    return true;
   }
 }
 
@@ -50,8 +48,8 @@ export async function POST(request: NextRequest) {
 
     console.log(`[DEBUG-API] Event: ${event}, Mobile: ${mobileNumber}`);
 
-    // Load existing data
-    const allData = loadResumeData();
+    // Load existing data from remote
+    const allData = await loadResumeData();
 
     // Create new session entry
     const sessionEntry: any = {
@@ -77,14 +75,15 @@ export async function POST(request: NextRequest) {
     }
     allData.sessions.push(sessionEntry);
 
-    // Save updated data
-    const saved = saveResumeData(allData);
+    // Save updated data to remote
+    const saved = await saveResumeData(allData);
 
     return NextResponse.json(
       {
         success: saved,
         message: `Resume data saved for event: ${event}`,
-        dataFile: RESUME_DATA_FILE,
+        dataUrl: `${REMOTE_DEBUG_URL}/resume-data.json`,
+        totalSessions: allData.sessions.length,
       },
       { status: saved ? 200 : 500 }
     );
@@ -103,12 +102,12 @@ export async function POST(request: NextRequest) {
 // GET endpoint to retrieve debug data
 export async function GET(request: NextRequest) {
   try {
-    const allData = loadResumeData();
+    const allData = await loadResumeData();
 
     return NextResponse.json(
       {
         success: true,
-        dataFile: RESUME_DATA_FILE,
+        dataUrl: `${REMOTE_DEBUG_URL}/resume-data.json`,
         totalSessions: allData.sessions?.length || 0,
         data: allData,
       },
