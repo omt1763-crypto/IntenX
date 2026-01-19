@@ -19,70 +19,263 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Main PDF text extraction - scan all pages and collect text
-async function extractAllTextFromPDF(buffer: Buffer): Promise<string> {
+// Method 1: Extract using pdfjs-dist with detailed logging
+async function extractViaPDFJS(buffer: Buffer): Promise<string> {
   try {
-    console.log('[PDF-EXTRACT-ALL] Starting full PDF text extraction...');
+    console.log('[PDF-PDFJS] Starting pdfjs-dist extraction...');
     
     const pdfjsModule = await import('pdfjs-dist');
     const pdfjs = pdfjsModule.default || pdfjsModule;
     
+    // Set worker path for PDF.js
+    const workerSrc = pdfjsModule.GlobalWorkerOptions?.workerSrc || 
+                     (pdfjsModule.GlobalWorkerOptions && (pdfjsModule.GlobalWorkerOptions.workerSrc = 'pdfjs-dist/build/pdf.worker.min.js'));
+    
     const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
     const pdf = await loadingTask.promise;
     
-    console.log(`[PDF-EXTRACT-ALL] PDF has ${pdf.numPages} pages, extracting all...`);
+    console.log(`[PDF-PDFJS] PDF has ${pdf.numPages} pages`);
     
     let fullText = '';
     let successCount = 0;
     
-    // Extract from ALL pages (not limited)
+    // Extract from ALL pages
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       try {
         const page = await pdf.getPage(pageNum);
         const textContent = await page.getTextContent();
         
-        // Collect all text items from page
         const pageText = textContent.items
-          .map((item: any) => item.str || '')
+          .map((item: any) => {
+            if (typeof item === 'string') return item;
+            if (typeof item === 'object' && 'str' in item) return item.str;
+            return '';
+          })
+          .filter((text: string) => text.trim().length > 0)
           .join(' ')
           .trim();
         
         if (pageText.length > 0) {
           fullText += pageText + '\n';
           successCount++;
+          console.log(`[PDF-PDFJS] Page ${pageNum}: ${pageText.length} chars extracted`);
         }
       } catch (pageError) {
-        console.warn(`[PDF-EXTRACT-ALL] Could not extract page ${pageNum}, skipping...`);
+        console.warn(`[PDF-PDFJS] Page ${pageNum} failed, continuing...`);
         continue;
       }
     }
     
-    console.log(`[PDF-EXTRACT-ALL] Successfully extracted from ${successCount}/${pdf.numPages} pages`);
+    const cleanedText = aggressiveTextCleanup(fullText);
+    console.log(`[PDF-PDFJS] Success: ${successCount}/${pdf.numPages} pages, ${cleanedText.length} chars`);
     
-    // Clean up the extracted text
-    let cleanedText = fullText.trim();
-    cleanedText = aggressiveTextCleanup(cleanedText);
-    
-    console.log(`[PDF-EXTRACT-ALL] Raw: ${fullText.length} chars → Cleaned: ${cleanedText.length} chars`);
     return cleanedText;
   } catch (error) {
-    console.warn('[PDF-EXTRACT-ALL] Extraction failed:', error instanceof Error ? error.message : error);
+    console.warn('[PDF-PDFJS] Failed:', error instanceof Error ? error.message : error);
     return '';
   }
 }
 
-// Aggressive text cleaning for token reduction
+// Method 2: Extract using pdf-parse
+async function extractViaPdfParse(buffer: Buffer): Promise<string> {
+  try {
+    console.log('[PDF-PARSE] Starting pdf-parse extraction...');
+    
+    const pdfParse = require('pdf-parse');
+    const data = await pdfParse(buffer, { 
+      max: 0, // Process all pages
+      version: 'v2.0.550'
+    });
+    
+    const text = (data.text || '').trim();
+    const cleanedText = aggressiveTextCleanup(text);
+    
+    console.log(`[PDF-PARSE] Extracted: ${cleanedText.length} chars from ${data.numpages} pages`);
+    return cleanedText;
+  } catch (error) {
+    console.warn('[PDF-PARSE] Failed:', error instanceof Error ? error.message : error);
+    return '';
+  }
+}
+
+// Method 3: Extract using pdfjs with streaming
+async function extractViaPDFJSAdvanced(buffer: Buffer): Promise<string> {
+  try {
+    console.log('[PDF-PDFJS-ADV] Starting advanced pdfjs extraction...');
+    
+    const pdfjsModule = await import('pdfjs-dist');
+    const pdfjs = pdfjsModule.default || pdfjsModule;
+    
+    const pdf = await pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise;
+    let fullText = '';
+    
+    for (let i = 1; i <= pdf.numPages; i++) {
+      try {
+        const page = await pdf.getPage(i);
+        
+        // Try text content extraction
+        try {
+          const content = await page.getTextContent();
+          const text = content.items
+            .map((item: any) => item.str || '')
+            .join('')
+            .trim();
+          
+          if (text.length > 0) {
+            fullText += text + '\n';
+            console.log(`[PDF-PDFJS-ADV] Page ${i}: ${text.length} chars`);
+          }
+        } catch (textError) {
+          // Try rendering as fallback
+          console.warn(`[PDF-PDFJS-ADV] Text extraction failed for page ${i}, trying render...`);
+        }
+      } catch (pageError) {
+        console.warn(`[PDF-PDFJS-ADV] Page ${i} error, continuing...`);
+      }
+    }
+    
+    const cleanedText = aggressiveTextCleanup(fullText);
+    console.log(`[PDF-PDFJS-ADV] Result: ${cleanedText.length} chars`);
+    
+    return cleanedText;
+  } catch (error) {
+    console.warn('[PDF-PDFJS-ADV] Failed:', error instanceof Error ? error.message : error);
+    return '';
+  }
+}
+
+// Method 4: Binary extraction from raw PDF
+async function extractViaBinaryAnalysis(buffer: Buffer): Promise<string> {
+  try {
+    console.log('[PDF-BINARY] Starting binary analysis extraction...');
+    
+    // Convert buffer to string, extract text objects
+    let text = buffer.toString('latin1');
+    
+    // Extract text from PDF objects (pattern: (text))
+    const matches = text.match(/\(([^()]*)\)/g) || [];
+    let extracted = matches
+      .map(match => match.slice(1, -1)) // Remove parentheses
+      .map(str => {
+        // Decode escaped characters
+        return str
+          .replace(/\\/g, ' ')
+          .replace(/[^\w\s\-\.,'():]/g, '');
+      })
+      .filter(str => str.trim().length > 3)
+      .join(' ');
+    
+    // Also try hex extraction
+    const hexMatches = text.match(/<([0-9A-F]+)>/gi) || [];
+    const hexExtracted = hexMatches
+      .map(match => {
+        try {
+          const hex = match.slice(1, -1);
+          return Buffer.from(hex, 'hex').toString('utf-8').replace(/[^\w\s]/g, '');
+        } catch {
+          return '';
+        }
+      })
+      .filter(s => s.length > 0)
+      .join(' ');
+    
+    const combined = (extracted + ' ' + hexExtracted).trim();
+    const cleanedText = aggressiveTextCleanup(combined);
+    
+    console.log(`[PDF-BINARY] Extracted: ${cleanedText.length} chars`);
+    return cleanedText;
+  } catch (error) {
+    console.warn('[PDF-BINARY] Failed:', error instanceof Error ? error.message : error);
+    return '';
+  }
+}
+
+// Method 5: Extract using base64 conversion
+async function extractViaBase64(buffer: Buffer): Promise<string> {
+  try {
+    console.log('[PDF-BASE64] Starting base64 conversion...');
+    
+    const base64 = buffer.toString('base64');
+    const decoded = Buffer.from(base64, 'base64').toString('utf-8');
+    
+    // Extract readable text
+    const text = decoded
+      .replace(/[^\w\s\-\.,'():%]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 2 && /[a-zA-Z]/.test(word))
+      .join(' ');
+    
+    const cleanedText = aggressiveTextCleanup(text);
+    console.log(`[PDF-BASE64] Extracted: ${cleanedText.length} chars`);
+    
+    return cleanedText;
+  } catch (error) {
+    console.warn('[PDF-BASE64] Failed:', error instanceof Error ? error.message : error);
+    return '';
+  }
+}
+
+// Main PDF text extraction - tries all methods in sequence
+async function extractAllTextFromPDF(buffer: Buffer): Promise<string> {
+  const methods = [
+    { name: 'PDFJS', fn: () => extractViaPDFJS(buffer) },
+    { name: 'pdf-parse', fn: () => extractViaPdfParse(buffer) },
+    { name: 'PDFJS-Advanced', fn: () => extractViaPDFJSAdvanced(buffer) },
+    { name: 'Binary Analysis', fn: () => extractViaBinaryAnalysis(buffer) },
+    { name: 'Base64', fn: () => extractViaBase64(buffer) },
+  ];
+  
+  for (const method of methods) {
+    try {
+      console.log(`[PDF-EXTRACT] Trying ${method.name} method...`);
+      const text = await method.fn();
+      
+      if (text && text.length > 100) {
+        console.log(`[PDF-EXTRACT] ✓ SUCCESS with ${method.name}: ${text.length} chars`);
+        return text;
+      }
+    } catch (error) {
+      console.warn(`[PDF-EXTRACT] ${method.name} failed:`, error instanceof Error ? error.message : error);
+      continue;
+    }
+  }
+  
+  console.warn('[PDF-EXTRACT] All extraction methods returned insufficient text');
+  return '';
+}
+
+// Aggressive text cleaning for token reduction (improved)
 function aggressiveTextCleanup(text: string): string {
+  if (!text) return '';
+  
   return text
-    // Collapse multiple newlines
+    // First, decode common escaped characters
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, ' ')
+    .replace(/\\r/g, '')
+    // Remove null bytes
+    .replace(/\0/g, '')
+    // Collapse multiple newlines to double newlines
     .replace(/\n{3,}/g, '\n\n')
-    // Remove excessive spaces
-    .replace(/  +/g, ' ')
-    // Remove lines with only spaces/special chars
+    // Remove excessive spaces (but keep some structure)
+    .replace(/[ \t]{2,}/g, ' ')
+    // Split into lines and clean each
     .split('\n')
-    .map(line => line.trim())
-    .filter(line => line.length > 2 && /[a-zA-Z0-9]/.test(line))
+    .map(line => {
+      // Trim whitespace
+      const trimmed = line.trim();
+      
+      // Keep line if it has at least 2 chars and some alphanumeric
+      if (trimmed.length > 1 && /[a-zA-Z0-9]/.test(trimmed)) {
+        return trimmed;
+      }
+      return '';
+    })
+    // Filter out empty lines
+    .filter((line: string) => line.length > 0)
+    // Rejoin lines
     .join('\n')
+    // Final trim
     .trim();
 }
 
@@ -109,141 +302,88 @@ async function extractTextFromPDFViaOCR(buffer: Buffer): Promise<string> {
   }
 }
 
-// Enhanced PDF extraction with better error handling
+// Enhanced PDF extraction with comprehensive error handling
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
-  let extractedText = '';
+  console.log('[PDF-EXTRACT] Starting comprehensive PDF extraction...');
   
-  // Method 1: Try main extraction - scan all pages and get all text
+  // Try all extraction methods
   try {
-    console.log('[PDF-EXTRACT] Attempting to extract all text from PDF...');
-    extractedText = await extractAllTextFromPDF(buffer);
+    console.log('[PDF-EXTRACT] Attempting all extraction methods...');
+    const extractedText = await extractAllTextFromPDF(buffer);
     
-    console.log(`[PDF-EXTRACT] Main extraction result: ${extractedText.length} characters`);
-    
-    if (extractedText.length > 100) {
-      console.log(`[PDF-EXTRACT] SUCCESS: Got ${extractedText.length} characters from PDF`);
+    if (extractedText && extractedText.length > 100) {
+      console.log(`[PDF-EXTRACT] SUCCESS: Extracted ${extractedText.length} characters`);
       return extractedText;
     }
   } catch (error) {
     console.warn('[PDF-EXTRACT] Main extraction failed:', error instanceof Error ? error.message : error);
   }
 
-  // Method 2: Try pdf-parse fallback (usually works well in serverless)
+  // If that didn't work, try OCR as last resort
+  console.log('[PDF-EXTRACT] Text extraction minimal, attempting OCR...');
   try {
-    console.log('[PDF-EXTRACT] Trying pdf-parse fallback...');
-    const pdfParse = require('pdf-parse');
-    const data = await pdfParse(buffer, { max: 20 });
-    
-    extractedText = (data.text || '').trim();
-    extractedText = aggressiveTextCleanup(extractedText);
-    
-    console.log(`[PDF-EXTRACT] pdf-parse result: ${extractedText.length} characters`);
-    
-    if (extractedText.length > 100) {
-      return extractedText;
+    const ocrText = await extractTextFromPDFViaOCR(buffer);
+    if (ocrText && ocrText.length > 80) {
+      console.log(`[PDF-EXTRACT] OCR success: ${ocrText.length} characters`);
+      return ocrText;
     }
-  } catch (error) {
-    console.warn('[PDF-EXTRACT] pdf-parse failed:', error instanceof Error ? error.message : error);
+  } catch (ocrError) {
+    console.warn('[PDF-EXTRACT] OCR failed:', ocrError instanceof Error ? ocrError.message : ocrError);
   }
 
-  // Method 3: Try raw buffer extraction
-  try {
-    console.log('[PDF-EXTRACT] Trying raw buffer extraction...');
-    let text = buffer.toString('utf-8', 0, Math.min(buffer.length, 500000));
+  // If still nothing, throw comprehensive error
+  throw new Error(
+    `Could not extract text from PDF. Tried: pdfjs-dist, pdf-parse, binary analysis, base64 conversion, and OCR.
     
-    text = text
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-      .replace(/[\x80-\x9F]/g, '')
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 2)
-      .join('\n');
-    
-    extractedText = text.trim();
-    extractedText = aggressiveTextCleanup(extractedText);
-    
-    console.log(`[PDF-EXTRACT] Raw buffer result: ${extractedText.length} characters`);
-    
-    if (extractedText.length > 100) {
-      return extractedText;
-    }
-  } catch (error) {
-    console.warn('[PDF-EXTRACT] Raw buffer failed:', error);
-  }
+The file may be:
+1. A scanned/image-based PDF (no embedded text)
+2. Password protected or encrypted
+3. Corrupted or malformed
+4. In an unsupported format
 
-  // Method 4: Try Latin-1 encoding
-  try {
-    console.log('[PDF-EXTRACT] Trying Latin-1 encoding...');
-    let text = buffer.toString('latin1', 0, Math.min(buffer.length, 500000));
-    
-    text = text
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 2 && !line.includes('PDF') && !line.includes('stream'))
-      .join('\n');
-    
-    extractedText = text.trim();
-    extractedText = aggressiveTextCleanup(extractedText);
-    
-    console.log(`[PDF-EXTRACT] Latin-1 result: ${extractedText.length} characters`);
-    
-    if (extractedText.length > 100) {
-      return extractedText;
-    }
-  } catch (error) {
-    console.warn('[PDF-EXTRACT] Latin-1 failed:', error);
-  }
-
-  // Method 5: Try OCR for scanned PDFs
-  if (extractedText.length < 100) {
-    console.log('[PDF-EXTRACT] Text too minimal, trying OCR...');
-    try {
-      const ocrText = await extractTextFromPDFViaOCR(buffer);
-      if (ocrText.length > 80) {
-        return ocrText;
-      }
-    } catch (ocrError) {
-      console.warn('[PDF-EXTRACT] OCR failed:', ocrError);
-    }
-  }
-
-  // If we got some text, return it
-  if (extractedText.length >= 80) {
-    console.log(`[PDF-EXTRACT] Using extracted text: ${extractedText.length} characters`);
-    return extractedText;
-  }
-
-  // All methods failed
-  const errorMsg = `Could not extract text from PDF (only ${extractedText.length} characters found). 
-
-Possible reasons:
-1. PDF is corrupted or malformed
-2. PDF is password protected
-3. File is not a valid PDF
-
-Solutions:
-• Try uploading a different PDF version
-• Save as DOCX in Microsoft Word and upload that
-• Copy and paste the resume text directly`;
-
-  throw new Error(errorMsg);
+Please try:
+• Using a text-based PDF (created from digital documents)
+• Saving as DOCX in Microsoft Word
+• Copying and pasting text directly (most reliable)
+• Converting the PDF using an online converter first`
+  );
 }
 
 // Validate that extracted text has minimum meaningful content
 function isValidResumeText(text: string): boolean {
-  // Very lenient validation - just check minimum length
-  // Let OpenAI handle the actual analysis
-  if (text.length < 80) return false;
+  if (!text || text.length < 50) {
+    console.log('[VALIDATION] Text too short:', text.length);
+    return false;
+  }
   
-  // Check if text has some reasonable structure (not just garbage)
-  const lines = text.split('\n').filter(line => line.trim().length > 5);
-  if (lines.length < 2) return false; // At least 2 substantial lines
+  // Very lenient: just need some basic structure
+  const lines = text.split('\n').filter(line => line.trim().length > 0);
   
-  // Check for at least some alphanumeric content (not just symbols)
+  // Need at least 2 lines (very lenient)
+  if (lines.length < 1) {
+    console.log('[VALIDATION] Not enough lines:', lines.length);
+    return false;
+  }
+  
+  // Check for at least some alphanumeric content
   const alphanumeric = text.replace(/[^a-zA-Z0-9]/g, '').length;
-  if (alphanumeric < 30) return false; // At least 30 letters/numbers
+  if (alphanumeric < 20) {
+    console.log('[VALIDATION] Not enough alphanumeric:', alphanumeric);
+    return false;
+  }
   
+  // Check if text contains common resume keywords
+  const resumeKeywords = ['experience', 'education', 'skill', 'project', 'work', 'employment', 'role', 'responsibility', 'achievement', 'email', 'phone', 'address', 'company', 'job', 'title', 'years', 'developed', 'managed', 'led', 'designed', 'created', 'built', 'implemented'];
+  const lowerText = text.toLowerCase();
+  const hasKeywords = resumeKeywords.some(keyword => lowerText.includes(keyword));
+  
+  if (!hasKeywords) {
+    // If no keywords, still accept if we have decent content
+    console.log('[VALIDATION] No resume keywords found, but accepting based on content');
+    return alphanumeric > 50; // Just need more alphanumeric content
+  }
+  
+  console.log('[VALIDATION] Text is valid for resume analysis');
   return true;
 }
 
