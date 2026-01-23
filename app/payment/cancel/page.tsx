@@ -1,16 +1,27 @@
 'use client';
 
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { XCircle } from 'lucide-react';
 
 export default function PaymentCancel() {
+  const searchParams = useSearchParams();
+  const orderId = searchParams.get('orderId');
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-8 text-center">
         <XCircle className="w-16 h-16 text-red-600 mx-auto mb-4" />
         <h2 className="text-2xl font-bold text-red-600 mb-2">Payment Cancelled</h2>
-        <p className="text-gray-600 mb-4">You have cancelled the payment process.</p>
+        <p className="text-gray-600 mb-4">You have cancelled the payment process with Razorpay.</p>
         <p className="text-gray-500 text-sm mb-6">No charges have been made to your account.</p>
+        
+        {orderId && (
+          <div className="bg-gray-50 rounded-lg p-3 text-left mb-4">
+            <p className="text-xs text-gray-600 mb-1">Order ID:</p>
+            <p className="text-xs font-mono text-gray-900 break-all">{orderId}</p>
+          </div>
+        )}
         
         <div className="flex gap-3">
           <Link
