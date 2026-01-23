@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FileUp, Zap, X, CheckCircle2, ArrowRight, BarChart3, Sparkles, TrendingUp, Upload, ChevronDown } from 'lucide-react'
 import ResumeAnalysis from '@/components/ResumeAnalysis'
+import JobCards from '@/components/resume-checker/JobCards'
+import OTPVerification from '@/components/resume-checker/OTPVerification'
 
-type Step = 'upload' | 'analyzing' | 'results'
+type Step = 'upload' | 'analyzing' | 'otp' | 'results'
 
 const resumeFAQs = [
   {
@@ -46,6 +48,9 @@ export default function ResumeChecker() {
   const [error, setError] = useState('')
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null)
+  const [showOTPVerification, setShowOTPVerification] = useState(false)
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false)
+  const [jobMatches, setJobMatches] = useState<any[]>([])
 
   useEffect(() => {
     setMounted(true)
@@ -130,6 +135,17 @@ export default function ResumeChecker() {
       return
     }
 
+    // Show OTP verification first
+    if (!isPhoneVerified) {
+      setShowOTPVerification(true)
+      return
+    }
+
+    // If already verified, proceed with analysis
+    await performAnalysis()
+  }
+
+  const performAnalysis = async () => {
     setCurrentStep('analyzing')
     setLoading(true)
 
@@ -164,6 +180,12 @@ export default function ResumeChecker() {
 
       console.log('API Success:', data)
       setAnalysisResults(data)
+      
+      // Extract job matches from results
+      if (data.matchedJobs && data.matchedJobs.length > 0) {
+        setJobMatches(data.matchedJobs)
+      }
+      
       setCurrentStep('results')
     } catch (error) {
       console.error('Analysis error:', error)
@@ -190,6 +212,13 @@ export default function ResumeChecker() {
     setJobDescription('')
     setError('')
     setShowUploadModal(false)
+    setJobMatches([])
+  }
+
+  const handleOTPVerified = (phoneNumber: string) => {
+    setIsPhoneVerified(true)
+    setShowOTPVerification(false)
+    void performAnalysis()
   }
 
   if (!mounted) return null
@@ -197,7 +226,25 @@ export default function ResumeChecker() {
   if (currentStep === 'results' && analysisResults) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 dark:from-slate-950">
+        {/* OTP Verification Modal */}
+        <AnimatePresence>
+          {showOTPVerification && (
+            <OTPVerification 
+              onVerified={handleOTPVerified}
+              onCancel={() => setShowOTPVerification(false)}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Resume Analysis Results */}
         <ResumeAnalysis results={analysisResults} onReset={handleReset} />
+        
+        {/* Job Matches Section */}
+        {jobMatches.length > 0 && (
+          <div className="mt-12 px-4 md:px-8 py-12 bg-gradient-to-b from-transparent to-blue-50">
+            <JobCards jobs={jobMatches} isLoading={false} />
+          </div>
+        )}
       </div>
     )
   }
@@ -226,6 +273,16 @@ export default function ResumeChecker() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* OTP Verification Modal */}
+      <AnimatePresence>
+        {showOTPVerification && (
+          <OTPVerification 
+            onVerified={handleOTPVerified}
+            onCancel={() => setShowOTPVerification(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Header Bar */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
