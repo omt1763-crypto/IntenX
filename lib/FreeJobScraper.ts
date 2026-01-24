@@ -186,8 +186,8 @@ export class FreeJobScraper {
     for (const job of jobs) {
       try {
         // Check if job already exists
-        const { data: existing } = await this.supabase
-          .from('scraped_jobs')
+        const { data: existing } = await (this.supabase
+          .from('scraped_jobs') as any)
           .select('id')
           .eq('source', job.source)
           .eq('job_url', job.job_url)
