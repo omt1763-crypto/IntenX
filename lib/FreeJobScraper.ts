@@ -201,9 +201,9 @@ export class FreeJobScraper {
               job_title: job.job_title,
               company_name: job.company_name,
               description: job.job_description,
-              scraped_at: new Date(),
-              updated_at: new Date(),
-            })
+              scraped_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            } as any)
             .eq('id', existing.id);
           updated++;
         } else {
@@ -223,11 +223,11 @@ export class FreeJobScraper {
               salary_max: job.salary_max,
               skills: job.required_skills,
               posted_date: job.posted_date,
-              created_at: new Date(),
-              updated_at: new Date(),
-              scraped_at: new Date(),
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              scraped_at: new Date().toISOString(),
               is_active: true,
-            },
+            } as any,
           ]);
           saved++;
         }
