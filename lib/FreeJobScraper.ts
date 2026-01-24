@@ -187,46 +187,45 @@ export class FreeJobScraper {
       try {
         // Check if job already exists
         const { data: existing } = await this.supabase
-          .from('jobs')
+          .from('scraped_jobs')
           .select('id')
           .eq('source', job.source)
-          .eq('source_job_id', job.source_job_id)
+          .eq('job_url', job.job_url)
           .single();
 
         if (existing) {
           // Update existing
           await this.supabase
-            .from('jobs')
+            .from('scraped_jobs')
             .update({
               job_title: job.job_title,
               company_name: job.company_name,
-              job_description: job.job_description,
-              last_scraped_at: new Date(),
+              description: job.job_description,
+              scraped_at: new Date(),
               updated_at: new Date(),
             })
             .eq('id', existing.id);
           updated++;
         } else {
           // Insert new
-          await this.supabase.from('jobs').insert([
+          await this.supabase.from('scraped_jobs').insert([
             {
               job_title: job.job_title,
               company_name: job.company_name,
-              job_description: job.job_description,
+              description: job.job_description,
               job_url: job.job_url,
               source: job.source,
-              source_job_id: job.source_job_id,
               job_type: job.job_type,
               experience_level: job.experience_level,
               location: job.location,
               is_remote: job.is_remote,
               salary_min: job.salary_min,
               salary_max: job.salary_max,
-              required_skills: job.required_skills,
+              skills: job.required_skills,
               posted_date: job.posted_date,
               created_at: new Date(),
               updated_at: new Date(),
-              last_scraped_at: new Date(),
+              scraped_at: new Date(),
               is_active: true,
             },
           ]);
