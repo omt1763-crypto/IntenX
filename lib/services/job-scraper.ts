@@ -157,7 +157,7 @@ export class JobScraper {
           const params = {
             keyword_company_name: keywords,
             keyword_locations: location,
-            p: page + 1
+            p: (page + 1).toString()
           };
 
           const queryString = new URLSearchParams(params).toString();
