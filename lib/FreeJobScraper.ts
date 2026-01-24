@@ -195,20 +195,20 @@ export class FreeJobScraper {
 
         if (existing) {
           // Update existing
-          await this.supabase
-            .from('scraped_jobs')
+          await (this.supabase
+            .from('scraped_jobs') as any)
             .update({
               job_title: job.job_title,
               company_name: job.company_name,
               description: job.job_description,
               scraped_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
-            } as any)
+            })
             .eq('id', existing.id);
           updated++;
         } else {
           // Insert new
-          await this.supabase.from('scraped_jobs').insert([
+          await (this.supabase.from('scraped_jobs') as any).insert([
             {
               job_title: job.job_title,
               company_name: job.company_name,
@@ -227,7 +227,7 @@ export class FreeJobScraper {
               updated_at: new Date().toISOString(),
               scraped_at: new Date().toISOString(),
               is_active: true,
-            } as any,
+            },
           ]);
           saved++;
         }
