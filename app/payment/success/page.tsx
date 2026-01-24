@@ -5,8 +5,9 @@ export const dynamic = 'force-dynamic';
 import { useSearchParams } from 'next/navigation';
 import { CheckCircle } from 'lucide-react';
 import Link from 'next/link';
+import { Suspense } from 'react';
 
-export default function PaymentSuccess() {
+function PaymentSuccessContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId');
   const transactionId = searchParams.get('transactionId');
@@ -43,4 +44,13 @@ export default function PaymentSuccess() {
       </div>
     </div>
   );
+}
+
+export default function PaymentSuccess() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>}>
+      <PaymentSuccessContent />
+    </Suspense>
+  );
+}
 }

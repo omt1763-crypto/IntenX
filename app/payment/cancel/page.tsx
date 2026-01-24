@@ -5,8 +5,9 @@ export const dynamic = 'force-dynamic';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { XCircle } from 'lucide-react';
+import { Suspense } from 'react';
 
-export default function PaymentCancel() {
+function PaymentCancelContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId');
 
@@ -41,5 +42,13 @@ export default function PaymentCancel() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PaymentCancel() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>}>
+      <PaymentCancelContent />
+    </Suspense>
   );
 }
