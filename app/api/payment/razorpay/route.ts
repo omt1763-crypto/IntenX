@@ -1,11 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import Razorpay from 'razorpay';
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || '',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || '',
-});
+let razorpay: any = null;
+
+function getRazorpayInstance() {
+  if (!razorpay) {
+    try {
+      const Razorpay = require('razorpay');
+      razorpay = new Razorpay({
+        key_id: process.env.RAZORPAY_KEY_ID || '',
+        key_secret: process.env.RAZORPAY_KEY_SECRET || '',
+      });
+    } catch (error) {
+      console.warn('Razorpay module not available');
+      return null;
+    }
+  }
+  return razorpay;
+}
 
 // POST: Create a new order
 export async function POST(request: NextRequest) {
@@ -19,10 +31,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const razorpayInstance = getRazorpayInstance();
+    if (!razorpayInstance) {
+      return NextResponse.json(
+        { error: 'Payment service unavailable' },
+        { status: 503 }
+      );
+    }
+
     // Amount in paise
     const orderAmount = Math.round(amount * 100);
 
-    const order = await razorpay.orders.create({
+    const order = await razorpayInstance.orders.create({
       amount: orderAmount,
       currency: 'INR',
       receipt: `${planId}-${userId}-${Date.now()}`,
@@ -76,7 +96,15 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Fetch payment details for verification
-    const payment = await razorpay.payments.fetch(razorpay_payment_id);
+    const razorpayInstance = getRazorpayInstance();
+    if (!razorpayInstance) {
+      return NextResponse.json(
+        { error: 'Payment service unavailable' },
+        { status: 503 }
+      );
+    }
+
+    const payment = await razorpayInstance.payments.fetch(razorpay_payment_id);
 
     return NextResponse.json({
       success: true,
