@@ -906,13 +906,60 @@ Return EXACTLY this JSON (no other text):
       });
     }
 
+    // ===== FIND JOB MATCHES =====
+    log('STEP-24', 'Attempting to find job matches...');
+    let matchedJobs = [];
+
+    try {
+      // Extract keywords from resume for job search
+      const searchKeywords = analysis.technicalSkills?.slice(0, 3)?.join(' ') || 
+                           jobDescription?.split(' ').slice(0, 3).join(' ') ||
+                           'developer';
+
+      log('STEP-24a', 'Calling job matching API', {
+        keywords: searchKeywords,
+      });
+
+      const matchResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/jobs/find-matches`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          resumeAnalysis: analysis,
+          jobKeywords: searchKeywords,
+          location: '', // Optional: can be extracted from resume
+          topN: 10,
+          useCache: true,
+        }),
+      });
+
+      if (matchResponse.ok) {
+        const matchData = await matchResponse.json();
+        matchedJobs = matchData.matchedJobs || [];
+        log('STEP-25', 'Job matching successful', {
+          matchedJobsCount: matchedJobs.length,
+          topMatchScore: matchedJobs[0]?.match_percentage,
+        });
+      } else {
+        log('STEP-25-WARNING', 'Job matching API returned non-200 status', {
+          status: matchResponse.status,
+        });
+      }
+    } catch (matchError) {
+      log('STEP-25-WARNING', 'Job matching failed, but continuing with results', {
+        error: String(matchError),
+      });
+    }
+
     // ===== SUCCESS =====
-    log('STEP-24', 'SUCCESS: Returning analysis to client');
+    log('STEP-26', 'SUCCESS: Returning analysis and job matches to client');
 
     return NextResponse.json(
       {
         success: true,
         analysis: analysis,
+        matchedJobs: matchedJobs,
       },
       { status: 200 }
     );
